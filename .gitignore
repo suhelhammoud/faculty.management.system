@@ -1,0 +1,26 @@
+# Dependencies (all apps and packages)
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+
+# Logs
+*.log
+
+# Vite cache
+**/.vite/
+
+# TypeScript
+*.tsbuildinfo
