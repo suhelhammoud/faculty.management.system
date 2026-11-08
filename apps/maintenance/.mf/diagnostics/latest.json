@@ -1,0 +1,10 @@
+{
+  "latestErrorEvent": {
+    "code": "TYPE-001",
+    "message": "Failed to generate type declaration. Execute the below cmd to reproduce and fix the error. #TYPE-001\nargs: {\"cmd\":\"/home/suhel/.local/share/fnm/node-versions/v22.23.3/installation/bin/node /home/suhel/Faculty/faculty.management.system/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc --project /home/suhel/Faculty/faculty.management.system/apps/maintenance/node_modules/.federation/tsconfig.3d02fd94c76ca04d9e0b64eaa4369974.json\"}\nView the docs to see how to solve: https://module-federation.io/guide/troubleshooting/type#type-001",
+    "args": {
+      "cmd": "/home/suhel/.local/share/fnm/node-versions/v22.23.3/installation/bin/node /home/suhel/Faculty/faculty.management.system/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc --project /home/suhel/Faculty/faculty.management.system/apps/maintenance/node_modules/.federation/tsconfig.3d02fd94c76ca04d9e0b64eaa4369974.json"
+    },
+    "timestamp": 1794169912419
+  }
+}

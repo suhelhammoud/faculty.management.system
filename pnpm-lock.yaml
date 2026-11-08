@@ -267,7 +267,313 @@ importers:
         specifier: ^8.3.6
         version: 8.3.6(@types/node@24.19.2)
 
+  apps/correspondence:
+    dependencies:
+      '@module-federation/vite':
+        specifier: ^1.23.11
+        version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2))
+      react:
+        specifier: ^19.3.1
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.3.1
+        version: 19.3.1(react@19.3.1)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.3.0
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: ^6.1.2
+        version: 6.2.1(vite@8.3.6(@types/node@24.19.2))
+      oxlint:
+        specifier: ^1.90.0
+        version: 1.92.0(oxlint-tsgolint@7.0.2006)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.3.6
+        version: 8.3.6(@types/node@24.19.2)
+
+  apps/exams:
+    dependencies:
+      '@module-federation/vite':
+        specifier: ^1.23.11
+        version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2))
+      react:
+        specifier: ^19.3.1
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.3.1
+        version: 19.3.1(react@19.3.1)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.3.0
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: ^6.1.2
+        version: 6.2.1(vite@8.3.6(@types/node@24.19.2))
+      oxlint:
+        specifier: ^1.90.0
+        version: 1.92.0(oxlint-tsgolint@7.0.2006)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.3.6
+        version: 8.3.6(@types/node@24.19.2)
+
+  apps/facilities:
+    dependencies:
+      '@module-federation/vite':
+        specifier: ^1.23.11
+        version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2))
+      react:
+        specifier: ^19.3.1
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.3.1
+        version: 19.3.1(react@19.3.1)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.3.0
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: ^6.1.2
+        version: 6.2.1(vite@8.3.6(@types/node@24.19.2))
+      oxlint:
+        specifier: ^1.90.0
+        version: 1.92.0(oxlint-tsgolint@7.0.2006)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.3.6
+        version: 8.3.6(@types/node@24.19.2)
+
+  apps/hr:
+    dependencies:
+      '@module-federation/vite':
+        specifier: ^1.23.11
+        version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2))
+      react:
+        specifier: ^19.3.1
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.3.1
+        version: 19.3.1(react@19.3.1)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.3.0
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: ^6.1.2
+        version: 6.2.1(vite@8.3.6(@types/node@24.19.2))
+      oxlint:
+        specifier: ^1.90.0
+        version: 1.92.0(oxlint-tsgolint@7.0.2006)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.3.6
+        version: 8.3.6(@types/node@24.19.2)
+
+  apps/inventory:
+    dependencies:
+      '@module-federation/vite':
+        specifier: ^1.23.11
+        version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2))
+      react:
+        specifier: ^19.3.1
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.3.1
+        version: 19.3.1(react@19.3.1)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.3.0
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: ^6.1.2
+        version: 6.2.1(vite@8.3.6(@types/node@24.19.2))
+      oxlint:
+        specifier: ^1.90.0
+        version: 1.92.0(oxlint-tsgolint@7.0.2006)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.3.6
+        version: 8.3.6(@types/node@24.19.2)
+
+  apps/maintenance:
+    dependencies:
+      '@module-federation/vite':
+        specifier: ^1.23.11
+        version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2))
+      react:
+        specifier: ^19.3.1
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.3.1
+        version: 19.3.1(react@19.3.1)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.3.0
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: ^6.1.2
+        version: 6.2.1(vite@8.3.6(@types/node@24.19.2))
+      oxlint:
+        specifier: ^1.90.0
+        version: 1.92.0(oxlint-tsgolint@7.0.2006)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.3.6
+        version: 8.3.6(@types/node@24.19.2)
+
+  apps/meetings:
+    dependencies:
+      '@module-federation/vite':
+        specifier: ^1.23.11
+        version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2))
+      react:
+        specifier: ^19.3.1
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.3.1
+        version: 19.3.1(react@19.3.1)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.3.0
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: ^6.1.2
+        version: 6.2.1(vite@8.3.6(@types/node@24.19.2))
+      oxlint:
+        specifier: ^1.90.0
+        version: 1.92.0(oxlint-tsgolint@7.0.2006)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.3.6
+        version: 8.3.6(@types/node@24.19.2)
+
   apps/shell:
+    dependencies:
+      '@module-federation/vite':
+        specifier: ^1.23.11
+        version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2))
+      react:
+        specifier: ^19.3.1
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.3.1
+        version: 19.3.1(react@19.3.1)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.3.0
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: ^6.1.2
+        version: 6.2.1(vite@8.3.6(@types/node@24.19.2))
+      oxlint:
+        specifier: ^1.90.0
+        version: 1.92.0(oxlint-tsgolint@7.0.2006)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.3.6
+        version: 8.3.6(@types/node@24.19.2)
+
+  apps/student-affairs:
+    dependencies:
+      '@module-federation/vite':
+        specifier: ^1.23.11
+        version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2))
+      react:
+        specifier: ^19.3.1
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.3.1
+        version: 19.3.1(react@19.3.1)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.3.0
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: ^6.1.2
+        version: 6.2.1(vite@8.3.6(@types/node@24.19.2))
+      oxlint:
+        specifier: ^1.90.0
+        version: 1.92.0(oxlint-tsgolint@7.0.2006)
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.3.6
+        version: 8.3.6(@types/node@24.19.2)
+
+  apps/supervision:
     dependencies:
       '@module-federation/vite':
         specifier: ^1.23.11
