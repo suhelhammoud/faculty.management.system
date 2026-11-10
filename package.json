@@ -4,6 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "prepare": "husky",
+    "format": "prettier --write \"apps/*/src/**/*.{ts,tsx,js,jsx,json,css,html}\" \"packages/*/src/**/*.{ts,tsx,js,jsx,json,css,html}\"",
+    "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx,js,jsx,json,css,html}\" \"packages/*/src/**/*.{ts,tsx,js,jsx,json,css,html}\"",
     "dev": "pnpm -r --parallel --filter './apps/*' --filter '!./apps/api' run dev",
     "dev:api": "pnpm --filter ./apps/api start:dev",
     "dev:shell": "pnpm --filter ./apps/shell dev",
@@ -41,6 +44,14 @@
       "version": "12.18.0",
       "onFail": "download"
     }
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.4.2"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,css,html,md,yml,yaml}": "prettier --write"
   },
   "packageManager": "pnpm@12.18.0",
   "type": "module"

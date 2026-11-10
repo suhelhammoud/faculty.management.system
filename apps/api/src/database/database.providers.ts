@@ -1,4 +1,3 @@
-
 import type { Provider } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createDb } from '@project/db';
@@ -31,4 +30,3 @@ export const databaseProviders: Provider[] = [
   databaseProvider,
   databasePoolProvider,
 ];
-
