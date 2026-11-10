@@ -70,3 +70,4 @@ declare module 'facilities/App' {
     const App: ComponentType;
     export default App;
 }
+declare module "admin/App" { const App: import("react").ComponentType; export default App; }

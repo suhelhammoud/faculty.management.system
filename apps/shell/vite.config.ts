@@ -1,14 +1,18 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { federation } from '@module-federation/vite';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), 'VITE_');
+  const adminEntry = env.VITE_ADMIN_REMOTE_URL || 'http://localhost:3011/remoteEntry.js';
+  return {
   plugins: [
     react(),
     federation({
       name: 'shell',
       dts: false,
       remotes: {
+        admin: { type: 'module', name: 'admin', entry: adminEntry, entryGlobalName: 'admin', shareScope: 'default' },
         attendance: {
           type: 'module',
           name: 'attendance',
@@ -94,4 +98,5 @@ export default defineConfig({
     port: 3000,
     strictPort: true,
   },
+  };
 });

@@ -4,7 +4,6 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-
     "dev": "pnpm -r --parallel --filter './apps/*' --filter '!./apps/api' run dev",
     "dev:api": "pnpm --filter ./apps/api start:dev",
     "dev:shell": "pnpm --filter ./apps/shell dev",
@@ -18,7 +17,6 @@
     "dev:inventory": "pnpm --filter ./apps/inventory dev",
     "dev:student-affairs": "pnpm --filter ./apps/student-affairs dev",
     "dev:facilities": "pnpm --filter ./apps/facilities dev",
-
     "build:frontends": "pnpm --filter './apps/*' --filter '!./apps/api' -r run build",
     "build:shell": "pnpm --filter ./apps/shell build",
     "build:attendance": "pnpm --filter ./apps/attendance build",
@@ -30,7 +28,9 @@
     "build:correspondence": "pnpm --filter ./apps/correspondence build",
     "build:inventory": "pnpm --filter ./apps/inventory build",
     "build:student-affairs": "pnpm --filter ./apps/student-affairs build",
-    "build:facilities": "pnpm --filter ./apps/facilities build"
+    "build:facilities": "pnpm --filter ./apps/facilities build",
+    "dev:admin": "pnpm --filter ./apps/admin dev",
+    "build:admin": "pnpm --filter ./apps/admin build"
   },
   "keywords": [],
   "author": "",

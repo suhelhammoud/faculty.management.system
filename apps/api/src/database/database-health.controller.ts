@@ -1,3 +1,4 @@
+import { Public } from '../auth/auth.guard.js';
 import { Controller, Get } from '@nestjs/common';
 import { DatabaseHealthService } from './database-health.service.js';
 
@@ -5,6 +6,7 @@ import { DatabaseHealthService } from './database-health.service.js';
 export class DatabaseHealthController {
   constructor(private readonly databaseHealth: DatabaseHealthService) {}
 
+  @Public()
   @Get('database')
   checkDatabase(): Promise<{ status: 'ok'; database: 'connected' }> {
     return this.databaseHealth.check();

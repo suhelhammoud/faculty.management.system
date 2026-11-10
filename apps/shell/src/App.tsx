@@ -1,5 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 
+const AdminApp = lazy(() => import('admin/App'));
+
 const AttendanceApp = lazy(() => import('attendance/App'));
 const MaintenanceApp = lazy(() => import('maintenance/App'));
 const SupervisionApp = lazy(() => import('supervision/App'));
@@ -12,6 +14,7 @@ const StudentAffairsApp = lazy(() => import('student-affairs/App'));
 const FacilitiesApp = lazy(() => import('facilities/App'));
 
 const modules = {
+    admin: { title: 'Administration', Component: AdminApp },
     attendance: { title: 'Attendance', Component: AttendanceApp },
     maintenance: { title: 'Maintenance', Component: MaintenanceApp },
     supervision: { title: 'Supervision', Component: SupervisionApp },

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { fileURLToPath } from 'node:url';
+import { AuthModule } from './auth/auth.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { DatabaseModule } from './database/database.module.js';
@@ -19,7 +19,9 @@ function validateEnvironment(config: Record<string, string | undefined>) {
   }
 
   if (!['postgres:', 'postgresql:'].includes(parsedDatabaseUrl.protocol)) {
-    throw new Error('DATABASE_URL must use the postgres:// or postgresql:// scheme');
+    throw new Error(
+      'DATABASE_URL must use the postgres:// or postgresql:// scheme',
+    );
   }
 
   const port = config.PORT === undefined ? 3000 : Number(config.PORT);
@@ -39,6 +41,7 @@ function validateEnvironment(config: Record<string, string | undefined>) {
       validate: validateEnvironment,
     }),
     DatabaseModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

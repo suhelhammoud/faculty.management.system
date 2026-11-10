@@ -1,0 +1,76 @@
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
+@theme inline {
+  --color-background: var(--admin-background);
+  --color-primary: #164e63;
+  --color-primary-foreground: #fff;
+  --color-border: #cbd5e1;
+  --color-muted: #f1f5f9;
+  --color-destructive: #b91c1c;
+}
+.faculty-admin {
+  --admin-background: #fff;
+  font:
+    15px/1.5 system-ui,
+    sans-serif;
+  color: #172c3a;
+  background: #f3f6f8;
+  min-height: 100vh;
+  text-align: left;
+  padding: 24px;
+  box-sizing: border-box;
+}
+.faculty-admin * {
+  box-sizing: border-box;
+}
+.faculty-admin h1 {
+  font-size: 28px;
+  margin: 0;
+  color: #172c3a;
+  letter-spacing: -0.5px;
+}
+.faculty-admin h2 {
+  font-size: 20px;
+  margin: 0 0 16px;
+  color: #172c3a;
+}
+.faculty-admin button {
+  cursor: pointer;
+}
+.faculty-admin label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+.faculty-admin select {
+  width: 100%;
+  min-height: 40px;
+  background: white;
+  color: #172c3a;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 8px;
+}
+.faculty-admin .panel {
+  background: white;
+  border: 1px solid #dae2e8;
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 20px;
+}
+.faculty-admin table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.faculty-admin th,
+.faculty-admin td {
+  padding: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+.faculty-admin .form-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+}
