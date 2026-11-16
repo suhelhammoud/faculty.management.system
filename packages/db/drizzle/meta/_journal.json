@@ -8,6 +8,13 @@
       "when": 1794331440465,
       "tag": "0000_hesitant_thanos",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794821169996,
+      "tag": "0001_wandering_ultimates",
+      "breakpoints": true
     }
   ]
 }

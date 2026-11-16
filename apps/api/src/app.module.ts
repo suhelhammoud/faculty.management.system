@@ -4,6 +4,16 @@ import { AuthModule } from './auth/auth.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { DatabaseModule } from './database/database.module.js';
+import { AttendanceModule } from './modules/attendance/attendance.module.js';
+import { CorrespondenceModule } from './modules/correspondence/correspondence.module.js';
+import { ExamsModule } from './modules/exams/exams.module.js';
+import { FacilitiesModule } from './modules/facilities/facilities.module.js';
+import { HrModule } from './modules/hr/hr.module.js';
+import { InventoryModule } from './modules/inventory/inventory.module.js';
+import { MaintenanceModule } from './modules/maintenance/maintenance.module.js';
+import { MeetingsModule } from './modules/meetings/meetings.module.js';
+import { StudentAffairsModule } from './modules/student-affairs/student-affairs.module.js';
+import { SupervisionModule } from './modules/supervision/supervision.module.js';
 
 function validateEnvironment(config: Record<string, string | undefined>) {
   const databaseUrl = config.DATABASE_URL?.trim();
@@ -19,9 +29,7 @@ function validateEnvironment(config: Record<string, string | undefined>) {
   }
 
   if (!['postgres:', 'postgresql:'].includes(parsedDatabaseUrl.protocol)) {
-    throw new Error(
-      'DATABASE_URL must use the postgres:// or postgresql:// scheme',
-    );
+    throw new Error('DATABASE_URL must use the postgres:// or postgresql:// scheme');
   }
 
   const port = config.PORT === undefined ? 3000 : Number(config.PORT);
@@ -42,6 +50,16 @@ function validateEnvironment(config: Record<string, string | undefined>) {
     }),
     DatabaseModule,
     AuthModule,
+    AttendanceModule,
+    MaintenanceModule,
+    SupervisionModule,
+    MeetingsModule,
+    HrModule,
+    ExamsModule,
+    CorrespondenceModule,
+    InventoryModule,
+    StudentAffairsModule,
+    FacilitiesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
