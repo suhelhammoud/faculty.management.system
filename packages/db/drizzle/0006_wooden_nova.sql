@@ -1,2 +1,0 @@
-DROP INDEX "hr_employment_records_current_idx";--> statement-breakpoint
-CREATE UNIQUE INDEX "hr_employment_records_one_current_per_employee_idx" ON "hr_employment_records" USING btree ("employee_id") WHERE "hr_employment_records"."is_current" = 1;
