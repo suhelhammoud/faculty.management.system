@@ -21,6 +21,7 @@ Each module folder starts with a single `README.md` as its initial specification
 - [Exams](modules/exams/README.md)
 - [Correspondence](modules/correspondence/README.md)
 - [Inventory](modules/inventory/README.md)
+- [Facilities](modules/facilities/README.md)
 - [Student Affairs](modules/student-affairs/README.md)
 
 ## Draft repository guidance

@@ -15,6 +15,41 @@
       "when": 1794821169996,
       "tag": "0001_wandering_ultimates",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794823108391,
+      "tag": "0002_deep_morbius",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794823130433,
+      "tag": "0003_outstanding_loners",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794824695707,
+      "tag": "0004_tense_loa",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794824714365,
+      "tag": "0005_fearless_marrow",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794824747003,
+      "tag": "0006_wooden_nova",
+      "breakpoints": true
     }
   ]
 }

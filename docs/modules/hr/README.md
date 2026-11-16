@@ -1,5 +1,7 @@
 # HR Management System
 
+See the [HR data model guide](DATA-MODEL.md) for the database tables, relationships, legal notes, and schema/migration links.
+
 ## Purpose
 
 Manages employee records, administrative decisions, leave requests, and reports.
@@ -8,13 +10,13 @@ Employee self-service lets employees view the parts of their personnel file they
 
 ## Functional scope
 
-| Workflow | Requirements | Source IDs |
-| --- | --- | --- |
-| Personnel files and employment history | Create and update employee files. Record appointment, start of work, end of service, and other employment changes. Link scanned decisions, letters, and supporting documents to the employee file or request. Show employment history to support issuing employment statements. Confirm the exact fields against the official form. | FR-01–FR-03, FR-12 · UC-01–UC-03 |
-| Employee self-service | Let employees view permitted parts of their own file, submit requests with the required attachments, and track their status. Examples include leave, a leave statement, and statements confirming commencement of work or current employment. Confirm which request types to offer. | FR-05–FR-07 · UC-04, UC-05, UC-07 |
-| Request review | Let the designated reviewer record the outcome and update the status according to the approved procedure. Approval, rejection, and requests for more information are example outcomes. | FR-08 · UC-06 |
-| Search and reporting | Search, sort, and filter employee and request records by fields such as employee, specialization, request type, or date. Let authorized report users select fields and filters, for example to show an employee's leave for a given month. | FR-09–FR-11 · UC-08, UC-09 |
-| Account and permission dependency | Use shared sign-in and shared role and permission administration. Confirm how personnel files are linked to employee accounts. | FR-04, FR-05 · UC-10 |
+| Workflow                               | Requirements                                                                                                                                                                                                                                                                                                                        | Source IDs                        |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| Personnel files and employment history | Create and update employee files. Record appointment, start of work, end of service, and other employment changes. Link scanned decisions, letters, and supporting documents to the employee file or request. Show employment history to support issuing employment statements. Confirm the exact fields against the official form. | FR-01–FR-03, FR-12 · UC-01–UC-03  |
+| Employee self-service                  | Let employees view permitted parts of their own file, submit requests with the required attachments, and track their status. Examples include leave, a leave statement, and statements confirming commencement of work or current employment. Confirm which request types to offer.                                                 | FR-05–FR-07 · UC-04, UC-05, UC-07 |
+| Request review                         | Let the designated reviewer record the outcome and update the status according to the approved procedure. Approval, rejection, and requests for more information are example outcomes.                                                                                                                                              | FR-08 · UC-06                     |
+| Search and reporting                   | Search, sort, and filter employee and request records by fields such as employee, specialization, request type, or date. Let authorized report users select fields and filters, for example to show an employee's leave for a given month.                                                                                          | FR-09–FR-11 · UC-08, UC-09        |
+| Account and permission dependency      | Use shared sign-in and shared role and permission administration. Confirm how personnel files are linked to employee accounts.                                                                                                                                                                                                      | FR-04, FR-05 · UC-10              |
 
 ## Example leave request
 

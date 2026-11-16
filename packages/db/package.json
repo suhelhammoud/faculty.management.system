@@ -20,7 +20,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
-    "studio": "drizzle-kit studio"
+    "studio": "drizzle-kit studio",
+    "db:start": "podman start faculty-postgres",
+    "db:stop": "podman stop faculty-postgres"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",
