@@ -2,6 +2,18 @@
 
 See the [HR data model guide](DATA-MODEL.md) for the database tables, relationships, legal notes, and schema/migration links.
 
+## HR admin web app
+
+The HR admin interface manages employee profiles, personal details, current employment information, and reference lists. English is the default language, with an Arabic/RTL option. It uses React, React Router, React Query, Zustand, shadcn/ui, and Tailwind with minimal styling.
+
+See the [frontend description](FRONTEND.md) for screens, workflows, architecture, authentication, and the image placeholder. The [app setup guide](../../../apps/hr/README.md) covers local startup, configuration, hosting, and verification commands.
+
+## Implemented HR admin API
+
+The initial backend covers employee profiles, personal details, current employment information, and editable reference lists. Profiles can be saved before employment information is available. See [HR API guide](API.md) for endpoints, payloads, permissions, setup, and verification.
+
+The broader workflows described below are background requirements and are deferred from this initial API. Appointment workflows, documents, requests, employment-history management, and employee account linking are outside the implemented scope.
+
 ## Purpose
 
 Manages employee records, administrative decisions, leave requests, and reports.

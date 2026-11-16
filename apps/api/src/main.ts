@@ -4,6 +4,7 @@ import { AUTH, type Auth } from './auth/auth.provider.js';
 import type { Request, Response, NextFunction } from 'express';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import { adminOriginProtection } from './auth/admin-origin-protection.js';
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
@@ -30,16 +31,9 @@ async function bootstrap() {
       }
       return handler(req, res);
     }
-    if (
-      req.method !== 'GET' &&
-      req.path.startsWith('/api/admin') &&
-      (!req.headers.origin || !origins.includes(req.headers.origin))
-    ) {
-      res.sendStatus(403);
-      return;
-    }
     next();
   });
+  app.use(adminOriginProtection(origins));
   app.useBodyParser('json');
   app.enableShutdownHooks();
   await app.listen(configService.get<number>('PORT', 3000));

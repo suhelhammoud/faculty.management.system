@@ -1,12 +1,6 @@
+import { provisionHrPermissions } from '../modules/hr/hr.permissions.js';
 import { createDb } from '@project/db';
-import {
-  user,
-  account,
-  roles,
-  permissions,
-  userRoles,
-  rolePermissions,
-} from '@project/db/schema';
+import { user, account, roles, permissions, userRoles, rolePermissions } from '@project/db/schema';
 import { randomUUID } from 'node:crypto';
 import { hashPassword } from 'better-auth/crypto';
 const username = process.env.BOOTSTRAP_USERNAME?.toLowerCase();
@@ -65,9 +59,8 @@ try {
         .insert(permissions)
         .values(keys.map((key) => ({ key })))
         .onConflictDoNothing();
-      await tx
-        .insert(rolePermissions)
-        .values(keys.map((permission) => ({ roleId, permission })));
+      await tx.insert(rolePermissions).values(keys.map((permission) => ({ roleId, permission })));
+      await provisionHrPermissions(tx, roleId);
       await tx.insert(userRoles).values({ userId: id, roleId });
     },
     { isolationLevel: 'serializable' },

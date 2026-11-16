@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState } from 'react';
+import { Component, lazy, Suspense, type ReactNode } from 'react';
+import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router';
 
 const AdminApp = lazy(() => import('admin/App'));
 
@@ -33,42 +34,53 @@ const modules = {
   facilities: { title: 'Facilities', Component: FacilitiesApp },
 };
 
-type ModuleName = keyof typeof modules;
-
+class RemoteBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? (
+      <div role="alert">
+        <p>Unable to load this module.</p>
+        <button onClick={() => window.location.reload()}>Retry</button>
+      </div>
+    ) : (
+      this.props.children
+    );
+  }
+}
 export default function App() {
-  const [activeModule, setActiveModule] = useState<ModuleName>('attendance');
-
-  const ActiveComponent = modules[activeModule].Component;
-
+  const location = useLocation();
   return (
-    <div style={{ padding: '24px' }}>
-      <h1>IT Faculty Management System</h1>
-
+    <div className="faculty-shell" style={{ padding: '24px', textAlign: 'start' }}>
+      <h1 style={{ fontSize: '24px', margin: '0 0 16px' }}>IT Faculty Management System</h1>
       <nav
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '12px',
-          marginBottom: '24px',
-        }}
+        aria-label="Faculty modules"
+        style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}
       >
-        {(Object.keys(modules) as ModuleName[]).map((moduleName) => (
-          <button
-            key={moduleName}
-            onClick={() => setActiveModule(moduleName)}
-            aria-pressed={activeModule === moduleName}
+        {Object.entries(modules).map(([name, module]) => (
+          <NavLink
+            key={name}
+            to={`/${name}`}
+            style={({ isActive }) => ({ fontWeight: isActive ? 700 : 400 })}
           >
-            {modules[moduleName].title}
-          </button>
+            {module.title}
+          </NavLink>
         ))}
       </nav>
-
       <main>
-        <h2>{modules[activeModule].title}</h2>
-
-        <Suspense fallback={<p>Loading module...</p>}>
-          <ActiveComponent />
-        </Suspense>
+        <RemoteBoundary key={location.pathname.split('/')[1]}>
+          <Suspense fallback={<p role="status">Loading module...</p>}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/attendance" replace />} />
+              {Object.entries(modules).map(([name, { Component: Module }]) => (
+                <Route key={name} path={`/${name}/*`} element={<Module />} />
+              ))}
+              <Route path="*" element={<p role="alert">Page not found.</p>} />
+            </Routes>
+          </Suspense>
+        </RemoteBoundary>
       </main>
     </div>
   );

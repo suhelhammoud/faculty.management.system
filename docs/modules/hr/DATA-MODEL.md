@@ -1,6 +1,6 @@
 # HR Data Model
 
-This document describes the initial HR database schema. It is implemented with PostgreSQL and Drizzle ORM in [`packages/db/src/schema/hr`](../../../packages/db/src/schema/hr/). The generated database changes are in the [Drizzle migrations](../../../packages/db/drizzle/).
+This document describes the initial HR database schema. It is implemented with PostgreSQL and Drizzle ORM in [`packages/db/src/schema/hr`](../../../../packages/db/src/schema/hr/). The generated database changes are in the [Drizzle migrations](../../../../packages/db/drizzle/).
 
 ## Tables
 
@@ -62,13 +62,14 @@ erDiagram
 
 ## Implementation links
 
-- [HR schema exports](../../../packages/db/src/schema/hr/index.ts)
-- [Employee table](../../../packages/db/src/schema/hr/employees.ts)
-- [Employment tables](../../../packages/db/src/schema/hr/employment-records.ts), [staff categories](../../../packages/db/src/schema/hr/staff-categories.ts), [positions](../../../packages/db/src/schema/hr/positions.ts), [academic ranks](../../../packages/db/src/schema/hr/academic-ranks.ts), [grade schemes](../../../packages/db/src/schema/hr/grade-schemes.ts), and [employment grades](../../../packages/db/src/schema/hr/employment-grades.ts)
-- [Certificate table](../../../packages/db/src/schema/hr/employee-certificates.ts), [decisions](../../../packages/db/src/schema/hr/administrative-decisions.ts), [documents](../../../packages/db/src/schema/hr/documents.ts), and [audit log](../../../packages/db/src/schema/hr/audit-log.ts)
-- [Request table](../../../packages/db/src/schema/hr/requests.ts), [request types](../../../packages/db/src/schema/hr/request-types.ts), [approval steps](../../../packages/db/src/schema/hr/request-workflow-steps.ts), [reviews](../../../packages/db/src/schema/hr/request-reviews.ts), and [request attachments](../../../packages/db/src/schema/hr/request-documents.ts)
-- [Migration 0002: initial HR tables](../../../packages/db/drizzle/0002_deep_morbius.sql)
-- [Migration 0003: request document links](../../../packages/db/drizzle/0003_outstanding_loners.sql)
-- [Migration 0004: workflow, audit, document integrity, and employment-history updates](../../../packages/db/drizzle/0004_tense_loa.sql)
-- [Migration 0005: rank/category constraints and initial reference data](../../../packages/db/drizzle/0005_fearless_marrow.sql)
-- [Migration 0006: one current employment record per employee](../../../packages/db/drizzle/0006_wooden_nova.sql)
+- [HR schema exports](../../../../packages/db/src/schema/hr/index.ts)
+- [Employee table](../../../../packages/db/src/schema/hr/employees.ts)
+- [Employment tables](../../../../packages/db/src/schema/hr/employment-records.ts), [staff categories](../../../../packages/db/src/schema/hr/staff-categories.ts), [positions](../../../../packages/db/src/schema/hr/positions.ts), [academic ranks](../../../../packages/db/src/schema/hr/academic-ranks.ts), [grade schemes](../../../../packages/db/src/schema/hr/grade-schemes.ts), and [employment grades](../../../../packages/db/src/schema/hr/employment-grades.ts)
+- [Certificate table](../../../../packages/db/src/schema/hr/employee-certificates.ts), [decisions](../../../../packages/db/src/schema/hr/administrative-decisions.ts), [documents](../../../../packages/db/src/schema/hr/documents.ts), and [audit log](../../../../packages/db/src/schema/hr/audit-log.ts)
+- [Request table](../../../../packages/db/src/schema/hr/requests.ts), [request types](../../../../packages/db/src/schema/hr/request-types.ts), [approval steps](../../../../packages/db/src/schema/hr/request-workflow-steps.ts), [reviews](../../../../packages/db/src/schema/hr/request-reviews.ts), and [request attachments](../../../../packages/db/src/schema/hr/request-documents.ts)
+- [Baseline: current schema](../../../../packages/db/drizzle/0000_slim_korath.sql)
+- [HR administration permissions and roles](../../../../packages/db/drizzle/0001_hr-admin-permissions.sql)
+
+## Initial API scope
+
+The [HR administration API](API.md) exposes employee profiles, current employment information, and reference lists. It updates current employment in place and preserves any pre-existing historical rows. Other schema entities remain available for later workflows. Account links, appointment/decision fields, document and request workflows, and deletion are not exposed by this API. HR mutations write transactionally to `hr_audit_log`.
