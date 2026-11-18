@@ -1,0 +1,229 @@
+{
+  "buildings": [
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "title": "Faculty Main Building",
+      "status": "active"
+    }
+  ],
+  "floors": [
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 1,
+      "title": "Floor 1"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 2,
+      "title": "Floor 2"
+    }
+  ],
+  "roomTypes": [
+    {
+      "name": "laboratory",
+      "description": "Laboratory"
+    },
+    {
+      "name": "classroom",
+      "description": "Classroom"
+    },
+    {
+      "name": "theater",
+      "description": "Theater"
+    }
+  ],
+  "rooms": [
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 1,
+      "roomType": "laboratory",
+      "roomCode": "lab_01",
+      "title": "lab_01",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 1,
+      "roomType": "laboratory",
+      "roomCode": "lab_02",
+      "title": "lab_02",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 1,
+      "roomType": "laboratory",
+      "roomCode": "lab_03",
+      "title": "lab_03",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 1,
+      "roomType": "laboratory",
+      "roomCode": "lab_04",
+      "title": "lab_04",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 1,
+      "roomType": "laboratory",
+      "roomCode": "lab_05",
+      "title": "lab_05",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 1,
+      "roomType": "laboratory",
+      "roomCode": "lab_06",
+      "title": "lab_06",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 2,
+      "roomType": "laboratory",
+      "roomCode": "lab_07",
+      "title": "lab_07",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 2,
+      "roomType": "laboratory",
+      "roomCode": "lab_08",
+      "title": "lab_08",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 2,
+      "roomType": "laboratory",
+      "roomCode": "lab_09",
+      "title": "lab_09",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 2,
+      "roomType": "laboratory",
+      "roomCode": "lab_10",
+      "title": "lab_10",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 2,
+      "roomType": "laboratory",
+      "roomCode": "lab_11",
+      "title": "lab_11",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 2,
+      "roomType": "laboratory",
+      "roomCode": "lab_12",
+      "title": "lab_12",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 1,
+      "roomType": "classroom",
+      "roomCode": "classroom_7",
+      "title": "Classroom 7",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 1,
+      "roomType": "classroom",
+      "roomCode": "classroom_8",
+      "title": "Classroom 8",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 1,
+      "roomType": "classroom",
+      "roomCode": "classroom_9",
+      "title": "Classroom 9",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 2,
+      "roomType": "classroom",
+      "roomCode": "classroom_10",
+      "title": "Classroom 10",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 2,
+      "roomType": "classroom",
+      "roomCode": "classroom_11",
+      "title": "Classroom 11",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 2,
+      "roomType": "classroom",
+      "roomCode": "classroom_12",
+      "title": "Classroom 12",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 1,
+      "roomType": "theater",
+      "roomCode": "theater_1",
+      "title": "Theater 1",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 1,
+      "roomType": "theater",
+      "roomCode": "theater_2",
+      "title": "Theater 2",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 1,
+      "roomType": "theater",
+      "roomCode": "theater_3",
+      "title": "Theater 3",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 2,
+      "roomType": "theater",
+      "roomCode": "theater_4",
+      "title": "Theater 4",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 2,
+      "roomType": "theater",
+      "roomCode": "theater_5",
+      "title": "Theater 5",
+      "status": "active"
+    },
+    {
+      "buildingCode": "FACULTY_MAIN",
+      "floorNumber": 2,
+      "roomType": "theater",
+      "roomCode": "theater_6",
+      "title": "Theater 6",
+      "status": "active"
+    }
+  ]
+}

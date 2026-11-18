@@ -1,4 +1,5 @@
 import { provisionHrPermissions } from '../modules/hr/hr.permissions.js';
+import { provisionFacilitiesPermissions } from '../modules/facilities/facilities.permissions.js';
 import { createDb } from '@project/db';
 import { user, account, roles, permissions, userRoles, rolePermissions } from '@project/db/schema';
 import { randomUUID } from 'node:crypto';
@@ -61,6 +62,7 @@ try {
         .onConflictDoNothing();
       await tx.insert(rolePermissions).values(keys.map((permission) => ({ roleId, permission })));
       await provisionHrPermissions(tx, roleId);
+      await provisionFacilitiesPermissions(tx, roleId);
       await tx.insert(userRoles).values({ userId: id, roleId });
     },
     { isolationLevel: 'serializable' },

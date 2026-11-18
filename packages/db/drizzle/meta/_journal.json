@@ -15,6 +15,13 @@
       "when": 1794863570465,
       "tag": "0001_hr-admin-permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795000224490,
+      "tag": "0002_facilities-permissions",
+      "breakpoints": true
     }
   ]
 }

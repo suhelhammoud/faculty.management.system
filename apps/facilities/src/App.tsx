@@ -1,11 +1,69 @@
+import { useState } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { Building2 } from 'lucide-react';
+import { Navigate, NavLink, Route, Routes } from 'react-router';
+import { AuthGate } from './components/auth';
+import { LanguageProvider } from './lib/language';
+import { useLanguage } from './lib/language-context';
+import { createFacilitiesClient } from './lib/api';
+import { RoomsPage } from './pages/rooms';
+import { SettingsPage } from './pages/settings';
 import './App.css';
+import './index.css';
 
-function App() {
+function FacilitiesShell() {
+  const { language, setLanguage, t } = useLanguage();
   return (
-    <>
-      <h1>Facilities</h1>
-    </>
+    <section className="faculty-facilities" lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <header className="fac-header">
+        <div className="fac-brand">
+          <span className="fac-brand-mark">
+            <Building2 size={21} />
+          </span>
+          <div>
+            <p className="fac-eyebrow">{t('Physical spaces')}</p>
+            <h1>{t('Facilities')}</h1>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="fac-button fac-button--secondary fac-language-button"
+          onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')}
+          aria-label={language === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
+        >
+          {language === 'en' ? 'العربية' : 'English'}
+        </button>
+      </header>
+      <AuthGate>
+        <nav className="fac-nav" aria-label={t('Facilities')}>
+          <NavLink to="/facilities/rooms">{t('Rooms')}</NavLink>
+          <NavLink to="/facilities/settings">{t('Settings')}</NavLink>
+        </nav>
+        <Routes>
+          <Route index element={<Navigate to="rooms" replace />} />
+          <Route path="rooms" element={<RoomsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route
+            path="*"
+            element={
+              <div className="fac-card">
+                <h2>{t('Page not found')}</h2>
+              </div>
+            }
+          />
+        </Routes>
+      </AuthGate>
+    </section>
   );
 }
 
-export default App;
+export default function App() {
+  const [client] = useState(createFacilitiesClient);
+  return (
+    <QueryClientProvider client={client}>
+      <LanguageProvider>
+        <FacilitiesShell />
+      </LanguageProvider>
+    </QueryClientProvider>
+  );
+}

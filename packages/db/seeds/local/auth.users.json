@@ -1,18 +1,27 @@
 [
   {
     "username": "hr_1",
-    "name": "HR One"
+    "name": "HR One",
+    "roles": ["hr_admin"]
   },
   {
     "username": "hr_2",
-    "name": "HR Two"
+    "name": "HR Two",
+    "roles": ["hr_admin"]
+  },
+  {
+    "username": "facility_1",
+    "name": "facility coordinator",
+    "roles": ["facilities_admin"]
   },
   {
     "username": "staff_one",
-    "name": "Staff One"
+    "name": "Staff One",
+    "roles": []
   },
   {
     "username": "staff_two",
-    "name": "Staff Two"
+    "name": "Staff Two",
+    "roles": []
   }
 ]

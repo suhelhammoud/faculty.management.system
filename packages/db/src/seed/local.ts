@@ -2,6 +2,7 @@ import { loadEnvFile } from 'node:process';
 import { resolve } from 'node:path';
 import { createDb } from '../client.js';
 import { seedAuth } from './auth.js';
+import { seedFacilities } from './facilities.js';
 import { seedHr } from './hr.js';
 
 const dbPackageRoot = resolve(import.meta.dirname, '../..');
@@ -42,7 +43,10 @@ try {
   await db.transaction(async (tx) => {
     const userIds = await seedAuth(tx, fixtureRoot, password);
     const employeeCount = await seedHr(tx, fixtureRoot, userIds);
-    console.log(`Seeded ${userIds.size} users and ${employeeCount} synthetic HR employees.`);
+    const roomCount = await seedFacilities(tx, fixtureRoot);
+    console.log(
+      `Seeded ${userIds.size} users, ${employeeCount} synthetic HR employees, and ${roomCount} rooms.`,
+    );
   });
 } finally {
   await pool.end();

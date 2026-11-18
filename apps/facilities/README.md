@@ -1,32 +1,25 @@
-# React + TypeScript + Vite
+# Facilities frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React/Vite Facilities app at `http://localhost:3010/facilities/rooms`, also exposed as `facilities/App` through Module Federation. The shell mounts it at `/facilities/*`.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Apply database migrations with `pnpm --filter @project/db migrate` and start the API with `PORT=4000`.
+2. Configure the API trusted origins to include `http://localhost:3010` and `http://localhost:3000` when using the shell. Assign the **Facilities Administrator** role to the intended account through Administration.
+3. Copy `.env.example` to `.env` only if you need to change the public `VITE_API_URL` build-time setting. Never put credentials in Vite variables.
+4. Run the API, Facilities, and optionally the shell:
 
-## React Compiler
+   ```sh
+   pnpm dev:api
+   pnpm dev:facilities
+   pnpm dev:shell
+   ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The app uses the shared session cookie and Facilities API. The API remains authoritative for permissions. The frontend supports English/LTR and Arabic/RTL; only the language choice is saved in browser storage.
 
-## Expanding the Oxlint configuration
+## Screens
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+- `/facilities/rooms` lists rooms, filters by building, floor, type, and status, and creates or edits rooms.
+- `/facilities/settings` maintains buildings, floors, and room types.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+The interface does not manage equipment, room reservations, or room-capacity history. See [Facilities API](../../docs/modules/facilities/API.md) and the [Facilities data model](../../docs/modules/facilities/DATA-MODEL.md).
