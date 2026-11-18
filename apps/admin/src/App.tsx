@@ -1,16 +1,17 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { DateInput, parseDate, formatDate } from '@project/ui/date-input';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import {
   QueryClient,
   QueryClientProvider,
   useMutation,
   useQuery,
   useQueryClient,
-} from "@tanstack/react-query";
-import { api } from "./api";
-import { useUi } from "./store";
-import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
-import "./index.css";
+} from '@tanstack/react-query';
+import { api } from './api';
+import { useUi } from './store';
+import { Button } from './components/ui/button';
+import { Input } from './components/ui/input';
+import './index.css';
 type User = {
   id: string;
   username: string;
@@ -59,10 +60,10 @@ function Field({
       <Input
         name={name}
         required
-        type={password ? "password" : "text"}
+        type={password ? 'password' : 'text'}
         minLength={password ? 12 : undefined}
         maxLength={password ? 128 : undefined}
-        autoComplete={password ? "new-password" : "off"}
+        autoComplete={password ? 'new-password' : 'off'}
       />
     </label>
   );
@@ -70,7 +71,7 @@ function Field({
 function ActionForm({
   title,
   path,
-  method = "POST",
+  method = 'POST',
   children,
   onSuccess,
 }: {
@@ -82,8 +83,7 @@ function ActionForm({
 }) {
   const client = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (body: Record<string, FormDataEntryValue>) =>
-      api(path, method, body),
+    mutationFn: (body: Record<string, FormDataEntryValue>) => api(path, method, body),
     onSuccess: async () => {
       await client.invalidateQueries();
       onSuccess?.();
@@ -106,12 +106,9 @@ function ActionForm({
   return (
     <form onSubmit={submit} className="panel">
       <h2>{title}</h2>
-      <fieldset
-        disabled={mutation.isPending}
-        className="form-grid border-0 p-0 m-0"
-      >
+      <fieldset disabled={mutation.isPending} className="form-grid border-0 p-0 m-0">
         {children}
-        <Button type="submit">{mutation.isPending ? "Saving…" : title}</Button>
+        <Button type="submit">{mutation.isPending ? 'Saving…' : title}</Button>
       </fieldset>
       {mutation.error && <p role="alert">{mutation.error.message}</p>}
       {done && <p role="status">Saved successfully.</p>}
@@ -121,8 +118,8 @@ function ActionForm({
 function Access() {
   const client = useQueryClient();
   const session = useQuery({
-    queryKey: ["session"],
-    queryFn: () => api<{ user: User } | null>("auth/get-session"),
+    queryKey: ['session'],
+    queryFn: () => api<{ user: User } | null>('auth/get-session'),
     refetchInterval: 30000,
     retry: false,
   });
@@ -132,20 +129,20 @@ function Access() {
     void session.refetch();
   };
   const logout = useMutation({
-    mutationFn: () => api("auth/sign-out", "POST", {}),
+    mutationFn: () => api('auth/sign-out', 'POST', {}),
     onSuccess: reset,
   });
   const login = useMutation({
     mutationFn: (body: { username: string; password: string }) =>
-      api("auth/sign-in/username", "POST", body),
+      api('auth/sign-in/username', 'POST', body),
     onSuccess: reset,
   });
   const change = useMutation({
     mutationFn: (body: { currentPassword: string; newPassword: string }) =>
-      api("admin/change-password", "POST", body),
+      api('admin/change-password', 'POST', body),
     onSuccess: reset,
   });
-  const [validation, setValidation] = useState("");
+  const [validation, setValidation] = useState('');
   if (session.isPending) return <p role="status">Checking your session…</p>;
   if (session.error)
     return (
@@ -168,8 +165,8 @@ function Access() {
             const data = new FormData(form);
             try {
               await login.mutateAsync({
-                username: String(data.get("username")),
-                password: String(data.get("password")),
+                username: String(data.get('username')),
+                password: String(data.get('password')),
               });
               form.reset();
               login.reset();
@@ -183,20 +180,11 @@ function Access() {
           </label>
           <label>
             Password
-            <Input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-            />
+            <Input name="password" type="password" autoComplete="current-password" required />
           </label>
-          <Button disabled={login.isPending}>
-            {login.isPending ? "Signing in…" : "Sign in"}
-          </Button>
+          <Button disabled={login.isPending}>{login.isPending ? 'Signing in…' : 'Sign in'}</Button>
           {login.error && <p role="alert">{login.error.message}</p>}
-          <p className="text-sm">
-            Forgot your password? Contact your administrator.
-          </p>
+          <p className="text-sm">Forgot your password? Contact your administrator.</p>
         </form>
       </div>
     );
@@ -207,19 +195,13 @@ function Access() {
           <h1>Faculty administration</h1>
           <p>Signed in as {user.username || user.name}</p>
         </div>
-        <Button
-          variant="outline"
-          disabled={logout.isPending}
-          onClick={() => logout.mutate()}
-        >
+        <Button variant="outline" disabled={logout.isPending} onClick={() => logout.mutate()}>
           Sign out
         </Button>
       </header>
       {logout.error && <p role="alert">{logout.error.message}</p>}
       {!user.enabled ? (
-        <section className="panel">
-          Your account is disabled. Contact your administrator.
-        </section>
+        <section className="panel">Your account is disabled. Contact your administrator.</section>
       ) : user.mustChangePassword ? (
         <form
           className="panel mx-auto max-w-lg grid gap-4"
@@ -227,15 +209,15 @@ function Access() {
             event.preventDefault();
             const form = event.currentTarget;
             const data = new FormData(form);
-            if (data.get("newPassword") !== data.get("confirm")) {
-              setValidation("Passwords do not match.");
+            if (data.get('newPassword') !== data.get('confirm')) {
+              setValidation('Passwords do not match.');
               return;
             }
-            setValidation("");
+            setValidation('');
             try {
               await change.mutateAsync({
-                currentPassword: String(data.get("currentPassword")),
-                newPassword: String(data.get("newPassword")),
+                currentPassword: String(data.get('currentPassword')),
+                newPassword: String(data.get('newPassword')),
               });
               form.reset();
               change.reset();
@@ -243,10 +225,7 @@ function Access() {
           }}
         >
           <h2>Set your new password</h2>
-          <p>
-            Replace your temporary password to continue. You will sign in again
-            afterward.
-          </p>
+          <p>Replace your temporary password to continue. You will sign in again afterward.</p>
           <label>
             Current password
             <Input
@@ -256,11 +235,7 @@ function Access() {
               required
             />
           </label>
-          <Field
-            name="newPassword"
-            label="New password (12–128 characters)"
-            password
-          />
+          <Field name="newPassword" label="New password (12–128 characters)" password />
           <Field name="confirm" label="Confirm new password" password />
           <Button disabled={change.isPending}>Change password</Button>
           {(validation || change.error) && (
@@ -270,10 +245,7 @@ function Access() {
       ) : !user.approved ? (
         <section className="panel">
           <h2>Awaiting approval</h2>
-          <p>
-            Your administrator must approve your account before you can
-            continue.
-          </p>
+          <p>Your administrator must approve your account before you can continue.</p>
           <Button onClick={() => void session.refetch()}>Check approval</Button>
         </section>
       ) : (
@@ -285,69 +257,64 @@ function Access() {
 function Dashboard() {
   const { tab, setTab, selectedUser, selectUser } = useUi();
   const client = useQueryClient();
-  const [roleId, setRoleId] = useState("");
+  const [roleId, setRoleId] = useState('');
   const [auditPage, setAuditPage] = useState(1);
-  const [auditAction, setAuditAction] = useState("");
-  const [auditActor, setAuditActor] = useState("");
-  const [auditFrom, setAuditFrom] = useState("");
-  const [auditTo, setAuditTo] = useState("");
+  const [auditAction, setAuditAction] = useState('');
+  const [auditActor, setAuditActor] = useState('');
+  const [auditFrom, setAuditFrom] = useState('');
+  const [auditTo, setAuditTo] = useState('');
   const users = useQuery({
-    queryKey: ["users"],
-    queryFn: () => api<User[]>("admin/users"),
+    queryKey: ['users'],
+    queryFn: () => api<User[]>('admin/users'),
     retry: false,
   });
   const roles = useQuery({
-    queryKey: ["roles"],
-    queryFn: () => api<Role[]>("admin/roles"),
+    queryKey: ['roles'],
+    queryFn: () => api<Role[]>('admin/roles'),
     retry: false,
   });
   const permissions = useQuery({
-    queryKey: ["permissions"],
-    queryFn: () => api<{ key: string }[]>("admin/permissions"),
+    queryKey: ['permissions'],
+    queryFn: () => api<{ key: string }[]>('admin/permissions'),
     retry: false,
   });
   const rolePermissions = useQuery({
-    queryKey: ["role-permissions", roleId],
-    queryFn: () =>
-      api<RolePermission[]>(`admin/roles/${enc(roleId)}/permissions`),
-    enabled: tab === "roles" && !!roleId,
+    queryKey: ['role-permissions', roleId],
+    queryFn: () => api<RolePermission[]>(`admin/roles/${enc(roleId)}/permissions`),
+    enabled: tab === 'roles' && !!roleId,
     retry: false,
   });
   const acl = useQuery({
-    queryKey: ["acl", selectedUser],
+    queryKey: ['acl', selectedUser],
     queryFn: () => api<Acl[]>(`admin/users/${enc(selectedUser)}/acl`),
-    enabled: tab === "acl" && !!selectedUser,
+    enabled: tab === 'acl' && !!selectedUser,
     retry: false,
   });
   const audit = useQuery({
-    queryKey: [
-      "audit-log",
-      auditPage,
-      auditAction,
-      auditActor,
-      auditFrom,
-      auditTo,
-    ],
+    queryKey: ['audit-log', auditPage, auditAction, auditActor, auditFrom, auditTo],
     queryFn: () => {
       const params = new URLSearchParams({
         page: String(auditPage),
-        pageSize: "25",
+        pageSize: '25',
       });
-      if (auditAction) params.set("action", auditAction);
-      if (auditActor) params.set("actor", auditActor);
-      if (auditFrom) params.set("from", new Date(auditFrom).toISOString());
-      if (auditTo) params.set("to", new Date(auditTo).toISOString());
+      if (auditAction) params.set('action', auditAction);
+      if (auditActor) params.set('actor', auditActor);
+      if (auditFrom) params.set('from', new Date(auditFrom).toISOString());
+      if (auditTo) params.set('to', new Date(auditTo).toISOString());
       return api<AuditPage>(`admin/audit-log?${params.toString()}`);
     },
-    enabled: tab === "audit",
+    enabled:
+      tab === 'audit' &&
+      (!auditFrom || !!parseDate(formatDate(auditFrom), true)) &&
+      (!auditTo || !!parseDate(formatDate(auditTo), true)),
     retry: false,
   });
   const mutation = useMutation({
     mutationFn: ({ path, method }: { path: string; method: string }) =>
-      api(path, method, method === "POST" ? {} : undefined),
+      api(path, method, method === 'POST' ? {} : undefined),
     onSuccess: () => client.invalidateQueries(),
   });
-  const act = (path: string, label: string, method = "POST") => {
+  const act = (path: string, label: string, method = 'POST') => {
     if (window.confirm(label)) mutation.mutate({ path, method });
   };
   const userOptions = (
@@ -373,20 +340,20 @@ function Dashboard() {
   return (
     <>
       <nav aria-label="Administration" className="flex flex-wrap gap-2 mt-6">
-        {(["users", "roles", "acl", "audit"] as const).map((t) => (
+        {(['users', 'roles', 'acl', 'audit'] as const).map((t) => (
           <Button
             key={t}
-            variant={tab === t ? "default" : "outline"}
+            variant={tab === t ? 'default' : 'outline'}
             aria-pressed={tab === t}
             onClick={() => setTab(t)}
           >
-            {t === "audit"
-              ? "Audit log"
-              : t === "acl"
-                ? "Resource access"
-                : t === "users"
-                  ? "Accounts"
-                  : "Roles & permissions"}
+            {t === 'audit'
+              ? 'Audit log'
+              : t === 'acl'
+                ? 'Resource access'
+                : t === 'users'
+                  ? 'Accounts'
+                  : 'Roles & permissions'}
           </Button>
         ))}
       </nav>
@@ -394,11 +361,11 @@ function Dashboard() {
       {[users, roles, permissions].map((q, i) =>
         q.error ? (
           <p role="alert" key={i}>
-            {["Accounts", "Roles", "Permissions"][i]}: {q.error.message}
+            {['Accounts', 'Roles', 'Permissions'][i]}: {q.error.message}
           </p>
         ) : null,
       )}
-      {tab === "users" && (
+      {tab === 'users' && (
         <>
           <section className="panel overflow-x-auto">
             <h2>Accounts</h2>
@@ -421,22 +388,19 @@ function Dashboard() {
                       <td>{u.username}</td>
                       <td>
                         {!u.enabled
-                          ? "Disabled"
+                          ? 'Disabled'
                           : !u.approved
-                            ? "Pending approval"
+                            ? 'Pending approval'
                             : u.mustChangePassword
-                              ? "Password change required"
-                              : "Active"}
+                              ? 'Password change required'
+                              : 'Active'}
                       </td>
                       <td className="flex flex-wrap gap-2">
                         {!u.approved && (
                           <Button
                             disabled={mutation.isPending}
                             onClick={() =>
-                              act(
-                                `admin/users/${enc(u.id)}/approve`,
-                                `Approve ${u.username}?`,
-                              )
+                              act(`admin/users/${enc(u.id)}/approve`, `Approve ${u.username}?`)
                             }
                           >
                             Approve
@@ -447,17 +411,14 @@ function Dashboard() {
                           disabled={mutation.isPending}
                           onClick={() =>
                             act(
-                              `admin/users/${enc(u.id)}/${u.enabled ? "disable" : "enable"}`,
-                              `${u.enabled ? "Disable" : "Enable"} ${u.username}?`,
+                              `admin/users/${enc(u.id)}/${u.enabled ? 'disable' : 'enable'}`,
+                              `${u.enabled ? 'Disable' : 'Enable'} ${u.username}?`,
                             )
                           }
                         >
-                          {u.enabled ? "Disable" : "Enable"}
+                          {u.enabled ? 'Disable' : 'Enable'}
                         </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => selectUser(u.id)}
-                        >
+                        <Button variant="outline" onClick={() => selectUser(u.id)}>
                           Manage
                         </Button>
                       </td>
@@ -476,10 +437,7 @@ function Dashboard() {
           <section className="panel">
             <label>
               Manage account
-              <select
-                value={selectedUser}
-                onChange={(e) => selectUser(e.target.value)}
-              >
+              <select value={selectedUser} onChange={(e) => selectUser(e.target.value)}>
                 {userOptions}
               </select>
             </label>
@@ -487,23 +445,14 @@ function Dashboard() {
           {selectedUser && (
             <>
               <ActionForm
-                key={"reset" + selectedUser}
+                key={'reset' + selectedUser}
                 title="Reset password"
                 path={`admin/users/${enc(selectedUser)}/reset-password`}
               >
-                <Field
-                  name="password"
-                  label="New temporary password"
-                  password
-                />
-                <p>
-                  All sessions will be revoked. Share the password securely.
-                </p>
+                <Field name="password" label="New temporary password" password />
+                <p>All sessions will be revoked. Share the password securely.</p>
               </ActionForm>
-              <ActionForm
-                title="Assign role"
-                path={`admin/users/${enc(selectedUser)}/roles`}
-              >
+              <ActionForm title="Assign role" path={`admin/users/${enc(selectedUser)}/roles`}>
                 <label>
                   Role
                   <select name="roleId" required>
@@ -514,10 +463,7 @@ function Dashboard() {
               <section className="panel form-grid">
                 <label>
                   Role to remove
-                  <select
-                    value={roleId}
-                    onChange={(e) => setRoleId(e.target.value)}
-                  >
+                  <select value={roleId} onChange={(e) => setRoleId(e.target.value)}>
                     {roleOptions}
                   </select>
                 </label>
@@ -527,8 +473,8 @@ function Dashboard() {
                   onClick={() =>
                     act(
                       `admin/users/${enc(selectedUser)}/roles/${enc(roleId)}`,
-                      "Remove this role assignment and revoke sessions?",
-                      "DELETE",
+                      'Remove this role assignment and revoke sessions?',
+                      'DELETE',
                     )
                   }
                 >
@@ -539,7 +485,7 @@ function Dashboard() {
           )}
         </>
       )}
-      {tab === "roles" && (
+      {tab === 'roles' && (
         <>
           <ActionForm title="Create role" path="admin/roles">
             <Field name="name" label="Role name" />
@@ -548,20 +494,14 @@ function Dashboard() {
             <h2>Manage role</h2>
             <label>
               Role
-              <select
-                value={roleId}
-                onChange={(e) => setRoleId(e.target.value)}
-              >
+              <select value={roleId} onChange={(e) => setRoleId(e.target.value)}>
                 {roleOptions}
               </select>
             </label>
           </section>
           {roleId && (
             <>
-              <ActionForm
-                title="Grant permission"
-                path={`admin/roles/${enc(roleId)}/permissions`}
-              >
+              <ActionForm title="Grant permission" path={`admin/roles/${enc(roleId)}/permissions`}>
                 <label>
                   Permission
                   <select name="permission" required>
@@ -602,7 +542,7 @@ function Dashboard() {
                                 act(
                                   `admin/roles/${enc(roleId)}/permissions/${enc(key)}`,
                                   `Remove ${key} from this role?`,
-                                  "DELETE",
+                                  'DELETE',
                                 )
                               }
                             >
@@ -622,8 +562,8 @@ function Dashboard() {
                   onClick={() =>
                     act(
                       `admin/roles/${enc(roleId)}`,
-                      "Delete this role and all its assignments?",
-                      "DELETE",
+                      'Delete this role and all its assignments?',
+                      'DELETE',
                     )
                   }
                 >
@@ -644,29 +584,21 @@ function Dashboard() {
           </section>
         </>
       )}
-      {tab === "acl" && (
+      {tab === 'acl' && (
         <>
           <section className="panel">
             <h2>Individual resource exceptions</h2>
-            <p>
-              Explicit denies take precedence over grants and role permissions.
-            </p>
+            <p>Explicit denies take precedence over grants and role permissions.</p>
             <label>
               User
-              <select
-                value={selectedUser}
-                onChange={(e) => selectUser(e.target.value)}
-              >
+              <select value={selectedUser} onChange={(e) => selectUser(e.target.value)}>
                 {userOptions}
               </select>
             </label>
           </section>
           {selectedUser && (
             <>
-              <ActionForm
-                title="Add access rule"
-                path={`admin/users/${enc(selectedUser)}/acl`}
-              >
+              <ActionForm title="Add access rule" path={`admin/users/${enc(selectedUser)}/acl`}>
                 <label>
                   Resource type
                   <select name="resourceType">
@@ -724,8 +656,8 @@ function Dashboard() {
                               onClick={() =>
                                 act(
                                   `admin/users/${enc(selectedUser)}/acl/${enc(r.id)}`,
-                                  "Remove this access rule?",
-                                  "DELETE",
+                                  'Remove this access rule?',
+                                  'DELETE',
                                 )
                               }
                             >
@@ -742,7 +674,7 @@ function Dashboard() {
           )}
         </>
       )}
-      {tab === "audit" && (
+      {tab === 'audit' && (
         <section className="panel overflow-x-auto">
           <h2>Recent administrative activity</h2>
           <div className="form-grid my-4">
@@ -770,22 +702,22 @@ function Dashboard() {
             </label>
             <label>
               From
-              <input
-                type="datetime-local"
+              <DateInput
+                withTime
                 value={auditFrom}
-                onChange={(e) => {
-                  setAuditFrom(e.target.value);
+                onValueChange={(value) => {
+                  setAuditFrom(value);
                   setAuditPage(1);
                 }}
               />
             </label>
             <label>
               To
-              <input
-                type="datetime-local"
+              <DateInput
+                withTime
                 value={auditTo}
-                onChange={(e) => {
-                  setAuditTo(e.target.value);
+                onValueChange={(value) => {
+                  setAuditTo(value);
                   setAuditPage(1);
                 }}
               />
@@ -810,12 +742,8 @@ function Dashboard() {
               <tbody>
                 {audit.data?.records.map((record) => (
                   <tr key={record.id}>
-                    <td>{new Date(record.createdAt).toLocaleString()}</td>
-                    <td>
-                      {record.actorName ||
-                        record.actorUsername ||
-                        record.actorId}
-                    </td>
+                    <td>{new Date(record.createdAt).toLocaleString('en-GB')}</td>
+                    <td>{record.actorName || record.actorUsername || record.actorId}</td>
                     <td>
                       <code>{record.action}</code>
                     </td>
@@ -840,10 +768,7 @@ function Dashboard() {
                 </Button>
                 <Button
                   variant="outline"
-                  disabled={
-                    auditPage * audit.data.pageSize >= audit.data.total ||
-                    audit.isFetching
-                  }
+                  disabled={auditPage * audit.data.pageSize >= audit.data.total || audit.isFetching}
                   onClick={() => setAuditPage((p) => p + 1)}
                 >
                   Next

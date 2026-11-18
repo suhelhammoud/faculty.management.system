@@ -87,21 +87,23 @@ export function AuthGate({ children }: { children: ReactNode }) {
             className="hr-stack"
           >
             <fieldset disabled={login.isPending} className="hr-stack">
-              <Field
-                name="Username"
-                value={values.username || ''}
-                onChange={update('username')}
-                required
-                autoComplete="username"
-              />
-              <Field
-                name="Password"
-                type="password"
-                value={values.Password || ''}
-                onChange={update('Password')}
-                required
-                autoComplete="current-password"
-              />
+              <div className="hr-form-fields">
+                <Field
+                  name="Username"
+                  value={values.username || ''}
+                  onChange={update('username')}
+                  required
+                  autoComplete="username"
+                />
+                <Field
+                  name="Password"
+                  type="password"
+                  value={values.Password || ''}
+                  onChange={update('Password')}
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
               <Button type="submit">{t(login.isPending ? 'Loading…' : 'Sign in')}</Button>
             </fieldset>
             <ErrorMessage error={login.error} />
@@ -149,17 +151,21 @@ export function AuthGate({ children }: { children: ReactNode }) {
               }}
             >
               <fieldset disabled={change.isPending} className="hr-stack">
-                {['Current password', 'New password', 'Confirm password'].map((name) => (
-                  <Field
-                    key={name}
-                    name={name}
-                    type="password"
-                    required
-                    value={values[name] || ''}
-                    onChange={update(name)}
-                    autoComplete={name === 'Current password' ? 'current-password' : 'new-password'}
-                  />
-                ))}
+                <div className="hr-form-fields">
+                  {['Current password', 'New password', 'Confirm password'].map((name) => (
+                    <Field
+                      key={name}
+                      name={name}
+                      type="password"
+                      required
+                      value={values[name] || ''}
+                      onChange={update(name)}
+                      autoComplete={
+                        name === 'Current password' ? 'current-password' : 'new-password'
+                      }
+                    />
+                  ))}
+                </div>
                 <p className="hr-muted">{t('Use 12–128 characters.')}</p>
                 <Button>{t(change.isPending ? 'Saving…' : 'Change password')}</Button>
               </fieldset>

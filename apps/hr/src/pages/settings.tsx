@@ -240,46 +240,45 @@ function ReferenceForm({
     >
       {dependentPending && <Loading />}
       <ErrorMessage error={dependentError} />
-      <fieldset
-        className="hr-form-grid"
-        disabled={save.isPending || dependentPending || !!dependentError}
-      >
-        {referenceFields[kind].map((name) =>
-          name === 'categoryId' || name === 'schemeId' ? (
-            <ReferenceSelect
-              key={name}
-              name={name}
-              kind={name === 'categoryId' ? 'staff-categories' : 'grade-schemes'}
-              rows={name === 'categoryId' ? categories.data : schemes.data}
-              value={values[name]}
-              onChange={set(name)}
-              required
-              error={errors[name]}
-            />
-          ) : name === 'isAcademic' ? (
-            <div className="hr-check" key={name}>
-              <Checkbox
-                id="isAcademic"
-                checked={values[name] === '1'}
-                onCheckedChange={(checked) => set(name)(checked ? '1' : '0')}
+      <fieldset disabled={save.isPending || dependentPending || !!dependentError}>
+        <div className="hr-form-fields">
+          {referenceFields[kind].map((name) =>
+            name === 'categoryId' || name === 'schemeId' ? (
+              <ReferenceSelect
+                key={name}
+                name={name}
+                kind={name === 'categoryId' ? 'staff-categories' : 'grade-schemes'}
+                rows={name === 'categoryId' ? categories.data : schemes.data}
+                value={values[name]}
+                onChange={set(name)}
+                required
+                error={errors[name]}
               />
-              <Label htmlFor="isAcademic">{t(name)}</Label>
-            </div>
-          ) : (
-            <Field
-              key={name}
-              name={name}
-              value={values[name]}
-              onChange={set(name)}
-              required={referenceRequired[kind].includes(name)}
-              error={errors[name]}
-              textarea={name === 'description'}
-              type={['rankOrder', 'gradeNumber', 'stepNumber'].includes(name) ? 'number' : 'text'}
-              min={1}
-              max={name === 'rankOrder' ? 5 : 32767}
-            />
-          ),
-        )}
+            ) : name === 'isAcademic' ? (
+              <div className="hr-check" key={name}>
+                <Checkbox
+                  id="isAcademic"
+                  checked={values[name] === '1'}
+                  onCheckedChange={(checked) => set(name)(checked ? '1' : '0')}
+                />
+                <Label htmlFor="isAcademic">{t(name)}</Label>
+              </div>
+            ) : (
+              <Field
+                key={name}
+                name={name}
+                value={values[name]}
+                onChange={set(name)}
+                required={referenceRequired[kind].includes(name)}
+                error={errors[name]}
+                textarea={name === 'description'}
+                type={['rankOrder', 'gradeNumber', 'stepNumber'].includes(name) ? 'number' : 'text'}
+                min={1}
+                max={name === 'rankOrder' ? 5 : 32767}
+              />
+            ),
+          )}
+        </div>
       </fieldset>
       <ErrorMessage error={save.error} />
       <div className="hr-actions">

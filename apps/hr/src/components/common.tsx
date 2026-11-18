@@ -1,3 +1,4 @@
+import { DateInput } from '@project/ui/date-input';
 import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription } from './ui/alert';
@@ -104,6 +105,12 @@ export function Field({
       </Label>
       {textarea ? (
         <Textarea {...attributes} />
+      ) : type === 'date' ? (
+        <DateInput
+          {...attributes}
+          className="hr:h-9 hr:w-full hr:rounded-md hr:border hr:border-input hr:bg-transparent hr:px-3 hr:py-1 hr:text-base hr:shadow-xs hr:outline-none hr:focus-visible:border-ring hr:focus-visible:ring-2 hr:aria-invalid:border-destructive"
+          onValueChange={onChange}
+        />
       ) : (
         <Input
           {...attributes}

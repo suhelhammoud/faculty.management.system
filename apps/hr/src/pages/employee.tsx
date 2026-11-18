@@ -1,3 +1,4 @@
+import { formatDate } from '@project/ui/date-input';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
@@ -87,7 +88,11 @@ export function EmployeePage({ edit = false }: { edit?: boolean }) {
                 {personalFields.map((field) => (
                   <div key={field}>
                     <dt>{t(field)}</dt>
-                    <dd dir="auto">{data[field] || '—'}</dd>
+                    <dd dir="auto">
+                      {(field === 'birthDate' && data[field]
+                        ? formatDate(data[field])
+                        : data[field]) || '—'}
+                    </dd>
                   </div>
                 ))}
               </dl>
@@ -136,33 +141,35 @@ function PersonalForm({ employee }: { employee?: Employee }) {
           }}
           noValidate
         >
-          <fieldset className="hr-form-grid" disabled={save.isPending}>
-            {personalFields.map((name) => (
-              <Field
-                key={name}
-                name={name}
-                value={values[name]}
-                onChange={(value) => {
-                  setValues((v) => ({ ...v, [name]: value }));
-                  setErrors((v) => ({ ...v, [name]: '' }));
-                  save.reset();
-                }}
-                error={errors[name]}
-                required={requiredPersonal.includes(name)}
-                textarea={['address', 'notes'].includes(name)}
-                type={
-                  name === 'birthDate'
-                    ? 'date'
-                    : name === 'email'
-                      ? 'email'
-                      : /Phone$|Number$/.test(name) &&
-                          name !== 'employeeNumber' &&
-                          name !== 'civilRegistryNumber'
-                        ? 'tel'
-                        : 'text'
-                }
-              />
-            ))}
+          <fieldset disabled={save.isPending}>
+            <div className="hr-form-fields">
+              {personalFields.map((name) => (
+                <Field
+                  key={name}
+                  name={name}
+                  value={values[name]}
+                  onChange={(value) => {
+                    setValues((v) => ({ ...v, [name]: value }));
+                    setErrors((v) => ({ ...v, [name]: '' }));
+                    save.reset();
+                  }}
+                  error={errors[name]}
+                  required={requiredPersonal.includes(name)}
+                  textarea={['address', 'notes'].includes(name)}
+                  type={
+                    name === 'birthDate'
+                      ? 'date'
+                      : name === 'email'
+                        ? 'email'
+                        : /Phone$|Number$/.test(name) &&
+                            name !== 'employeeNumber' &&
+                            name !== 'civilRegistryNumber'
+                          ? 'tel'
+                          : 'text'
+                  }
+                />
+              ))}
+            </div>
           </fieldset>
           <ErrorMessage error={save.error} />
           <Success show={save.isSuccess} />
@@ -220,8 +227,8 @@ function EmploymentDetails({ employment }: { employment: Employment | null }) {
               department: employment.department,
               employmentRegime: employment.employmentRegime,
               employmentStatus: employment.employmentStatus,
-              startDate: employment.startDate,
-              endDate: employment.endDate,
+              startDate: formatDate(employment.startDate),
+              endDate: employment.endDate ? formatDate(employment.endDate) : null,
               notes: employment.notes,
             }).map(([key, value]) => (
               <div key={key}>
@@ -349,71 +356,75 @@ function EmploymentForm({
                 if (!Object.keys(nextErrors).length) save.mutate();
               }}
             >
-              <fieldset className="hr-form-grid" disabled={save.isPending}>
-                <ReferenceSelect
-                  kind="staff-categories"
-                  name="categoryId"
-                  rows={categories.data}
-                  value={values.categoryId}
-                  onChange={set('categoryId')}
-                  required
-                  error={errors.categoryId}
-                />
-                <ReferenceSelect
-                  kind="positions"
-                  name="positionId"
-                  rows={positions.data?.filter((p) => p.categoryId === values.categoryId)}
-                  value={values.positionId}
-                  onChange={set('positionId')}
-                  required
-                  error={errors.positionId}
-                />
-                <ReferenceSelect
-                  kind="academic-ranks"
-                  name="academicRankId"
-                  rows={ranks.data}
-                  value={values.academicRankId}
-                  onChange={set('academicRankId')}
-                  placeholder="None"
-                />
-                <ReferenceSelect
-                  kind="grade-schemes"
-                  name="schemeId"
-                  rows={schemes.data}
-                  value={selectedScheme}
-                  onChange={(id) => {
-                    setScheme(id);
-                    set('gradeId')('');
-                  }}
-                  placeholder="None"
-                />
-                <ReferenceSelect
-                  kind="employment-grades"
-                  name="gradeId"
-                  rows={grades.data?.filter((g) => g.schemeId === selectedScheme)}
-                  value={values.gradeId}
-                  onChange={set('gradeId')}
-                  placeholder="None"
-                />
-                {[
-                  'department',
-                  'employmentRegime',
-                  'employmentStatus',
-                  'startDate',
-                  'endDate',
-                  'notes',
-                ].map((name) => (
-                  <Field
-                    key={name}
-                    name={name}
-                    value={values[name]}
-                    onChange={set(name)}
-                    required={['employmentRegime', 'employmentStatus', 'startDate'].includes(name)}
-                    error={errors[name]}
-                    type={name.endsWith('Date') ? 'date' : 'text'}
-                    textarea={name === 'notes'}
+              <fieldset disabled={save.isPending}>
+                <div className="hr-form-fields">
+                  <ReferenceSelect
+                    kind="staff-categories"
+                    name="categoryId"
+                    rows={categories.data}
+                    value={values.categoryId}
+                    onChange={set('categoryId')}
+                    required
+                    error={errors.categoryId}
                   />
-                ))}
+                  <ReferenceSelect
+                    kind="positions"
+                    name="positionId"
+                    rows={positions.data?.filter((p) => p.categoryId === values.categoryId)}
+                    value={values.positionId}
+                    onChange={set('positionId')}
+                    required
+                    error={errors.positionId}
+                  />
+                  <ReferenceSelect
+                    kind="academic-ranks"
+                    name="academicRankId"
+                    rows={ranks.data}
+                    value={values.academicRankId}
+                    onChange={set('academicRankId')}
+                    placeholder="None"
+                  />
+                  <ReferenceSelect
+                    kind="grade-schemes"
+                    name="schemeId"
+                    rows={schemes.data}
+                    value={selectedScheme}
+                    onChange={(id) => {
+                      setScheme(id);
+                      set('gradeId')('');
+                    }}
+                    placeholder="None"
+                  />
+                  <ReferenceSelect
+                    kind="employment-grades"
+                    name="gradeId"
+                    rows={grades.data?.filter((g) => g.schemeId === selectedScheme)}
+                    value={values.gradeId}
+                    onChange={set('gradeId')}
+                    placeholder="None"
+                  />
+                  {[
+                    'department',
+                    'employmentRegime',
+                    'employmentStatus',
+                    'startDate',
+                    'endDate',
+                    'notes',
+                  ].map((name) => (
+                    <Field
+                      key={name}
+                      name={name}
+                      value={values[name]}
+                      onChange={set(name)}
+                      required={['employmentRegime', 'employmentStatus', 'startDate'].includes(
+                        name,
+                      )}
+                      error={errors[name]}
+                      type={name.endsWith('Date') ? 'date' : 'text'}
+                      textarea={name === 'notes'}
+                    />
+                  ))}
+                </div>
               </fieldset>
               <ErrorMessage error={save.error} />
               <Success show={save.isSuccess} />

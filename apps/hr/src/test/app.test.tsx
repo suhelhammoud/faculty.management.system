@@ -268,7 +268,7 @@ describe('HR application', () => {
     await user.selectOptions(within(employmentForm).getByLabelText(/Staff category/), category);
     await user.selectOptions(within(employmentForm).getByLabelText(/Position/), position);
     await user.type(within(employmentForm).getByLabelText(/Employment regime/), 'Faculty staff');
-    await user.type(within(employmentForm).getByLabelText(/Start date/), '2026-01-01');
+    await user.type(within(employmentForm).getByLabelText(/Start date/), '01/01/2026');
     await user.click(save);
     await screen.findByText('Saved successfully.');
     expect(requests.find((r) => r.method === 'PUT')?.body).toMatchObject({

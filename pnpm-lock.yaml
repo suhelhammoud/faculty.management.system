@@ -181,6 +181,9 @@ importers:
       '@module-federation/vite':
         specifier: ^1.23.11
         version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      '@project/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@radix-ui/react-slot':
         specifier: ^1.2.0
         version: 1.5.0(@types/react@19.3.0)(react@19.3.1)
@@ -460,6 +463,9 @@ importers:
       '@module-federation/vite':
         specifier: ^1.23.11
         version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      '@project/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@radix-ui/react-direction':
         specifier: ^1.2.0
         version: 1.2.0(@types/react@19.3.0)(react@19.3.1)
@@ -774,6 +780,16 @@ importers:
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
+
+  packages/ui:
+    dependencies:
+      react:
+        specifier: ^19.3.1
+        version: 19.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
 
 packages:
 

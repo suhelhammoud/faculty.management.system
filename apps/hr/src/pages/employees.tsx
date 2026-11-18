@@ -81,7 +81,7 @@ function EmployeeList({
       <Card>
         <CardContent>
           <form
-            className="hr-filter-grid"
+            className="hr-stack"
             onSubmit={(event) => {
               event.preventDefault();
               const next = new URLSearchParams();
@@ -91,41 +91,43 @@ function EmployeeList({
               setParams(employeeFilters(next));
             }}
           >
-            <Field name="Search" value={draft.search || ''} onChange={set('search')} />
-            <ReferenceSelect
-              name="categoryId"
-              kind="staff-categories"
-              rows={category.data}
-              value={draft.categoryId || ''}
-              onChange={set('categoryId')}
-              placeholder="All categories"
-            />
-            <ReferenceSelect
-              name="positionId"
-              kind="positions"
-              rows={positions.data?.filter(
-                (p) => !draft.categoryId || p.categoryId === draft.categoryId,
-              )}
-              value={draft.positionId || ''}
-              onChange={set('positionId')}
-              placeholder="All positions"
-            />
-            <Field
-              name="employmentStatus"
-              value={draft.employmentStatus || ''}
-              onChange={set('employmentStatus')}
-            />
-            <SelectField
-              name="Rows per page"
-              value={draft.pageSize || '20'}
-              onChange={set('pageSize')}
-            >
-              {[10, 20, 50, 100].map((size) => (
-                <NativeSelectOption key={size} value={size}>
-                  {size}
-                </NativeSelectOption>
-              ))}
-            </SelectField>
+            <div className="hr-form-fields">
+              <Field name="Search" value={draft.search || ''} onChange={set('search')} />
+              <ReferenceSelect
+                name="categoryId"
+                kind="staff-categories"
+                rows={category.data}
+                value={draft.categoryId || ''}
+                onChange={set('categoryId')}
+                placeholder="All categories"
+              />
+              <ReferenceSelect
+                name="positionId"
+                kind="positions"
+                rows={positions.data?.filter(
+                  (p) => !draft.categoryId || p.categoryId === draft.categoryId,
+                )}
+                value={draft.positionId || ''}
+                onChange={set('positionId')}
+                placeholder="All positions"
+              />
+              <Field
+                name="employmentStatus"
+                value={draft.employmentStatus || ''}
+                onChange={set('employmentStatus')}
+              />
+              <SelectField
+                name="Rows per page"
+                value={draft.pageSize || '20'}
+                onChange={set('pageSize')}
+              >
+                {[10, 20, 50, 100].map((size) => (
+                  <NativeSelectOption key={size} value={size}>
+                    {size}
+                  </NativeSelectOption>
+                ))}
+              </SelectField>
+            </div>
             <div className="hr-actions">
               <Button type="submit">{t('Apply filters')}</Button>
               <Button

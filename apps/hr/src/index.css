@@ -171,18 +171,27 @@
   align-content: start;
   min-width: 0;
 }
-.hr-form-grid,
 .hr-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
-.hr-filter-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 16px;
-  align-items: end;
+/* Fill down each column while preserving DOM and keyboard order. */
+.hr-form-fields {
+  columns: 18rem 3;
+  column-gap: 20px;
+  column-fill: balance;
+  min-width: 0;
 }
+.hr-form-fields textarea {
+  resize: vertical;
+  max-width: 100%;
+}
+.hr-form-fields > * {
+  break-inside: avoid;
+  margin-block-end: 20px;
+}
+
 .hr-field-error {
   color: #b91c1c;
   font-size: 13px;
@@ -220,9 +229,11 @@
   .faculty-hr {
     padding: 16px;
   }
-  .hr-form-grid,
   .hr-detail-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .hr-form-fields {
+    columns: auto 1;
   }
   .hr-settings-tabs {
     gap: 4px;
