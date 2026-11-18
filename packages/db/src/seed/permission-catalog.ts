@@ -5,11 +5,11 @@ import { createDb } from '../client.js';
 import { seedPermissionCatalog } from './permissions.js';
 
 const dbPackageRoot = resolve(import.meta.dirname, '../..');
-const envPath = resolve(dbPackageRoot, '.env');
+const envPath = resolve(dbPackageRoot, '.env.db');
 if (existsSync(envPath)) loadEnvFile(envPath);
 
 const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error('Set DATABASE_URL in packages/db/.env or the environment');
+if (!databaseUrl) throw new Error('Set DATABASE_URL in packages/db/.env.db or the environment');
 
 const { db, pool } = createDb(databaseUrl);
 try {

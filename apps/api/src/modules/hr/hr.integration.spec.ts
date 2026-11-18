@@ -44,7 +44,7 @@ describe.skipIf(!databaseName)('HR API integration (isolated PostgreSQL)', () =>
   beforeAll(async () => {
     if (!databaseName?.endsWith('_test'))
       throw new Error('HR_TEST_DATABASE_NAME must end in _test');
-    process.loadEnvFile('../../packages/db/.env');
+    process.loadEnvFile('../../packages/db/.env.db');
     const url = new URL(process.env.DATABASE_URL!);
     url.pathname = `/${databaseName}`;
     connection = createDb(url.toString());

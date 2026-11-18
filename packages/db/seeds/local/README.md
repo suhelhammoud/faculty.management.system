@@ -28,8 +28,8 @@ to floor 2. Replace the placeholder building code/title with the institution's
 actual building details when available. Room capacities remain unset because
 none were provided.
 
-Set `DATABASE_URL` and `SEED_USER_PASSWORD` in the ignored
-`packages/db/.env` file. The shared password must be 12–128 characters. The
+Set `DATABASE_URL` in the ignored `packages/db/.env.db` file and
+`SEED_USER_PASSWORD` in `packages/db/.env`. The shared password must be 12–128 characters. The
 runner hashes it before storing credentials, marks seeded users approved and
 enabled, and does not require a password change.
 

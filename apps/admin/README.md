@@ -4,7 +4,7 @@ Standalone React/Vite app at http://localhost:3011, exposing `admin/App` through
 
 ## Run locally
 
-1. Configure the API with `PORT=4000`, `BETTER_AUTH_URL=http://localhost:4000`, and `TRUSTED_ORIGINS=http://localhost:3011,http://localhost:3000` alongside the database URL and auth secret. Apply migrations and bootstrap an administrator as described in `docs/auth-api-setup.md`.
+1. Configure the API with `PORT=4000`, `BETTER_AUTH_URL=http://localhost:4000`, `TRUSTED_ORIGINS=http://localhost:3011,http://localhost:3000`, and its auth secret. The shared database connection string belongs in `packages/db/.env.db`; apply migrations and bootstrap an administrator as described in `docs/auth-api-setup.md`.
 2. Copy `.env.example` to `.env` if changing the default API URL. Vite environment values are public build-time settings; never put secrets here.
 3. Run `pnpm dev:api` and `pnpm dev:admin` from the workspace root. For federation, also run `pnpm dev:shell`.
 4. Use the administrator username and temporary password, set a new password, and sign in again.

@@ -1,4 +1,5 @@
 import { loadEnvFile } from 'node:process';
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createDb } from '../client.js';
 import { seedAuth } from './auth.js';
@@ -29,10 +30,13 @@ function isSafeLocalDatabase(databaseUrl: string): boolean {
   );
 }
 
-loadEnvFile(resolve(dbPackageRoot, '.env'));
+const databaseEnvPath = resolve(dbPackageRoot, '.env.db');
+const seedEnvPath = resolve(dbPackageRoot, '.env');
+if (existsSync(databaseEnvPath)) loadEnvFile(databaseEnvPath);
+if (existsSync(seedEnvPath)) loadEnvFile(seedEnvPath);
 const databaseUrl = process.env.DATABASE_URL;
 const password = process.env.SEED_USER_PASSWORD;
-if (!databaseUrl) throw new Error('Set DATABASE_URL in packages/db/.env');
+if (!databaseUrl) throw new Error('Set DATABASE_URL in packages/db/.env.db or the environment');
 if (!password) throw new Error('Set SEED_USER_PASSWORD in packages/db/.env');
 if (!isSafeLocalDatabase(databaseUrl)) {
   throw new Error('Local seeding is restricted to non-production loopback databases');

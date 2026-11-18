@@ -40,14 +40,15 @@ Stop it when finished with `pnpm --filter @project/db db:stop`. The named volume
 
 ## Configure, migrate, and seed
 
-1. On first setup, copy the examples to ignored local environment files. If a local `.env` already exists, edit it instead of overwriting it:
+1. On first setup, copy the examples to ignored local environment files. If a local `.env` already exists, edit it instead of overwriting it. Move any existing `DATABASE_URL` into `packages/db/.env.db` and remove its copies from the other files:
 
    ```sh
+   cp packages/db/.env.db.example packages/db/.env.db
    cp packages/db/.env.example packages/db/.env
    cp apps/api/.env.example apps/api/.env
    ```
 
-2. In `packages/db/.env`, set `DATABASE_URL` to the local connection string and set `SEED_USER_PASSWORD` to a 12–128 character password for the synthetic demo accounts. In `apps/api/.env`, use the same database URL, keep `PORT=4000` and `BETTER_AUTH_URL=http://localhost:4000`, and replace the auth secret with a random value of at least 32 characters. For example, generate one with `openssl rand -base64 32`.
+2. In `packages/db/.env.db`, set `DATABASE_URL` to the local connection string; both the API and database package load it from this shared file. In `packages/db/.env`, set `SEED_USER_PASSWORD` to a 12–128 character password for synthetic demo accounts. In `apps/api/.env`, keep `PORT=4000` and `BETTER_AUTH_URL=http://localhost:4000`, and replace the auth secret with a random value of at least 32 characters. For example, generate one with `openssl rand -base64 32`.
 
 3. Set `TRUSTED_ORIGINS` in `apps/api/.env` to the exact local browser origins used during development:
 
@@ -66,10 +67,9 @@ Stop it when finished with `pnpm --filter @project/db db:stop`. The named volume
 
    Migrations create the tables for the implemented modules; the permission seed registers the shared, version-controlled permission catalog without changing role grants.
 
-5. Build the API, then create the first Administration account while the database has no users. Put the database URL and bootstrap credentials in a temporary ignored file such as `apps/api/.env.bootstrap`:
+5. Build the API, then create the first Administration account while the database has no users. Put the bootstrap credentials in a temporary ignored file such as `apps/api/.env.bootstrap`; the bootstrap command reads `DATABASE_URL` from `packages/db/.env.db`:
 
    ```dotenv
-   DATABASE_URL=postgresql://faculty:faculty_dev_password@127.0.0.1:5432/faculty_db
    BOOTSTRAP_USERNAME=your_admin_username
    BOOTSTRAP_PASSWORD=your_temporary_password
    ```
@@ -78,7 +78,7 @@ Stop it when finished with `pnpm --filter @project/db db:stop`. The named volume
 
    ```sh
    pnpm --filter api build
-   node --env-file=apps/api/.env.bootstrap apps/api/dist/auth/bootstrap-admin.js
+   node --env-file=packages/db/.env.db --env-file=apps/api/.env.bootstrap apps/api/dist/auth/bootstrap-admin.js
    ```
 
    Remove the temporary bootstrap file after the account is created. The bootstrap account must change its password after its first sign-in. This step is needed for Administration; skip it only if you do not need an Administration account.

@@ -1,6 +1,8 @@
-
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'drizzle-kit';
+
+config({ path: fileURLToPath(new URL('./.env.db', import.meta.url)) });
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is not defined');

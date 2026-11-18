@@ -104,4 +104,4 @@ Run `pnpm --filter api test` for the automated suite. PostgreSQL integration tes
 HR_TEST_DATABASE_NAME=faculty_hr_api_test pnpm --filter api test
 ```
 
-The test uses connection settings from `packages/db/.env` while replacing the database name. It applies migrations only to that test database. The API build and `pnpm --filter @project/db typecheck` check the TypeScript interfaces.
+The test uses connection settings from `packages/db/.env.db` while replacing the database name. It applies migrations only to that test database. The API build and `pnpm --filter @project/db typecheck` check the TypeScript interfaces.

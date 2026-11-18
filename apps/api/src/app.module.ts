@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { AuthModule } from './auth/auth.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -40,12 +42,26 @@ function validateEnvironment(config: Record<string, string | undefined>) {
   return { ...config, DATABASE_URL: databaseUrl, PORT: port };
 }
 
+function findWorkspaceRoot(startDirectory: string): string {
+  let directory = resolve(startDirectory);
+  while (true) {
+    if (existsSync(resolve(directory, 'packages/db/package.json'))) return directory;
+    const parent = resolve(directory, '..');
+    if (parent === directory) return startDirectory;
+    directory = parent;
+  }
+}
+
+const workspaceRoot = findWorkspaceRoot(process.cwd());
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      // envFilePath: fileURLToPath(new URL('../.env', import.meta.url)),
-      envFilePath: '.env',
+      envFilePath: [
+        resolve(workspaceRoot, 'packages/db/.env.db'),
+        resolve(workspaceRoot, 'apps/api/.env'),
+      ],
       validate: validateEnvironment,
     }),
     DatabaseModule,

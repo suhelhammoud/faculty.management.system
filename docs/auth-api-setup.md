@@ -1,10 +1,10 @@
 # Auth API setup
 
-Configure `DATABASE_URL`, `BETTER_AUTH_SECRET` (random, at least 32 characters), `BETTER_AUTH_URL`, and comma-separated `TRUSTED_ORIGINS` using `apps/api/.env.example` as a reference. Use HTTPS in production.
+Configure `DATABASE_URL` once in `packages/db/.env.db`. The API and database package load the shared value from there. Configure `BETTER_AUTH_SECRET` (random, at least 32 characters), `BETTER_AUTH_URL`, and comma-separated `TRUSTED_ORIGINS` in `apps/api/.env` using `apps/api/.env.example` as a reference. Use HTTPS in production.
 
 Run the database migrations with `pnpm --filter @project/db migrate`, synchronize the version-controlled permission catalog with `pnpm --filter @project/db seed:permissions`, then build with `pnpm --filter api build`. The catalog seed inserts new permissions and updates descriptions; it does not change role grants or delete catalog entries. Run it after migrations on every deployment. See the [shared authorization guide](modules/authorization/README.md) for the permission, role, and seed workflow.
 
-For an empty user database, run `node apps/api/dist/auth/bootstrap-admin.js` with `DATABASE_URL`, `BOOTSTRAP_USERNAME`, and `BOOTSTRAP_PASSWORD` injected securely into the environment. The bootstrap administrator must change their password after signing in. Do not put passwords in shell history or commit them.
+For an empty user database, put `BOOTSTRAP_USERNAME` and `BOOTSTRAP_PASSWORD` in a temporary ignored file and run `node --env-file=packages/db/.env.db --env-file=apps/api/.env.bootstrap apps/api/dist/auth/bootstrap-admin.js`. The bootstrap administrator must change their password after signing in. Do not put passwords in shell history or commit them.
 
 ## Endpoints
 

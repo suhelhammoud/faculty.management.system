@@ -21,7 +21,7 @@ The development experience should be modular and maintainable, with strong TypeS
 - **Authentication plan:** Better Auth (not yet confirmed implemented).
 - **Authorization plan:** dynamic RBAC, permissions named `resource.action`, with NestJS guards/decorators; CASL may be introduced later for ownership/record-level policies. Avoid duplicating Better Auth authorization capabilities without evaluating them first.
 - **Development environment:** Fedora Linux, WebStorm, Codex CLI; Node, PNPM and Corepack were installed and checked.
-- **Developer preference:** incremental, one-step-at-a-time instructions; provide shell commands in copyable code blocks. Use Codex as a *development assistant*, not as an autonomous implementer. Have Codex inspect/explain proposed edits and obtain approval before modifying code.
+- **Developer preference:** incremental, one-step-at-a-time instructions; provide shell commands in copyable code blocks. Use Codex as a _development assistant_, not as an autonomous implementer. Have Codex inspect/explain proposed edits and obtain approval before modifying code.
 
 ### Changes from older attached architecture documents
 
@@ -29,18 +29,18 @@ The earlier `Architecture one - updated.md` described **nine modules and a singl
 
 ## 3. Ten faculty business modules
 
-| # | Short module | Project title | Responsibility | Frontend folder | Dev port |
-|---|---|---|---|---|---|
-| 1 | `Attendance` | Attendance System | Student attendance at lectures and academic activities | `apps/attendance` | 3001 |
-| 2 | `Maintenance` | Asset Maintenance System | Maintenance requests for faculty computers, printers and equipment; track repair workflows | `apps/maintenance` | 3002 |
-| 3 | `Supervision` | Supervision Tracker | Student projects, groups, supervisor meetings, documents and progress | `apps/supervision` | 3003 |
-| 4 | `Meetings` | Meeting Booking System | Staff publish free slots and users book general appointments, not just supervision meetings | `apps/meetings` | 3004 |
-| 5 | `HR` | HR Management System | Employee records, decisions, requests, leave and reports | `apps/hr` | 3005 |
-| 6 | `Exams` | Exam System | Exam marks entry, approvals, results, reports and certification hand-off | `apps/exams` | 3006 |
-| 7 | `Correspondence` | Correspondence System | Incoming/outgoing official correspondence | `apps/correspondence` | 3007 |
-| 8 | `Inventory` | Asset Inventory System | Equipment assets assigned to employees and transfers between custodians | `apps/inventory` | 3008 |
-| 9 | `StudentAffairs` | Student Affairs System | Student applications, enrollment, records, certificates, academic status | `apps/student-affairs` | 3009 |
-| 10 | `Facilities` | **Provisional title:** Faculty Asset Registry System / Facilities Management System | Registry of buildings, floors, rooms, classrooms, labs, furniture and equipment locations | `apps/facilities` | 3010 |
+| #   | Short module     | Project title                                                                       | Responsibility                                                                              | Frontend folder        | Dev port |
+| --- | ---------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------- | -------- |
+| 1   | `Attendance`     | Attendance System                                                                   | Student attendance at lectures and academic activities                                      | `apps/attendance`      | 3001     |
+| 2   | `Maintenance`    | Asset Maintenance System                                                            | Maintenance requests for faculty computers, printers and equipment; track repair workflows  | `apps/maintenance`     | 3002     |
+| 3   | `Supervision`    | Supervision Tracker                                                                 | Student projects, groups, supervisor meetings, documents and progress                       | `apps/supervision`     | 3003     |
+| 4   | `Meetings`       | Meeting Booking System                                                              | Staff publish free slots and users book general appointments, not just supervision meetings | `apps/meetings`        | 3004     |
+| 5   | `HR`             | HR Management System                                                                | Employee records, decisions, requests, leave and reports                                    | `apps/hr`              | 3005     |
+| 6   | `Exams`          | Exam System                                                                         | Exam marks entry, approvals, results, reports and certification hand-off                    | `apps/exams`           | 3006     |
+| 7   | `Correspondence` | Correspondence System                                                               | Incoming/outgoing official correspondence                                                   | `apps/correspondence`  | 3007     |
+| 8   | `Inventory`      | Asset Inventory System                                                              | Equipment assets assigned to employees and transfers between custodians                     | `apps/inventory`       | 3008     |
+| 9   | `StudentAffairs` | Student Affairs System                                                              | Student applications, enrollment, records, certificates, academic status                    | `apps/student-affairs` | 3009     |
+| 10  | `Facilities`     | **Provisional title:** Faculty Asset Registry System / Facilities Management System | Registry of buildings, floors, rooms, classrooms, labs, furniture and equipment locations   | `apps/facilities`      | 3010     |
 
 **Facilities naming note:** `Facilities` was recommended and used as the module name, but the user had not finalized its longer project title. Avoid conflating Facilities (physical locations/registry), Inventory (asset custody/transfers), and Maintenance (repair workflows). Design shared identities and links between them when appropriate.
 
@@ -97,7 +97,7 @@ Backend business modules are intended under `apps/api/src/modules/`, with shared
 - The user chose PostgreSQL and installed **Podman** because `docker` was not found on Fedora.
 - Local container instructions used `faculty-postgres`, PostgreSQL 17, database `faculty_db`, user `faculty`, port `127.0.0.1:5432`, and named persistent volume `faculty-postgres-data`.
 - Commands: `podman start faculty-postgres`, `podman stop faculty-postgres`, `podman ps -a`, and `podman exec faculty-postgres pg_isready -U faculty -d faculty_db`.
-- Local development credentials were configured in `.env` during setup. **Do not put actual passwords or `.env` contents into shared context files, source control, or output logs.** The connection URL should be loaded from `DATABASE_URL`.
+- Local development credentials are configured in ignored environment files. **Do not put actual passwords or `.env` contents into shared context files, source control, or output logs.** Store the shared database connection URL as `DATABASE_URL` in `packages/db/.env.db`; the API and database package load it from there.
 
 ### `@project/db`
 
