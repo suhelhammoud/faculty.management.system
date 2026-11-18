@@ -1,0 +1,36 @@
+.workflow-page {
+  max-width: 48rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.workflow-page nav,
+.workflow-page .workflow-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.workflow-page form,
+.workflow-page fieldset,
+.workflow-page label {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.workflow-page li + li {
+  margin-top: 0.65rem;
+}
+
+.workflow-page input,
+.workflow-page select,
+.workflow-page textarea,
+.workflow-page button {
+  font: inherit;
+  padding: 0.35rem 0.55rem;
+}
+
+.workflow-page button {
+  justify-self: start;
+}

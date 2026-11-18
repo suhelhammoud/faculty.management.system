@@ -27,6 +27,15 @@ export const PERMISSION = {
     read: 'facilities:read',
     write: 'facilities:write',
   },
+  workflow: {
+    monitor: 'workflow:monitor',
+  },
+  inventory: {
+    manageAssets: 'inventory:manage-assets',
+    requestRemoval: 'inventory:request-removal',
+    reviewRemoval: 'inventory:removal-review',
+    decideRemoval: 'inventory:removal-decide',
+  },
 } as const;
 
 export const PERMISSION_CATALOG = [
@@ -46,6 +55,20 @@ export const PERMISSION_CATALOG = [
   { key: PERMISSION.hrReferenceData.write, description: 'Manage HR reference data' },
   { key: PERMISSION.facilities.read, description: 'View facilities records' },
   { key: PERMISSION.facilities.write, description: 'Manage facilities records' },
+  {
+    key: PERMISSION.workflow.monitor,
+    description: 'View the workflow monitor within record scope',
+  },
+  {
+    key: PERMISSION.inventory.manageAssets,
+    description: 'Register assets and change asset custody',
+  },
+  { key: PERMISSION.inventory.requestRemoval, description: 'Submit asset removal requests' },
+  { key: PERMISSION.inventory.reviewRemoval, description: 'Review asset removal requests' },
+  {
+    key: PERMISSION.inventory.decideRemoval,
+    description: 'Record asset removal committee decisions',
+  },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_CATALOG)[number]['key'];

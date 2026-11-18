@@ -33,7 +33,9 @@ async function bootstrap() {
     }
     next();
   });
-  app.use(adminOriginProtection(origins));
+  app.use(
+    adminOriginProtection(origins, ['/api/admin', '/api/workflow', '/api/inventory/workflow']),
+  );
   app.useBodyParser('json');
   app.enableShutdownHooks();
   await app.listen(configService.get<number>('PORT', 3000));

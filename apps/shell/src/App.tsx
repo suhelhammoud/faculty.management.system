@@ -1,5 +1,13 @@
 import { Component, lazy, Suspense, type ReactNode } from 'react';
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router';
+import {
+  NewRemovalRequest,
+  RemovalRequestDetail,
+  WorkflowHistory,
+  WorkflowInbox,
+  WorkflowMonitor,
+  WorkflowTask,
+} from './workflows/WorkflowPages';
 
 const AdminApp = lazy(() => import('admin/App'));
 
@@ -68,12 +76,30 @@ export default function App() {
             {module.title}
           </NavLink>
         ))}
+        <NavLink
+          to="/workflow/tasks"
+          style={({ isActive }) => ({ fontWeight: isActive ? 700 : 400 })}
+        >
+          Workflows
+        </NavLink>
       </nav>
       <main>
         <RemoteBoundary key={location.pathname.split('/')[1]}>
           <Suspense fallback={<p role="status">Loading module...</p>}>
             <Routes>
               <Route path="/" element={<Navigate to="/attendance" replace />} />
+              <Route path="/workflow/tasks" element={<WorkflowInbox />} />
+              <Route path="/workflow/tasks/:id" element={<WorkflowTask />} />
+              <Route path="/workflow/monitor" element={<WorkflowMonitor />} />
+              <Route path="/workflow/instances/:id" element={<WorkflowHistory />} />
+              <Route
+                path="/inventory/workflow/removal-requests/new"
+                element={<NewRemovalRequest />}
+              />
+              <Route
+                path="/inventory/workflow/removal-requests/:id"
+                element={<RemovalRequestDetail />}
+              />
               {Object.entries(modules).map(([name, { Component: Module }]) => (
                 <Route key={name} path={`/${name}/*`} element={<Module />} />
               ))}

@@ -2,7 +2,7 @@
 
 ## Project context
 
-This repository is a monorepo with a React/TypeScript frontend, a NestJS API, PostgreSQL, and Drizzle ORM. The `apps/inventory` frontend is currently a starter scaffold. `apps/api/src/modules/inventory/inventory.module.ts` is empty. Database schema and migrations live in `packages/db`.
+This repository is a monorepo with a React/TypeScript frontend, a NestJS API, PostgreSQL, and Drizzle ORM. The Inventory API implements the removal workflow, with proposal and decision screens in the shared shell. The standalone Inventory frontend is a starter scaffold. Database schema and migrations live in `packages/db`.
 
 Follow the architecture, authentication, validation, styling, and error-handling patterns used by existing modules. Inventory should work as a standalone frontend and through the shared app shell.
 
@@ -104,9 +104,11 @@ Retain transaction history. Do not erase history when an item is transferred, de
 
 - Add the Inventory module to the NestJS API using the project’s existing module, controller, service, validation, and database patterns.
 - Use validated request schemas and transactional database writes for multi-item receipts and movements so partial failures do not leave balances or custody inconsistent.
-- Add inventory-specific read/write permissions through the shared authorization system. Committee decisions must require an appropriate write permission. Do not bypass shared sign-in or authorization.
+- Add Inventory permissions through `@project/authorization`. Require a dedicated step permission and access to the request for recording committee decisions. Grant the permission through the shared role administration process.
 - Provide endpoints for listing/searching assets and stock, reading transaction history, and creating the supported transactions.
-- Put workflow API routes under `/api/workflow/`, for example `GET /api/workflow/tasks`, `GET /api/workflow/instances/:instanceId`, and `POST /api/workflow/tasks/:taskId/actions`.
+- Start removal requests with `POST /api/inventory/workflow/removal-requests` and load proposal details with `GET /api/inventory/workflow/removal-requests/:requestId`.
+- Use `GET /api/inventory/workflow/assets` to choose assets for a proposal. Asset managers can register an asset with `POST /api/inventory/workflow/assets` and update its HR employee custody with `PATCH /api/inventory/workflow/assets/:id/custody`.
+- Use the shared task and history endpoints under `/api/workflow/`. Submit every workflow action, including the committee decision, through `POST /api/workflow/tasks/:taskId/actions`. Inventory validates the per-item decisions and commits custody changes, Inventory transaction records, and workflow progression together. Follow the [shared workflow API and transaction contract](../workflows/IMPLEMENTATION-PLAN.md#api-and-transaction-behavior).
 - Keep API payloads and responses typed and consistent with project conventions.
 
 ## Frontend

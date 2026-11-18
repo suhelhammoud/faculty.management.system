@@ -16,6 +16,7 @@ import { MaintenanceModule } from './modules/maintenance/maintenance.module.js';
 import { MeetingsModule } from './modules/meetings/meetings.module.js';
 import { StudentAffairsModule } from './modules/student-affairs/student-affairs.module.js';
 import { SupervisionModule } from './modules/supervision/supervision.module.js';
+import { WorkflowsModule } from './modules/workflows/workflows.module.js';
 
 function validateEnvironment(config: Record<string, string | undefined>) {
   const databaseUrl = config.DATABASE_URL?.trim();
@@ -66,6 +67,7 @@ const workspaceRoot = findWorkspaceRoot(process.cwd());
     }),
     DatabaseModule,
     AuthModule,
+    WorkflowsModule,
     AttendanceModule,
     MaintenanceModule,
     SupervisionModule,

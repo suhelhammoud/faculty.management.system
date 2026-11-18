@@ -1,176 +1,185 @@
 # Shared Workflow Implementation Plan
 
-## Purpose
+## Purpose and initial scope
 
-Provide a reusable workflow capability for processes that pass through an ordered sequence of users with different roles. Examples include inventory removal decisions, HR requests, and other future module processes.
+Build a reusable Workflows module inside the shared NestJS API. Inventory, Student Affairs, Exams, HR, and future modules can use it to route work through a sequence of people. Inventory removal is the first worked example. The other examples show how the same contract applies to different records and access rules.
 
-The workflow capability owns step progression, task assignment, authorization checks, and action history. Each business module continues to own its request data and applies its own business changes when a workflow reaches a successful outcome.
+Start with versioned TypeScript definitions, one active task at a time, permission-based queues, a common task inbox, and a read-only monitor. Support assignment to a specific person when a process requires it. Add parallel approvals, timers, notifications, claiming, reassignment, and a workflow editor when a confirmed process needs them.
 
-## Recommended initial scope
+## NestJS module structure
 
-Build a lightweight workflow service inside the existing NestJS API. Start with sequential steps, role- or permission-based task queues, and a small set of common actions such as approve, reject, return for changes, and defer. Record the user who performs each action. Allow a specific user assignment only when a process requires it; defer task claiming and reassignment until there is a concrete need. Add branching or parallel approvals only when a defined process requires them.
+Create `WorkflowsModule` in `apps/api/src/modules/workflows` and include it in `AppModule`. It owns the shared controller, workflow service, and definition registry. It imports `AuthModule` for the shared authorization service and uses the existing database provider. Put the shared tables and migrations in `packages/db`.
 
-Start workflows from their related business record or module request page. Define workflow templates in versioned TypeScript code initially. Give every workflow a clear name and description, and every step a title and instructions. Consider an administrator-facing workflow editor later if process owners need to change sequences without a software release. Do not begin with a general-purpose BPMN editor or allow arbitrary executable workflow rules to be stored in the database.
+Export the workflow service and registration interface. Inventory, Exams, Student Affairs, and other participating modules import `WorkflowsModule` and register their definitions and handlers during initialization. Keep their definitions and handlers in their own module directories. Validate registrations after the feature modules have registered and before serving requests. Dependencies point from participating modules to WorkflowsModule, so adding a workflow requires no dependency on its owning module inside the engine.
 
-## Concepts
+## Ownership and data model
 
-- **Workflow definition/template:** A versioned description of the workflow’s name and purpose, ordered step titles and instructions, eligible roles or permissions, allowed actions, and transitions.
-- **Workflow instance:** One running process, linked to a business request or record. It records the definition version it started with.
-- **Task:** Work awaiting action at a particular step. A role-based task may be visible to eligible users; the system records which user actually completes it.
-- **Workflow event:** An immutable history entry recording an action, actor, date, comment, and relevant decision data.
-- **Domain request data:** Module-owned proposed information being reviewed. It is stored separately from the current official business records.
+- **Workflows** manages instances, tasks, transitions, and append-only event history. It resolves the registered definition for each instance and enforces task eligibility and the transition rules.
+- **Business modules** register their definitions and matching handlers. Each module owns its records, request revisions, evidence, record-level access rules, action validation, and business updates. It starts a workflow from its request or business record and defines what each action means for that record.
 
-## Data model
+Use three shared PostgreSQL tables:
 
-Create shared tables once; new workflow types should normally add definitions and instances, not a new set of workflow-engine tables.
+| Table                | Contents                                                                                                                                                                               |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workflow_instances` | ID, definition key and version, starter user, lifecycle status, current step, start and completion timestamps, and a stable subject reference with module, record type, and record ID. |
+| `workflow_tasks`     | ID, instance ID, step key, optional assigned user, pending/completed/cancelled status, and open and completion timestamps. Each visit to a step gets its own task ID.                  |
+| `workflow_events`    | ID, instance ID, optional task ID, action, actor, timestamp, and workflow comment where appropriate. Corrections append a new event.                                                   |
 
-### Shared workflow tables
+Enforce at most one pending task per instance with a PostgreSQL partial unique index. Keep action history in events and resolve step eligibility from the pinned definition. Keep marks, student records, attachments, and per-item decisions in the owning module's typed tables. Workflow history can reference the domain revision or decision that an action used.
 
-1. **`workflow_instances`**
-   - ID.
-   - Definition key and version.
-   - Current step key.
-   - Lifecycle status, such as running, completed, rejected, or cancelled.
-   - Starter user and start/completion timestamps.
-   - A stable subject reference for linking the process to a module record.
+## TypeScript definitions
 
-2. **`workflow_tasks`**
-   - ID and workflow instance ID.
-   - Step key and required role or permission.
-   - Optional specifically assigned user when required by the process; otherwise, the task is available to the eligible role/permission group.
-   - Pending/completed/cancelled status.
-   - Acting user, action, opened/completed timestamps, and comments as appropriate.
-
-3. **`workflow_events`**
-   - ID, workflow instance ID, and optional task ID.
-   - Event type/action, actor user, timestamp, comment, and structured decision data.
-   - Append-only history. Corrections should create additional events rather than rewriting past events.
-
-### Module-owned request data
-
-Use existing module records when they already represent the request. Add domain-specific request tables only when a workflow needs proposed data that is not already represented. For example, Inventory can store removal requests and their item/reason lines, linked to a workflow instance. HR can link an existing leave request to a workflow instance.
-
-Use typed module tables for important searchable business data. Avoid placing an entire request in an untyped JSON payload. Small step-specific answers may be stored as structured JSON when appropriate, while validation remains in application code.
-
-## Workflow definition shape
-
-Definitions are versioned in code and identify the workflow key, version, user-facing name and description, ordered step keys, step titles and instructions, eligibility requirements, allowed actions, validation rules, and transitions. Example only; actual roles and decisions must be confirmed for each process:
+Each definition declares a namespaced key, version, initial step, and steps with instructions, eligibility, and action transitions. A transition identifies a next step or a terminal workflow status. The Inventory definition uses typed step permissions from the shared catalog. [Inventory definition](../../../apps/api/src/modules/inventory/inventory-removal.definition.ts)
 
 ```ts
-const inventoryRemovalV1 = {
+import { PERMISSION, type PermissionKey } from '@project/authorization';
+
+type Transition<Step extends string> =
+  { next: Step } | { finish: 'completed' | 'rejected' | 'cancelled' };
+
+type WorkflowDefinition<Step extends string> = {
+  key: `${string}.${string}`;
+  version: number;
+  title: string;
+  description: string;
+  initialStep: Step;
+  steps: Record<
+    Step,
+    {
+      title: string;
+      instructions: string;
+      eligible: { permission: PermissionKey } | { requester: true };
+      actions: Record<string, Transition<Step>>;
+    }
+  >;
+};
+
+type RemovalStep = 'review' | 'revise' | 'committee-decision';
+
+export const inventoryRemovalV1 = {
   key: 'inventory.removal',
   version: 1,
   title: 'Asset removal review',
-  description: 'Reviews malfunctioning assets and records the removal decision.',
-  steps: [
-    {
-      key: 'review',
+  description: 'Reviews proposed assets and records the removal decision.',
+  initialStep: 'review',
+  steps: {
+    review: {
       title: 'Review request',
-      instructions:
-        'Review the asset details and reported malfunction. Approve, return, or reject the request.',
-      permission: 'inventory:removal-review',
-      actions: ['approve', 'return', 'reject'],
+      instructions: 'Review the proposed assets and the reasons for removal.',
+      eligible: { permission: PERMISSION.inventory.reviewRemoval },
+      actions: {
+        forward: { next: 'committee-decision' },
+        return: { next: 'revise' },
+        reject: { finish: 'rejected' },
+      },
     },
-    {
-      key: 'committee-decision',
-      title: 'Committee decision',
+    revise: {
+      title: 'Revise request',
+      instructions: 'Address the review comments and resubmit the proposal.',
+      eligible: { requester: true },
+      actions: {
+        resubmit: { next: 'review' },
+      },
+    },
+    'committee-decision': {
+      title: 'Record committee decision',
       instructions: 'Record an outcome and reason for each proposed asset.',
-      permission: 'inventory:removal-decide',
-      actions: ['approve-waste', 'defer', 'reject'],
+      eligible: { permission: PERMISSION.inventory.decideRemoval },
+      actions: {
+        'record-decision': { finish: 'completed' },
+        return: { next: 'revise' },
+      },
     },
-  ],
-};
+  },
+} satisfies WorkflowDefinition<RemovalStep>;
 ```
 
-The running instance stores the definition key and version, so in-progress workflows continue under the version they started with when a later definition is introduced. New instances use the current active version. Keep older definitions available while instances using them remain active.
+Validate the registry at startup. Reject duplicate definition key/version pairs, missing or unknown step references, and unregistered permission keys. Use the designated active version for new starts. Keep the original definition and matching handlers available while instances using that version are active.
 
-## Backend architecture
+The owning module registers handlers for record access and action processing alongside the definition. For example, the Inventory handler requires a reason on return, validates each item decision, and applies approved asset changes. The engine uses the same registration contract for every module.
 
-Implement a shared Workflows module/service under the API. Follow existing NestJS, Drizzle, validation, authentication, and permission patterns.
+## Authorization
 
-The shared service should provide operations conceptually similar to:
+Use the typed `PERMISSION` constants and `PermissionKey` from `@project/authorization`. The package defines permission keys and bootstrap role templates. PostgreSQL holds live roles, grants, and user assignments. Grant step permissions through the existing Administration API and synchronize the permission catalog during deployment. Existing roles need an explicit grant for new keys. [Shared authorization guide](../authorization/README.md)
 
-```ts
-start(tx, { definitionKey, subject, startedBy });
-advance(tx, { taskId, actorId, action, comment, input });
+The workflow service resolves the actor from the signed-in session and evaluates current authorization for the subject. The module applies record-level rules such as exam session scope or access to a particular student request. A requester step uses the requester identified by the module, which can differ from the student or employee the request concerns. When the process requires a named assignee, require that assignment as well as step eligibility. Check specific role membership in addition to the step permission when institutional policy requires it, such as formal committee membership. Modules can also enforce separation of duties.
+
+Apply module record scope and the relevant visibility rules to the inbox, direct links, instance history, and monitor. Viewing a request or its history and acting on its current task have separate authorization rules. Apply history and comment visibility before returning those fields. Recheck current step eligibility and record access on action submission even when the task appeared in the user's inbox.
+
+## API and transaction behavior
+
+Keep the `/workflow/` segment in workflow URLs. Use these shared endpoints:
+
+- `GET /api/workflow/tasks` lists pending tasks the signed-in user can act on.
+- `GET /api/workflow/tasks/:taskId` loads a task by ID for the review page and exposes the actions currently available to the caller.
+- `GET /api/workflow/instances/:instanceId` returns the current instance and the history the caller may view.
+- `POST /api/workflow/tasks/:taskId/actions` is the single endpoint for submitting a task action. It accepts an action key, an optional comment, and any input validated by the owning module.
+
+Module endpoints start workflows and serve domain details. For example, Inventory creates a proposal and starts its workflow via `POST /api/inventory/workflow/removal-requests`. The proposal and its item details are available via `GET /api/inventory/workflow/removal-requests/:requestId`.
+
+Create the domain request, workflow instance, initial task, and start event in one PostgreSQL transaction. On each action, serialize work for the instance by locking its row before its task row. Recheck the active task, action, and actor once inside the transaction. Pass the same transaction to the module handler, then persist the task outcome, event, and next task or terminal status together with any domain changes.
+
+Accept an idempotency key for starts and action submissions. Scope it to the authenticated actor, operation, and target when present. Persist a successful result with the write and return it for an identical retry subject to current read authorization. Check for a replay before applying the pending-task requirement. Return a conflict if a key is reused with different input or a competing submission uses a different key against a completed task.
+
+The module records the version of the data being reviewed and checks for relevant changes before applying a decision. On a stale-record conflict, roll back the submission and leave its task pending so the actor can use the recovery action defined for that step. A return opens a new revision task and preserves the prior submission and history. Resubmission sends a new revision through review.
+
+## Inbox and monitor
+
+Use one shared inbox, with module review pages for domain details and forms. Support refresh and deep links by fetching current data using stable IDs in paths such as `/workflow/tasks/:taskId` and `/inventory/workflow/removal-requests/:requestId`. Show the workflow title and purpose, step instructions, actions the user can take, and the history they may view.
+
+The read-only monitor shows the current step, start date, last activity, and chronological history. Authorized users can filter by lifecycle status and step.
+
+## Worked examples
+
+### Inventory removal
+
+An Inventory requester submits proposed assets and removal reasons. These are the transitions for the illustrative definition above.
+
+| Step               | Eligible actor                                                    | Action               | Result                                                                                                          |
+| ------------------ | ----------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Review             | User with the removal-review permission and access to the request | Forward              | Open a committee decision task.                                                                                 |
+| Review             | Same reviewer eligibility                                         | Return with a reason | Open a revision task for the requester.                                                                         |
+| Review             | Same reviewer eligibility                                         | Reject               | End the request as rejected and retain the proposal and decision history.                                       |
+| Revise             | Requester with access to the request                              | Resubmit             | Save a new proposal revision and open a new review task.                                                        |
+| Committee decision | User authorized to record the committee decision for the request  | Record decision      | Record the dated, named committee decision and an outcome and reason for each item, then complete the workflow. |
+| Committee decision | Same committee decision eligibility                               | Return with a reason | Open a revision task for the requester.                                                                         |
+
+The committee action accepts approved-for-waste, rejected, and deferred item outcomes in the same request. Before applying approved results, Inventory locks the affected assets and verifies the relevant asset status and custody against the reviewed proposal. Approved items become decommissioned and their active custody ends. Rejected and deferred items retain their status and custody. A deferred item is a recorded committee outcome. The workflow completes when the committee decision is recorded. Record any later physical disposal as a separate Inventory transaction. Confirm the review sequence and whether one authorized recorder or multiple committee members must act. [Inventory implementation specification](../inventory/IMPLEMENTATION-SPEC.md#initial-transaction-workflows)
+
+### Exams results approval
+
+An exam result batch moves from verification within the authorized course or session scope to director approval. A return opens a revision task and the revised batch goes through verification again. Exams owns the reviewed mark version, applies any separation-of-duties rule, and records approval before publication. Publishing or exporting results is a separately authorized Exams action. The exact roles, approval scope, and lock point need institutional confirmation. [Exams module specification](../exams/README.md#core-workflow)
+
+### Student Affairs certificate request
+
+A staff member could open a certificate request on behalf of a student. The request records the student, the staff actor who submitted it, and the person permitted to revise it. Student Affairs controls access to the request, supporting records, and any student-facing history. Its workflow can route a return to the designated requester and completion to the module's certificate issuance process. Request eligibility, visibility, and issuance rules need institutional confirmation. [Student Affairs module specification](../student-affairs/README.md#open-decisions)
+
+## Acceptance checks
+
+- A mixed Inventory decision writes one outcome per item. Only approved-for-waste items change status and custody.
+- A returned proposal retains its original revision, review comments, and actors. Resubmission opens a new review task on the new revision.
+- Two reviewers submitting the same task concurrently cause one transition. Retrying the winning request with the same idempotency key returns the existing result with no additional task, event, or domain change.
+- An asset handover during review produces a conflict on a stale decision. The workflow and asset writes roll back together, and the reviewer can still return the proposal.
+- An out-of-scope user cannot discover the task in the inbox, open its history by direct link, or act on it. A user who loses the step permission after opening the task cannot submit a decision.
+- An instance started under an older definition version can still advance using its matching handlers after a new version becomes active.
+
+## Run the Inventory pilot
+
+Apply the database migration and synchronize the shared permission catalog before starting the updated API.
+
+```sh
+pnpm --filter @project/db migrate
+pnpm --filter @project/db seed:permissions
 ```
 
-`advance` should validate that:
+Use shared Administration to grant the permissions appropriate to each existing role.
 
-- The workflow instance is active and the task is its current task.
-- The action is allowed by the current definition step.
-- The signed-in user has the required permission and is eligible to act.
-- The submitted action data is valid for that step.
+| Permission                  | Use                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------- |
+| `inventory:manage-assets`   | Register assets and manage their HR employee custody through the Inventory API. |
+| `inventory:request-removal` | Create a removal proposal.                                                      |
+| `inventory:removal-review`  | Review a proposal and forward, return, or reject it.                            |
+| `inventory:removal-decide`  | Record the committee's decision or return a proposal for revision.              |
+| `workflow:monitor`          | Open the shared read-only monitor for records within the user's access scope.   |
 
-Never trust a role or permission asserted by the frontend. Resolve authorization from the signed-in user through the shared authorization system.
-
-For sequential workflows, create the next task only after the current task completes. A role- or permission-based task appears in the inbox of eligible users, and an eligible user can complete it directly. Record the user who actually acts. Use a specific user assignment only if the process requires it. Add claiming or reassignment later if users need to reserve tasks or managers need to redirect them.
-
-## Transaction safety and domain changes
-
-Keep workflow state in PostgreSQL; do not rely on in-memory process state or frontend state for active workflow data.
-
-Advance an instance under a database transaction and lock the relevant instance/task rows so two users cannot complete the same step concurrently. Validate current status and allowed action again inside that transaction.
-
-The workflow service determines whether the process advanced or completed. The owning module applies its business changes. On successful terminal completion, perform the final workflow update and domain updates atomically. For example, an approved Inventory removal should update asset status, end active custody, create the final Inventory transaction, and complete the workflow within one database transaction. If any operation fails, roll back the entire transaction.
-
-While the process is pending, store proposed changes in module-owned request tables. Do not update the official asset/employee records until the workflow succeeds. Record the version or `updatedAt` value of records when proposed; before applying changes, detect if the underlying record changed during review and surface a conflict instead of overwriting newer data.
-
-Rejected or deferred requests retain their workflow and request history. Rejection must not apply pending changes to official records. A return-for-changes action should route the request to the appropriate prior actor/step according to the definition.
-
-## API shape and URL convention
-
-All workflow-related API paths must include the `/workflow/` segment. Use a consistent shared prefix such as:
-
-- `GET /api/workflow/tasks` — tasks available to or assigned to the signed-in user.
-- `GET /api/workflow/instances/:instanceId` — current workflow state and history.
-- `POST /api/workflow/tasks/:taskId/actions` — submit an action for a task.
-
-Module APIs own workflow initiation and domain-specific request details. For example:
-
-- `POST /api/inventory/workflow/removal-requests` — create a removal request and start its workflow.
-- `GET /api/inventory/workflow/removal-requests/:requestId` — retrieve the request and its item details.
-- `POST /api/inventory/workflow/removal-requests/:requestId/actions` — record a domain-specific action and apply final Inventory changes when appropriate.
-
-Choose either shared task action handling or module-specific action endpoints consistently. If the terminal action changes domain records, ensure workflow progression and domain changes use the same database transaction.
-
-## Frontend and routes
-
-Provide a shared workflow task inbox, either in the shell or a dedicated workflow app. Integrate module-specific screens incrementally; modules that do not start or handle workflows need not be changed.
-
-All frontend workflow routes must include the `/workflow/` segment. Examples:
-
-- `/workflow/tasks` — shared task inbox.
-- `/workflow/tasks/:taskId` — task review page.
-- `/inventory/workflow/removal-requests/:requestId` — Inventory-specific request details.
-- `/hr/workflow/requests/:requestId` — an HR-specific review page when needed.
-
-Pass stable IDs in URLs, then fetch workflow and business data from the API. Do not rely on router state as the only copy of important data; deep links and refreshes must work. The shared inbox can display common task details and link to the module page for domain-specific evidence or forms.
-
-Display the workflow name and purpose, the current step title and instructions, the related business record, available actions, and prior actions/comments. Keep a basic workflow monitor for authorized staff with filters for status and current step, plus a detail view showing start date, last activity, and chronological task/event history. This provides visibility into pending or stalled instances without requiring a visual workflow designer or advanced administration controls.
-
-## Example: Inventory removal workflow
-
-1. Inventory staff create a removal request with one or more malfunctioning assets and reasons.
-2. The API saves the proposed request data and starts a workflow instance; live asset custody/status remain unchanged.
-3. The authorized reviewer completes the current task. The service records the actor, action, date, and comment, then advances or returns/rejects the request.
-4. The committee records an outcome per item, since one request may contain different item decisions.
-5. If the workflow reaches its successful outcome, Inventory applies approved results atomically: mark approved items decommissioned/waste, end active custody, create dated Inventory transaction records, and complete the workflow.
-6. Rejected or deferred items retain their existing state and custody. Their proposal and decision history remain available.
-
-Actual role names, decision values, review sequence, and whether one or all committee members must act are business decisions to confirm before implementation.
-
-## Initial implementation boundaries
-
-- Support sequential workflows first.
-- Keep definitions versioned in code initially.
-- Start each workflow from its related business record or module request page.
-- Include a descriptive workflow name and purpose, plus a title and instructions for each step.
-- Use role/permission-based task queues and record the acting user; defer claim and reassignment features.
-- Use shared workflow tables for runtime state and history.
-- Keep domain request data in the owning module.
-- Enforce permissions and transitions in the backend.
-- Build one shared task inbox and add module-specific review pages only where needed.
-- Include a basic read-only monitor and chronological history for authorized staff.
-- Defer parallel approvals, time-based escalation, dynamic workflow editing, and a visual workflow designer until requirements justify them.
-- Defer email notifications, task claiming, task reassignment, and step-skipping/recovery controls until a workflow requires them.
+Set the shell's `VITE_API_URL` to the API origin and include the shell origin in the API's `TRUSTED_ORIGINS`. Open **Workflows** in the shell to see the inbox and start a proposal. The pilot supports one authorized recorder for each committee decision. Exams and Student Affairs can register their own processes when their policies are confirmed.

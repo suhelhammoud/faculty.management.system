@@ -1,5 +1,6 @@
 import {
   CanActivate,
+  createParamDecorator,
   ExecutionContext,
   ForbiddenException,
   Inject,
@@ -14,6 +15,14 @@ import { AuthorizationService } from './authorization.service.js';
 import type { Request } from 'express';
 import type { PermissionKey } from '@project/authorization';
 export const Public = () => SetMetadata('auth:public', true);
+export const RequireSession = () => SetMetadata('auth:session', true);
+const actorId = Symbol('authenticated actor');
+type AuthenticatedRequest = Request & { [actorId]?: string };
+export const ActorId = createParamDecorator((_data: unknown, context: ExecutionContext) => {
+  const id = context.switchToHttp().getRequest<AuthenticatedRequest>()[actorId];
+  if (!id) throw new UnauthorizedException();
+  return id;
+});
 export const RequirePermission = (
   permission: PermissionKey,
   resourceType?: string,
@@ -29,7 +38,7 @@ export class AuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext) {
     if (this.reflector.getAllAndOverride('auth:public', [context.getHandler(), context.getClass()]))
       return true;
-    const req = context.switchToHttp().getRequest<Request>();
+    const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const current = await this.auth.api.getSession({
       headers: fromNodeHeaders(req.headers),
     });
@@ -39,7 +48,16 @@ export class AuthGuard implements CanActivate {
       resourceType?: string;
       idParam: string;
     }>('auth:permission', [context.getHandler(), context.getClass()]);
-    if (!rule) throw new ForbiddenException('Endpoint has no authorization policy');
+    if (!rule) {
+      const requiresSession = this.reflector.getAllAndOverride<boolean>('auth:session', [
+        context.getHandler(),
+        context.getClass(),
+      ]);
+      if (!requiresSession) throw new ForbiddenException('Endpoint has no authorization policy');
+      if (!(await this.authorization.isActive(current.user.id))) throw new ForbiddenException();
+      req[actorId] = current.user.id;
+      return true;
+    }
     const id = req.params[rule.idParam];
     if (rule.resourceType && typeof id !== 'string') throw new ForbiddenException();
     if (
@@ -50,6 +68,7 @@ export class AuthGuard implements CanActivate {
       ))
     )
       throw new ForbiddenException();
+    req[actorId] = current.user.id;
     return true;
   }
 }
