@@ -106,11 +106,14 @@ Retain transaction history. Do not erase history when an item is transferred, de
 - Use validated request schemas and transactional database writes for multi-item receipts and movements so partial failures do not leave balances or custody inconsistent.
 - Add inventory-specific read/write permissions through the shared authorization system. Committee decisions must require an appropriate write permission. Do not bypass shared sign-in or authorization.
 - Provide endpoints for listing/searching assets and stock, reading transaction history, and creating the supported transactions.
+- Put workflow API routes under `/api/workflow/`, for example `GET /api/workflow/tasks`, `GET /api/workflow/instances/:instanceId`, and `POST /api/workflow/tasks/:taskId/actions`.
 - Keep API payloads and responses typed and consistent with project conventions.
 
 ## Frontend
 
 Build the Inventory app using existing frontend conventions and shared components.
+
+All frontend workflow routes must include the `/workflow/` path segment. Use routes such as `/workflow/tasks`, `/workflow/tasks/:taskId`, and module-specific routes such as `/inventory/workflow/removal-requests/:requestId`. Pass stable IDs in the URL and fetch workflow and business data from the API so deep links and refreshes work.
 
 Provide screens or views for:
 
