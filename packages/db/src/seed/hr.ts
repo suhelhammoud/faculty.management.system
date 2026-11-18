@@ -1,7 +1,7 @@
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import type { ReferenceSeed, EmployeeSeed } from './fixtures/local/types.js';
+import { validateHr } from './validation.js';
 import { and, eq } from 'drizzle-orm';
-import type { Database } from '../client.js';
+import type { SeedTransaction } from './types.js';
 import {
   hrAcademicRanks,
   hrEmploymentGrades,
@@ -12,98 +12,13 @@ import {
   hrStaffCategories,
 } from '../schema/hr/index.js';
 
-type SeedExecutor = Pick<Database, 'select' | 'insert' | 'update'>;
-type ReferenceSeed = {
-  staffCategories: {
-    code: string;
-    nameAr: string;
-    nameEn: string;
-    description?: string;
-  }[];
-  positions: {
-    categoryCode: string;
-    code: string;
-    nameAr: string;
-    nameEn: string;
-    isAcademic: 0 | 1;
-  }[];
-  academicRanks: {
-    code: string;
-    nameAr: string;
-    nameEn: string;
-    rankOrder: number;
-  }[];
-  gradeSchemes: {
-    code: string;
-    nameAr: string;
-    nameEn: string;
-    description?: string;
-  }[];
-  employmentGrades: {
-    schemeCode: string;
-    gradeNumber: number;
-    stepNumber: number;
-    labelAr: string;
-    labelEn: string;
-  }[];
-};
-type EmployeeSeed = {
-  employeeNumber: string;
-  username: string;
-  firstNameAr: string;
-  lastNameAr: string;
-  firstNameEn: string;
-  lastNameEn: string;
-  categoryCode: string;
-  positionCode: string;
-  academicRankCode?: string;
-  department: string;
-  employmentRegime: string;
-  startDate: string;
-};
-
-async function readJson<T>(fixtureRoot: string, filename: string): Promise<T> {
-  return JSON.parse(await readFile(resolve(fixtureRoot, filename), 'utf8')) as T;
-}
-
 export async function seedHr(
-  tx: SeedExecutor,
-  fixtureRoot: string,
+  tx: SeedTransaction,
+  references: ReferenceSeed,
+  employees: EmployeeSeed[],
   userIds: Map<string, string>,
 ): Promise<number> {
-  const [references, employees] = await Promise.all([
-    readJson<ReferenceSeed>(fixtureRoot, 'hr.reference-data.json'),
-    readJson<EmployeeSeed[]>(fixtureRoot, 'hr.employees.json'),
-  ]);
-
-  const categoryCodes = new Set(references.staffCategories.map(({ code }) => code));
-  const positionKeys = new Set(
-    references.positions.map(({ categoryCode, code }) => `${categoryCode}:${code}`),
-  );
-  const rankCodes = new Set(references.academicRanks.map(({ code }) => code));
-  const gradeSchemeCodes = new Set(references.gradeSchemes.map(({ code }) => code));
-  for (const grade of references.employmentGrades) {
-    if (!gradeSchemeCodes.has(grade.schemeCode)) {
-      throw new Error(`Unknown grade scheme ${grade.schemeCode}`);
-    }
-    if (grade.gradeNumber < 1 || grade.stepNumber < 1) {
-      throw new Error(`Grade and step numbers must be positive for ${grade.schemeCode}`);
-    }
-  }
-  for (const employee of employees) {
-    if (!userIds.has(employee.username)) {
-      throw new Error(`Unknown username in employee ${employee.employeeNumber}`);
-    }
-    if (!categoryCodes.has(employee.categoryCode)) {
-      throw new Error(`Unknown category code in employee ${employee.employeeNumber}`);
-    }
-    if (!positionKeys.has(`${employee.categoryCode}:${employee.positionCode}`)) {
-      throw new Error(`Unknown position in employee ${employee.employeeNumber}`);
-    }
-    if (employee.academicRankCode && !rankCodes.has(employee.academicRankCode)) {
-      throw new Error(`Unknown rank ${employee.academicRankCode}`);
-    }
-  }
+  validateHr(references, employees, new Set(userIds.keys()));
 
   const categoryIds = new Map<string, string>();
   for (const category of references.staffCategories) {

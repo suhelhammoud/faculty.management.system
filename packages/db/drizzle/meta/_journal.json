@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1794857077652,
-      "tag": "0000_slim_korath",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1794863570465,
-      "tag": "0001_hr-admin-permissions",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1795000224490,
-      "tag": "0002_facilities-permissions",
+      "when": 1795032795720,
+      "tag": "0000_brown_sandman",
       "breakpoints": true
     }
   ]

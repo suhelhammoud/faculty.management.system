@@ -24,7 +24,8 @@
     "migrate": "drizzle-kit migrate",
     "studio": "drizzle-kit studio",
     "db:start": "podman start faculty-postgres",
-    "db:stop": "podman stop faculty-postgres"
+    "db:stop": "podman stop faculty-postgres",
+    "test:seed": "pnpm build && node test/seed.test.mjs"
   },
   "dependencies": {
     "@project/authorization": "workspace:*",

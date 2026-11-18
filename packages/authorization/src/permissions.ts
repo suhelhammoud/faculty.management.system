@@ -62,23 +62,3 @@ export const FACILITIES_PERMISSIONS = [
   PERMISSION.facilities.read,
   PERMISSION.facilities.write,
 ] as const satisfies readonly PermissionKey[];
-
-export type DefaultRoleTemplate = {
-  id: string;
-  name: string;
-  permissions: readonly PermissionKey[];
-};
-
-export const HR_DEFAULT_ROLE = {
-  id: 'hr-administrator',
-  name: 'HR Administrator',
-  permissions: HR_PERMISSIONS,
-} as const satisfies DefaultRoleTemplate;
-
-export const FACILITIES_DEFAULT_ROLE = {
-  id: 'facilities-administrator',
-  name: 'Facilities Administrator',
-  permissions: FACILITIES_PERMISSIONS,
-} as const satisfies DefaultRoleTemplate;
-
-export const DEFAULT_ROLE_TEMPLATES = [HR_DEFAULT_ROLE, FACILITIES_DEFAULT_ROLE] as const;

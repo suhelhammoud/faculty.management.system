@@ -9,7 +9,10 @@ export async function provisionRoleTemplate(
   administratorRoleId: string,
   template: DefaultRoleTemplate,
 ): Promise<void> {
-  await tx.insert(roles).values({ id: template.id, name: template.name }).onConflictDoNothing();
+  await tx
+    .insert(roles)
+    .values({ id: template.id, name: template.name, description: template.description })
+    .onConflictDoNothing();
   const [role] = await tx.select().from(roles).where(eq(roles.name, template.name));
   if (!role) throw new Error(`Failed to provision default role ${template.name}`);
   await tx

@@ -1,4 +1,8 @@
-import { DEFAULT_ROLE_TEMPLATES, PERMISSION_CATALOG } from '@project/authorization';
+import {
+  ADMINISTRATOR_DEFAULT_ROLE,
+  DEFAULT_ROLE_TEMPLATES,
+  PERMISSION_CATALOG,
+} from '@project/authorization';
 import { provisionRoleTemplate } from './provision-role-template.js';
 import { createDb } from '@project/db';
 import { user, account, roles, permissions, userRoles, rolePermissions } from '@project/db/schema';
@@ -27,7 +31,7 @@ try {
         throw new Error('Bootstrap requires an empty user table');
       const id = randomUUID(),
         roleId = randomUUID();
-      const keys = PERMISSION_CATALOG.map(({ key }) => key);
+      const keys = ADMINISTRATOR_DEFAULT_ROLE.permissions;
       await tx.insert(user).values({
         id,
         username,
@@ -45,7 +49,11 @@ try {
         userId: id,
         password: hash,
       });
-      await tx.insert(roles).values({ id: roleId, name: 'Administrator' });
+      await tx.insert(roles).values({
+        id: roleId,
+        name: ADMINISTRATOR_DEFAULT_ROLE.name,
+        description: ADMINISTRATOR_DEFAULT_ROLE.description,
+      });
       await tx
         .insert(permissions)
         .values([...PERMISSION_CATALOG])

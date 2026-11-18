@@ -61,35 +61,24 @@ Stop it when finished with `pnpm --filter @project/db db:stop`. The named volume
 4. Apply all committed database migrations:
 
    ```sh
+   pnpm --filter @project/db generate
    pnpm --filter @project/db migrate
    pnpm --filter @project/db seed:permissions
    ```
 
    Migrations create the tables for the implemented modules; the permission seed registers the shared, version-controlled permission catalog without changing role grants.
 
-5. Build the API, then create the first Administration account while the database has no users. Put the bootstrap credentials in a temporary ignored file such as `apps/api/.env.bootstrap`; the bootstrap command reads `DATABASE_URL` from `packages/db/.env.db`:
-
-   ```dotenv
-   BOOTSTRAP_USERNAME=your_admin_username
-   BOOTSTRAP_PASSWORD=your_temporary_password
-   ```
-
-   Then run:
-
-   ```sh
-   pnpm --filter api build
-   node --env-file=packages/db/.env.db --env-file=apps/api/.env.bootstrap apps/api/dist/auth/bootstrap-admin.js
-   ```
-
-   Remove the temporary bootstrap file after the account is created. The bootstrap account must change its password after its first sign-in. This step is needed for Administration; skip it only if you do not need an Administration account.
-
-6. Load the synthetic local users and application records:
+5. Load the local administrator, synthetic users, and application records:
 
    ```sh
    pnpm --filter @project/db seed:local
    ```
 
-   The runner seeds demo auth users, HR data, and Facilities rooms. Seeded users use `SEED_USER_PASSWORD`; `facility_1` has Facilities permissions. The runner only accepts a non-production PostgreSQL database on a loopback host. See [local seed details](packages/db/seeds/local/README.md).
+   Sign in with username `admin` and the `SEED_USER_PASSWORD` configured in `packages/db/.env`. The local administrator has all catalog permissions. Rerunning the seed preserves this administrator's password and account settings; other demo users use the current seed password.
+
+   Local seeding synchronizes the permission catalog, creates the Administrator, HR Administrator, and Facilities Administrator roles, and adds their default permission grants without removing existing grants. It seeds demo auth users, HR data, and Facilities rooms. The runner only accepts a non-production PostgreSQL database on a loopback host. See [local seed details](packages/db/src/seed/README.md).
+
+   For deployments without demo data, create the first administrator using the separate [bootstrap procedure](docs/auth-api-setup.md). Bootstrap requires an empty user table; local development does not require it.
 
 ## Run the API and apps
 

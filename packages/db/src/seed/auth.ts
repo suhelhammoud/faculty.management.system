@@ -1,51 +1,29 @@
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { assertSeedAccounts, demoIdentity } from './ownership.js';
+import { validatePassword, validateUsers } from './validation.js';
+import { DEFAULT_ROLE_TEMPLATES } from '@project/authorization';
+import type { AuthSeedUser, SeedRoleId } from './fixtures/local/types.js';
 import { hashPassword } from 'better-auth/crypto';
 import { and, eq, inArray } from 'drizzle-orm';
-import type { Database } from '../client.js';
+import type { SeedTransaction } from './types.js';
 import { account, roles, user, userRoles } from '../schema/auth/index.js';
 
-type SeedExecutor = Pick<Database, 'select' | 'insert' | 'delete'>;
-type SeedRole = 'hr_admin' | 'facilities_admin';
-type AuthSeedUser = { username: string; name: string; roles?: SeedRole[] };
-const roleNames: Record<SeedRole, string> = {
-  hr_admin: 'HR Administrator',
-  facilities_admin: 'Facilities Administrator',
-};
-
-async function readUsers(fixtureRoot: string): Promise<AuthSeedUser[]> {
-  return JSON.parse(
-    await readFile(resolve(fixtureRoot, 'auth.users.json'), 'utf8'),
-  ) as AuthSeedUser[];
-}
-
 export async function seedAuth(
-  tx: SeedExecutor,
-  fixtureRoot: string,
+  tx: SeedTransaction,
+  seedUsers: AuthSeedUser[],
   password: string,
 ): Promise<Map<string, string>> {
-  if (password.length < 12 || password.length > 128) {
-    throw new Error('SEED_USER_PASSWORD must be 12–128 characters');
-  }
+  validatePassword(password);
+  validateUsers(seedUsers);
+  await assertSeedAccounts(tx, seedUsers.map(demoIdentity));
 
-  const seedUsers = await readUsers(fixtureRoot);
-  if (
-    !seedUsers.length ||
-    seedUsers.some(
-      ({ username, name, roles: assignedRoles }) =>
-        !/^[a-z0-9_]{3,30}$/.test(username) ||
-        !name.trim() ||
-        (assignedRoles ?? []).some((role) => !Object.hasOwn(roleNames, role)),
-    )
-  ) {
-    throw new Error('Auth fixtures need valid usernames, names, and recognized roles');
-  }
-
-  const seedRoles = new Map<string, string>();
-  for (const roleName of Object.values(roleNames)) {
-    const [role] = await tx.select().from(roles).where(eq(roles.name, roleName)).limit(1);
-    if (!role) throw new Error(`${roleName} role is missing; run database migrations first`);
-    seedRoles.set(roleName, role.id);
+  const seedRoles = new Map<SeedRoleId, string>();
+  for (const template of DEFAULT_ROLE_TEMPLATES) {
+    const [role] = await tx.select().from(roles).where(eq(roles.name, template.name)).limit(1);
+    if (!role)
+      throw new Error(
+        `${template.name} role is missing; provision local access before seeding users`,
+      );
+    seedRoles.set(template.id, role.id);
   }
 
   const passwordHash = await hashPassword(password);
@@ -73,8 +51,10 @@ export async function seedAuth(
           mustChangePassword: false,
           updatedAt: new Date(),
         },
+        setWhere: eq(user.id, `seed-${seedUser.username}`),
       })
       .returning({ id: user.id });
+    if (!createdUser) throw new Error(`Seed account collision for ${seedUser.username}`);
     userIds.set(seedUser.username, createdUser.id);
 
     await tx
@@ -95,8 +75,8 @@ export async function seedAuth(
       .delete(userRoles)
       .where(and(eq(userRoles.userId, createdUser.id), inArray(userRoles.roleId, seedRoleIds)));
     const assignedRoleIds = (seedUser.roles ?? []).map((role) => {
-      const roleId = seedRoles.get(roleNames[role]);
-      if (!roleId) throw new Error(`Missing role ${roleNames[role]}`);
+      const roleId = seedRoles.get(role);
+      if (!roleId) throw new Error(`Missing role ${role}`);
       return { userId: createdUser.id, roleId };
     });
     if (assignedRoleIds.length) {

@@ -2,12 +2,13 @@ import { loadEnvFile } from 'node:process';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createDb } from '../client.js';
-import { seedAuth } from './auth.js';
-import { seedFacilities } from './facilities.js';
-import { seedHr } from './hr.js';
+import { seedLocalDatabase } from './run-local.js';
+import { localAdministrator, localUsers } from './fixtures/local/auth.js';
+import { hrReferenceData } from './fixtures/local/hr-reference-data.js';
+import { hrEmployees } from './fixtures/local/hr-employees.js';
+import { localFacilities } from './fixtures/local/facilities.js';
 
 const dbPackageRoot = resolve(import.meta.dirname, '../..');
-const fixtureRoot = resolve(dbPackageRoot, 'seeds/local');
 
 function isSafeLocalDatabase(databaseUrl: string): boolean {
   let parsed: URL;
@@ -44,14 +45,20 @@ if (!isSafeLocalDatabase(databaseUrl)) {
 
 const { db, pool } = createDb(databaseUrl);
 try {
-  await db.transaction(async (tx) => {
-    const userIds = await seedAuth(tx, fixtureRoot, password);
-    const employeeCount = await seedHr(tx, fixtureRoot, userIds);
-    const roomCount = await seedFacilities(tx, fixtureRoot);
-    console.log(
-      `Seeded ${userIds.size} users, ${employeeCount} synthetic HR employees, and ${roomCount} rooms.`,
-    );
-  });
+  const { userCount, employeeCount, roomCount } = await seedLocalDatabase(
+    db,
+    {
+      administrator: localAdministrator,
+      users: localUsers,
+      references: hrReferenceData,
+      employees: hrEmployees,
+      facilities: localFacilities,
+    },
+    password,
+  );
+  console.log(
+    `Provisioned local administrator "${localAdministrator.username}" and seeded ${userCount} demo users, ${employeeCount} synthetic HR employees, and ${roomCount} rooms.`,
+  );
 } finally {
   await pool.end();
 }
