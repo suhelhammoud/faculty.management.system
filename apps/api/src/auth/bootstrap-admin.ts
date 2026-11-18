@@ -1,5 +1,5 @@
-import { provisionHrPermissions } from '../modules/hr/hr.permissions.js';
-import { provisionFacilitiesPermissions } from '../modules/facilities/facilities.permissions.js';
+import { DEFAULT_ROLE_TEMPLATES, PERMISSION_CATALOG } from '@project/authorization';
+import { provisionRoleTemplate } from './provision-role-template.js';
 import { createDb } from '@project/db';
 import { user, account, roles, permissions, userRoles, rolePermissions } from '@project/db/schema';
 import { randomUUID } from 'node:crypto';
@@ -27,17 +27,7 @@ try {
         throw new Error('Bootstrap requires an empty user table');
       const id = randomUUID(),
         roleId = randomUUID();
-      const keys = [
-        'users:read',
-        'users:create',
-        'users:approve',
-        'users:reset-password',
-        'users:assign-roles',
-        'roles:read',
-        'roles:create',
-        'roles:update',
-        'audit:read',
-      ];
+      const keys = PERMISSION_CATALOG.map(({ key }) => key);
       await tx.insert(user).values({
         id,
         username,
@@ -58,11 +48,11 @@ try {
       await tx.insert(roles).values({ id: roleId, name: 'Administrator' });
       await tx
         .insert(permissions)
-        .values(keys.map((key) => ({ key })))
+        .values([...PERMISSION_CATALOG])
         .onConflictDoNothing();
       await tx.insert(rolePermissions).values(keys.map((permission) => ({ roleId, permission })));
-      await provisionHrPermissions(tx, roleId);
-      await provisionFacilitiesPermissions(tx, roleId);
+      for (const template of DEFAULT_ROLE_TEMPLATES)
+        await provisionRoleTemplate(tx, roleId, template);
       await tx.insert(userRoles).values({ userId: id, roleId });
     },
     { isolationLevel: 'serializable' },

@@ -2,7 +2,7 @@
 
 Configure `DATABASE_URL`, `BETTER_AUTH_SECRET` (random, at least 32 characters), `BETTER_AUTH_URL`, and comma-separated `TRUSTED_ORIGINS` using `apps/api/.env.example` as a reference. Use HTTPS in production.
 
-Run the database migrations with `pnpm --filter @project/db migrate`, then build with `pnpm --filter api build`.
+Run the database migrations with `pnpm --filter @project/db migrate`, synchronize the version-controlled permission catalog with `pnpm --filter @project/db seed:permissions`, then build with `pnpm --filter api build`. The catalog seed inserts new permissions and updates descriptions; it does not change role grants or delete catalog entries. Run it after migrations on every deployment. See the [shared authorization guide](modules/authorization/README.md) for the permission, role, and seed workflow.
 
 For an empty user database, run `node apps/api/dist/auth/bootstrap-admin.js` with `DATABASE_URL`, `BOOTSTRAP_USERNAME`, and `BOOTSTRAP_PASSWORD` injected securely into the environment. The bootstrap administrator must change their password after signing in. Do not put passwords in shell history or commit them.
 
@@ -10,20 +10,20 @@ For an empty user database, run `node apps/api/dist/auth/bootstrap-admin.js` wit
 
 All mutation requests must include an allowed `Origin` header. Browser requests must include cookies (`credentials: 'include'`). Public health routes are `/` and `/health/database`.
 
-| Method | Path | Body / purpose |
-| --- | --- | --- |
-| POST | `/api/auth/sign-in/username` | `username`, `password` |
-| GET | `/api/auth/get-session` | Current session |
-| POST | `/api/auth/sign-out` | Sign out |
-| POST | `/api/admin/change-password` | `currentPassword`, `newPassword`; authenticated, enabled accounts only |
-| GET | `/api/admin/users` | List users; `users:read` |
-| POST | `/api/admin/users` | `username`, `name`, `password`; `users:create` |
-| POST | `/api/admin/users/:id/approve` | `users:approve` |
-| POST | `/api/admin/users/:id/reset-password` | Temporary `password`; `users:reset-password` |
-| GET | `/api/admin/roles` | `roles:read` |
-| POST | `/api/admin/roles` | `name`; `roles:create` |
-| POST | `/api/admin/roles/:id/permissions` | `permission`; `roles:update` |
-| POST | `/api/admin/users/:id/roles` | `roleId`; `users:assign-roles` |
+| Method | Path                                  | Body / purpose                                                         |
+| ------ | ------------------------------------- | ---------------------------------------------------------------------- |
+| POST   | `/api/auth/sign-in/username`          | `username`, `password`                                                 |
+| GET    | `/api/auth/get-session`               | Current session                                                        |
+| POST   | `/api/auth/sign-out`                  | Sign out                                                               |
+| POST   | `/api/admin/change-password`          | `currentPassword`, `newPassword`; authenticated, enabled accounts only |
+| GET    | `/api/admin/users`                    | List users; `users:read`                                               |
+| POST   | `/api/admin/users`                    | `username`, `name`, `password`; `users:create`                         |
+| POST   | `/api/admin/users/:id/approve`        | `users:approve`                                                        |
+| POST   | `/api/admin/users/:id/reset-password` | Temporary `password`; `users:reset-password`                           |
+| GET    | `/api/admin/roles`                    | `roles:read`                                                           |
+| POST   | `/api/admin/roles`                    | `name`; `roles:create`                                                 |
+| POST   | `/api/admin/roles/:id/permissions`    | `permission`; `roles:update`                                           |
+| POST   | `/api/admin/users/:id/roles`          | `roleId`; `users:assign-roles`                                         |
 
 New accounts are pending approval and require a password change. Passwords must be 12–128 characters. Username creation accepts 3–30 ASCII letters, digits, or underscores and normalizes to lowercase. Synthetic internal email identifiers satisfy Better Auth's schema; email login and recovery are not exposed.
 
@@ -45,20 +45,20 @@ Destructive operations preserve at least one approved, enabled user without a pe
 
 ## ACL and permission management
 
-| Method | Path | Authorization |
-| --- | --- | --- |
-| GET | `/api/admin/permissions` | `roles:read` |
-| DELETE | `/api/admin/roles/:id/permissions/:permission` | `roles:update` on the role |
-| GET | `/api/admin/users/:id/acl` | `users:assign-roles` on the user |
-| POST | `/api/admin/users/:id/acl` | `users:assign-roles` on the user plus the affected permission on the resource |
-| DELETE | `/api/admin/users/:id/acl/:aclId` | Same checks as ACL creation |
+| Method | Path                                           | Authorization                                                                 |
+| ------ | ---------------------------------------------- | ----------------------------------------------------------------------------- |
+| GET    | `/api/admin/permissions`                       | `roles:read`                                                                  |
+| DELETE | `/api/admin/roles/:id/permissions/:permission` | `roles:update` on the role                                                    |
+| GET    | `/api/admin/users/:id/acl`                     | `users:assign-roles` on the user                                              |
+| POST   | `/api/admin/users/:id/acl`                     | `users:assign-roles` on the user plus the affected permission on the resource |
+| DELETE | `/api/admin/users/:id/acl/:aclId`              | Same checks as ACL creation                                                   |
 
 ACL creation accepts `resourceType`, `resourceId`, `permission`, and `effect` (`allow` or `deny`). Example: `{"resourceType":"users","resourceId":"TARGET_USER_ID","permission":"users:approve","effect":"deny"}`. The response contains the new ACL entry ID. Grants and denies may coexist; any matching deny wins. Delete a deny explicitly to restore access. Removing a deny requires the same delegation checks as adding a grant.
 
-Currently registered resource types are `users` and `roles`, matching the backend's existing entities. Unknown types, missing resources, unknown permission keys, and mismatched permission namespaces are rejected. Register a resolver when introducing another resource such as tasks. Permissions are listed from the database catalog; this API does not create arbitrary permission keys.
+Currently registered resource types are `users` and `roles`, matching the backend's existing entities. Unknown types, missing resources, unknown permission keys, and mismatched permission namespaces are rejected. Register a resolver when introducing another resource such as tasks. Permissions are listed from the database catalog; this API does not create arbitrary permission keys. The supported keys and descriptions live in `@project/authorization` and are synchronized with `pnpm --filter @project/db seed:permissions`.
 
 Permission removal revokes affected sessions and applies the existing last-administrator invariant in a serializable transaction. ACL changes take effect on subsequent authorization checks without a new login, and all mutations write audit records. ACL listing is scoped to the user named in the URL; deleting another user's ACL ID returns 404. No schema migration is needed for these endpoints.
 
 ## Audit log
 
-`GET /api/admin/audit-log` requires the `audit:read` permission and returns up to 200 newest records with actor name/username, action, target, and timestamp. Passwords and session tokens are never included. The admin dashboard's **Audit log** tab uses this endpoint; access is enforced by the API. Existing installations must add `audit:read` to the permissions catalog and grant it to an authorized role through a migration or administrative database operation.
+`GET /api/admin/audit-log` requires the `audit:read` permission and returns up to 200 newest records with actor name/username, action, target, and timestamp. Passwords and session tokens are never included. The admin dashboard's **Audit log** tab uses this endpoint; access is enforced by the API. The permission catalog seed registers `audit:read`; an administrator must grant it to an authorized role through role administration.

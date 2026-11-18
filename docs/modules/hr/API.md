@@ -4,7 +4,7 @@ The API manages employee personal details, current employment information, and t
 
 ## Access and setup
 
-Apply migrations with `pnpm --filter @project/db migrate` and build with `pnpm --filter api build`. Migration `0001_hr-admin-permissions.sql` registers HR permissions, creates the **HR Administrator** role, and grants the permissions to an existing **Administrator** role. New bootstrap administrators also receive these permissions. No users are automatically assigned to HR Administrator.
+Apply migrations with `pnpm --filter @project/db migrate`, then synchronize the permission catalog with `pnpm --filter @project/db seed:permissions`, and build with `pnpm --filter api build`. Permission keys and descriptions are defined in the shared authorization catalog. Migration `0001_hr-admin-permissions.sql` remains in migration history and provides initial grants for existing installations; new bootstrap administrators receive the configured defaults. No users are automatically assigned to HR Administrator. See the [shared authorization guide](../authorization/README.md) for how to add permissions and manage grants.
 
 An approved, enabled shared administrator who has completed their password change can assign an HR user through the existing administration API:
 

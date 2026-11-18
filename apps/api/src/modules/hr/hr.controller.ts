@@ -14,6 +14,7 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { fromNodeHeaders } from 'better-auth/node';
+import { PERMISSION } from '@project/authorization';
 import type { Request } from 'express';
 import { AUTH, type Auth } from '../../auth/auth.provider.js';
 import { RequirePermission } from '../../auth/auth.guard.js';
@@ -52,13 +53,13 @@ export class HrController {
   }
 
   @Get('employees')
-  @RequirePermission('hr-employees:read')
+  @RequirePermission(PERMISSION.hrEmployees.read)
   listEmployees(@Query({ schema: employeeQuery }) query: EmployeeQuery) {
     return this.employees.list(query);
   }
 
   @Post('employees')
-  @RequirePermission('hr-employees:create')
+  @RequirePermission(PERMISSION.hrEmployees.create)
   async createEmployee(
     @Body({ schema: employeeCreate }) body: EmployeeCreate,
     @Req() req: Request,
@@ -67,13 +68,13 @@ export class HrController {
   }
 
   @Get('employees/:employeeId')
-  @RequirePermission('hr-employees:read')
+  @RequirePermission(PERMISSION.hrEmployees.read)
   getEmployee(@Param('employeeId', { schema: uuid }) id: string) {
     return this.employees.get(id);
   }
 
   @Patch('employees/:employeeId')
-  @RequirePermission('hr-employees:update')
+  @RequirePermission(PERMISSION.hrEmployees.update)
   async updateEmployee(
     @Param('employeeId', { schema: uuid }) id: string,
     @Body({ schema: employeePatch }) body: EmployeePatch,
@@ -83,7 +84,7 @@ export class HrController {
   }
 
   @Put('employees/:employeeId/employment')
-  @RequirePermission('hr-employees:update')
+  @RequirePermission(PERMISSION.hrEmployees.update)
   async putEmployment(
     @Param('employeeId', { schema: uuid }) id: string,
     @Body({ schema: employmentPut }) body: EmploymentPut,
@@ -93,7 +94,7 @@ export class HrController {
   }
 
   @Get(':kind')
-  @RequirePermission('hr-reference-data:read')
+  @RequirePermission(PERMISSION.hrReferenceData.read)
   listReference(
     @Param('kind', { schema: referenceKind }) kind: ReferenceKind,
     @Query({ schema: referenceQuery }) query: { categoryId?: string; schemeId?: string },
@@ -102,7 +103,7 @@ export class HrController {
   }
 
   @Post(':kind')
-  @RequirePermission('hr-reference-data:write')
+  @RequirePermission(PERMISSION.hrReferenceData.write)
   async createReference(
     @Param('kind', { schema: referenceKind }) kind: ReferenceKind,
     @Body() body: unknown,
@@ -112,7 +113,7 @@ export class HrController {
   }
 
   @Patch(':kind/:id')
-  @RequirePermission('hr-reference-data:write')
+  @RequirePermission(PERMISSION.hrReferenceData.write)
   async updateReference(
     @Param('kind', { schema: referenceKind }) kind: ReferenceKind,
     @Param('id', { schema: uuid }) id: string,

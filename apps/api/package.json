@@ -22,6 +22,7 @@
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts"
   },
   "dependencies": {
+    "@project/authorization": "workspace:*",
     "@better-auth/drizzle-adapter": "^1.7.18",
     "@nestjs/common": "^12.0.1",
     "@nestjs/config": "^12.1.1",

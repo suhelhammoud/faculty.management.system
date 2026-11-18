@@ -61,7 +61,10 @@ Stop it when finished with `pnpm --filter @project/db db:stop`. The named volume
 
    ```sh
    pnpm --filter @project/db migrate
+   pnpm --filter @project/db seed:permissions
    ```
+
+   Migrations create the tables for the implemented modules; the permission seed registers the shared, version-controlled permission catalog without changing role grants.
 
 5. Build the API, then create the first Administration account while the database has no users. Put the database URL and bootstrap credentials in a temporary ignored file such as `apps/api/.env.bootstrap`:
 

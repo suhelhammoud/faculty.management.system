@@ -16,8 +16,9 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "pnpm --filter @project/authorization build && tsc -p tsconfig.json",
+    "typecheck": "pnpm --filter @project/authorization build && tsc --noEmit -p tsconfig.json",
+    "seed:permissions": "pnpm build && node dist/seed/permission-catalog.js",
     "seed:local": "pnpm build && node dist/seed/local.js",
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
@@ -26,6 +27,7 @@
     "db:stop": "podman stop faculty-postgres"
   },
   "dependencies": {
+    "@project/authorization": "workspace:*",
     "better-auth": "^1.7.18",
     "drizzle-orm": "^0.45.4",
     "pg": "^8.23.1"
