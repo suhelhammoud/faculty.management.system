@@ -37,18 +37,19 @@ export class InventoryRemovalController {
 
   @Post('assets')
   @RequirePermission(PERMISSION.inventory.manageAssets)
-  registerAsset(@Body({ schema: asset }) body: z.infer<typeof asset>) {
-    return this.inventory.registerAsset(body);
+  registerAsset(@ActorId() actorId: string, @Body({ schema: asset }) body: z.infer<typeof asset>) {
+    return this.inventory.registerAsset(actorId, body);
   }
 
   @Patch('assets/:id/custody')
   @HttpCode(204)
   @RequirePermission(PERMISSION.inventory.manageAssets, 'inventory.asset')
   changeCustody(
+    @ActorId() actorId: string,
     @Param('id', { schema: uuid }) id: string,
     @Body({ schema: custody }) body: z.infer<typeof custody>,
   ) {
-    return this.inventory.changeCustody(id, body.employeeId);
+    return this.inventory.changeCustody(actorId, id, body.employeeId);
   }
 
   @Post('removal-requests')

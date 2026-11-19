@@ -10,15 +10,13 @@ import {
 import { PERMISSION } from '@project/authorization';
 import type { Database } from '@project/db';
 import {
-  hrEmployees,
   inventoryAssets,
-  inventoryCustodies,
   inventoryRemovalDecisions,
   inventoryRemovalItems,
   inventoryRemovalRequests,
   workflowInstances,
 } from '@project/db/schema';
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { AuthorizationService } from '../../auth/authorization.service.js';
 import { DATABASE } from '../../database/database.constants.js';
@@ -31,6 +29,7 @@ import { WorkflowRegistry } from '../workflows/workflow-registry.js';
 import { WorkflowsService } from '../workflows/workflows.service.js';
 import { inventoryRemoval } from './inventory-removal.definition.js';
 import { asset, committeeDecision, proposal } from './inventory-removal.schemas.js';
+import { InventoryTransactionsService } from './inventory-transactions.service.js';
 
 const subjectType = 'removal-request';
 function validate<T>(schema: z.ZodType<T>, value: unknown) {
@@ -47,6 +46,8 @@ export class InventoryRemovalService implements OnModuleInit {
     @Inject(AuthorizationService) private readonly auth: AuthorizationService,
     @Inject(WorkflowRegistry) private readonly registry: WorkflowRegistry,
     @Inject(WorkflowsService) private readonly workflows: WorkflowsService,
+    @Inject(InventoryTransactionsService)
+    private readonly transactions: InventoryTransactionsService,
   ) {}
 
   onModuleInit() {
@@ -103,6 +104,7 @@ export class InventoryRemovalService implements OnModuleInit {
         assetId: inventoryRemovalItems.assetId,
         tag: inventoryAssets.tag,
         name: inventoryAssets.name,
+        condition: inventoryAssets.condition,
         revision: inventoryRemovalItems.revision,
         reason: inventoryRemovalItems.reason,
         outcome: inventoryRemovalItems.outcome,
@@ -157,30 +159,12 @@ export class InventoryRemovalService implements OnModuleInit {
       .orderBy(asc(inventoryAssets.tag));
   }
 
-  async registerAsset(input: z.infer<typeof asset>) {
-    return this.db.transaction(async (tx) => {
-      const [row] = await tx
-        .insert(inventoryAssets)
-        .values({ tag: input.tag, name: input.name })
-        .onConflictDoNothing({ target: inventoryAssets.tag })
-        .returning();
-      if (!row) throw new ConflictException('Asset tag already exists');
-      if (input.employeeId) await this.openCustody(tx, row.id, input.employeeId);
-      return row;
-    });
+  registerAsset(actorId: string, input: z.infer<typeof asset>) {
+    return this.transactions.registerLegacy(actorId, input);
   }
 
-  async changeCustody(id: string, employeeId: string | null) {
-    return this.db.transaction(async (tx) => {
-      const [row] = await this.lockAssets(tx, [id]);
-      if (row.status !== 'active') throw new ConflictException('Asset has been decommissioned');
-      await this.endCustody(tx, id, new Date());
-      if (employeeId) await this.openCustody(tx, id, employeeId);
-      await tx
-        .update(inventoryAssets)
-        .set({ revision: row.revision + 1 })
-        .where(eq(inventoryAssets.id, id));
-    });
+  changeCustody(actorId: string, id: string, employeeId: string | null) {
+    return this.transactions.changeLegacyCustody(actorId, id, employeeId);
   }
 
   private async canView(db: WorkflowReader, actorId: string, id: string) {
@@ -235,7 +219,7 @@ export class InventoryRemovalService implements OnModuleInit {
     revision: number,
     items: z.infer<typeof proposal>['items'],
   ) {
-    const assets = await this.lockAssets(
+    const assets = await this.transactions.lockAssets(
       tx,
       items.map(({ assetId }) => assetId),
     );
@@ -244,7 +228,7 @@ export class InventoryRemovalService implements OnModuleInit {
       const asset = assets.find(({ id }) => id === item.assetId)!;
       if (asset.status !== 'active')
         throw new ConflictException('A proposed asset has been decommissioned');
-      const custody = await this.activeCustody(tx, asset.id);
+      const custody = await this.transactions.activeCustody(tx, asset.id);
       values.push({
         ...item,
         requestId,
@@ -276,14 +260,18 @@ export class InventoryRemovalService implements OnModuleInit {
 
     const approved = input.items.filter(({ outcome }) => outcome === 'approved-for-waste');
     const assets = approved.length
-      ? await this.lockAssets(
+      ? await this.transactions.lockAssets(
           tx,
           approved.map(({ assetId }) => assetId),
         )
       : [];
+    const stateChanges = new Map<
+      string,
+      Awaited<ReturnType<InventoryTransactionsService['decommission']>>
+    >();
     for (const row of assets) {
       const original = proposal.find(({ assetId }) => assetId === row.id)!;
-      const custody = await this.activeCustody(tx, row.id);
+      const custody = await this.transactions.activeCustody(tx, row.id);
       if (
         row.status !== 'active' ||
         row.revision !== original.assetRevision ||
@@ -293,11 +281,7 @@ export class InventoryRemovalService implements OnModuleInit {
           'A proposed asset changed during review. Return the request for revision.',
         );
       }
-      await tx
-        .update(inventoryAssets)
-        .set({ status: 'decommissioned', revision: row.revision + 1 })
-        .where(eq(inventoryAssets.id, row.id));
-      await this.endCustody(tx, row.id, new Date());
+      stateChanges.set(row.id, await this.transactions.decommission(tx, row, custody));
     }
 
     for (const line of input.items) {
@@ -317,43 +301,23 @@ export class InventoryRemovalService implements OnModuleInit {
         decidedOn: input.decidedOn,
       })
       .returning({ id: inventoryRemovalDecisions.id });
+    await this.transactions.record(
+      tx,
+      {
+        type: 'committee-decision',
+        name: input.name,
+        reference: input.reference,
+        eventDate: input.decidedOn,
+        actorId,
+        decisionId: decision.id,
+      },
+      input.items.map(({ assetId, outcome, reason }) => ({
+        assetId,
+        outcome,
+        reason,
+        ...stateChanges.get(assetId),
+      })),
+    );
     return decision.id;
-  }
-
-  private async lockAssets(tx: WorkflowTransaction, ids: string[]) {
-    const found = await tx
-      .select()
-      .from(inventoryAssets)
-      .where(inArray(inventoryAssets.id, ids))
-      .orderBy(asc(inventoryAssets.id))
-      .for('update');
-    if (found.length !== ids.length)
-      throw new NotFoundException('One or more assets were not found');
-    return found;
-  }
-
-  private async activeCustody(tx: WorkflowTransaction, assetId: string) {
-    const [row] = await tx
-      .select()
-      .from(inventoryCustodies)
-      .where(and(eq(inventoryCustodies.assetId, assetId), isNull(inventoryCustodies.endedAt)));
-    return row;
-  }
-
-  private async openCustody(tx: WorkflowTransaction, assetId: string, employeeId: string) {
-    const [employee] = await tx
-      .select({ id: hrEmployees.employeeId })
-      .from(hrEmployees)
-      .where(eq(hrEmployees.employeeId, employeeId))
-      .for('key share');
-    if (!employee) throw new BadRequestException('Employee was not found');
-    await tx.insert(inventoryCustodies).values({ assetId, employeeId });
-  }
-
-  private async endCustody(tx: WorkflowTransaction, assetId: string, endedAt: Date) {
-    await tx
-      .update(inventoryCustodies)
-      .set({ endedAt })
-      .where(and(eq(inventoryCustodies.assetId, assetId), isNull(inventoryCustodies.endedAt)));
   }
 }

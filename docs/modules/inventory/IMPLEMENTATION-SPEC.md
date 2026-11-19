@@ -2,7 +2,7 @@
 
 ## Project context
 
-This repository is a monorepo with a React/TypeScript frontend, a NestJS API, PostgreSQL, and Drizzle ORM. The Inventory API implements the removal workflow, with proposal and decision screens in the shared shell. The standalone Inventory frontend is a starter scaffold. Database schema and migrations live in `packages/db`.
+This repository is a monorepo with a React/TypeScript frontend, a NestJS API, PostgreSQL, and Drizzle ORM. The Inventory API implements asset custody, stock and transaction posting, and the removal workflow. See the [API reference](API.md) for the current endpoints and permission model. The shared shell provides proposal and decision screens. The standalone Inventory frontend is a starter scaffold. Database schema and migrations live in `packages/db`.
 
 Follow the architecture, authentication, validation, styling, and error-handling patterns used by existing modules. Inventory should work as a standalone frontend and through the shared app shell.
 
@@ -24,7 +24,7 @@ Track separately:
 
 - **Responsible party/custodian:** an HR employee or a clearly distinguished shared responsibility account.
 - **Physical location:** an optional Facilities room.
-- **Status:** a small, maintainable set such as available, assigned, under repair, lost, or decommissioned.
+- **Lifecycle and condition:** lifecycle is active, decommissioned, or disposed. Condition is separate and records whether the asset is serviceable, malfunctioning, under repair, lost, or unassessed.
 
 Responsibility and room location are independent. An asset may have a responsible employee without a room location, or a room location without an individual custodian.
 
@@ -95,7 +95,7 @@ Retain transaction history. Do not erase history when an item is transferred, de
 ## Storage locations and integrations
 
 - Use Facilities as the source of truth for rooms. Inventory should reference room IDs rather than creating duplicate room records.
-- Support identifying which Facilities rooms are valid storage locations. Follow existing Facilities room type/data conventions where possible.
+- Inventory explicitly designates individual Facilities rooms as storage and configures a shared custodian for each.
 - Reference HR employee records for individual responsible parties.
 - Shared responsibility accounts must be distinguishable from real employee records and must not be stored as fake HR employees.
 - Keep any future Maintenance integration out of scope unless an existing API contract already makes it straightforward.
@@ -147,12 +147,9 @@ Show the current asset custodian and physical location as separate fields. Show 
 - Existing shared authentication and permission checks protect Inventory API operations.
 - Inventory navigation and standalone development continue to follow the repository’s app conventions.
 
-## Decisions to confirm before implementation
+## Operational decisions
 
-If the repository does not already settle these points, identify them before making assumptions:
-
-- The exact inventory status and committee decision values.
-- The required asset fields and consumable units.
-- Which Facilities rooms count as storage locations.
-- Whether shared responsibility accounts are created inside Inventory or maintained by an administrator elsewhere.
-- Which user roles receive read, write, and committee-decision permissions.
+- Each consumable has one fixed unit and uses whole quantities.
+- An active asset can be proposed for removal with a reason, regardless of its recorded condition.
+- Only removal uses the approval inbox. The reviewer and the committee decision recorder may be the same person if that person has both grants.
+- Grant Inventory capabilities through shared Administration. Configure storage rooms and their shared custodians before receiving inventory.

@@ -4,9 +4,13 @@ import { WorkflowsModule } from '../workflows/workflows.module.js';
 import { InventoryRemovalController } from './inventory-removal.controller.js';
 import { InventoryRemovalService } from './inventory-removal.service.js';
 
+import { InventoryController } from './inventory.controller.js';
+import { InventoryReadService } from './inventory-read.service.js';
+import { InventoryTransactionsService } from './inventory-transactions.service.js';
+
 @Module({
   imports: [AuthModule, WorkflowsModule],
-  controllers: [InventoryRemovalController],
-  providers: [InventoryRemovalService],
+  controllers: [InventoryController, InventoryRemovalController],
+  providers: [InventoryReadService, InventoryRemovalService, InventoryTransactionsService],
 })
 export class InventoryModule {}

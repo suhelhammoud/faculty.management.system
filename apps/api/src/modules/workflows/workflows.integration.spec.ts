@@ -6,10 +6,15 @@ import { Test } from '@nestjs/testing';
 import { PERMISSION } from '@project/authorization';
 import { createDb } from '@project/db';
 import {
+  facilitiesBuildings,
+  facilitiesFloors,
+  facilitiesRooms,
+  facilitiesRoomTypes,
   hrEmployees,
   inventoryAssets,
   inventoryCustodies,
   inventoryRemovalDecisions,
+  inventoryTransactions,
   permissions,
   rolePermissions,
   roles,
@@ -28,6 +33,9 @@ import { AuthorizationService } from '../../auth/authorization.service.js';
 import { DATABASE } from '../../database/database.constants.js';
 import { InventoryRemovalController } from '../inventory/inventory-removal.controller.js';
 import { InventoryRemovalService } from '../inventory/inventory-removal.service.js';
+import { InventoryController } from '../inventory/inventory.controller.js';
+import { InventoryReadService } from '../inventory/inventory-read.service.js';
+import { InventoryTransactionsService } from '../inventory/inventory-transactions.service.js';
 import type { WorkflowRegistration } from './workflow-definition.js';
 import { WorkflowRegistry } from './workflow-registry.js';
 import { WorkflowsController } from './workflows.controller.js';
@@ -107,6 +115,10 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       { roleId: actorRoles.reviewer, permission: PERMISSION.workflow.monitor },
       { roleId: actorRoles.reviewer2, permission: permissionGrants.reviewRemoval },
       { roleId: actorRoles.manager, permission: permissionGrants.manageAssets },
+      { roleId: actorRoles.manager, permission: permissionGrants.read },
+      { roleId: actorRoles.manager, permission: permissionGrants.configure },
+      { roleId: actorRoles.manager, permission: permissionGrants.postTransactions },
+      { roleId: actorRoles.reviewer, permission: permissionGrants.dispose },
     ]);
     await db.insert(hrEmployees).values(
       [employeeId, secondEmployee].map((id) => ({
@@ -126,17 +138,19 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       },
     } as unknown as Auth;
     const module = await Test.createTestingModule({
-      controllers: [WorkflowsController, InventoryRemovalController],
+      controllers: [WorkflowsController, InventoryRemovalController, InventoryController],
       providers: [
         WorkflowsService,
         WorkflowRegistry,
         InventoryRemovalService,
+        InventoryReadService,
+        InventoryTransactionsService,
         { provide: DATABASE, useValue: db },
         { provide: AuthorizationService, useValue: new AuthorizationService(db) },
       ],
     }).compile();
     app = module.createNestApplication();
-    app.use(adminOriginProtection([origin], ['/api/workflow', '/api/inventory/workflow']));
+    app.use(adminOriginProtection([origin], ['/api/workflow', '/api/inventory']));
     app.useGlobalGuards(new AuthGuard(new Reflector(), auth, new AuthorizationService(db)));
     await app.init();
   }, 30_000);
@@ -242,7 +256,25 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       winner.key,
     ).expect(200);
     expect(retried.body).toEqual(committee);
-    await action(committee.taskId, actors.reviewer, decisions(ids)).expect(200);
+    const recorded = decisions(ids);
+    const decisionKey = randomUUID();
+    await action(committee.taskId, actors.reviewer, recorded, decisionKey).expect(200);
+    await action(committee.taskId, actors.reviewer, recorded, decisionKey).expect(200);
+    const ledger = await client()
+      .get('/api/inventory/transactions')
+      .query({ type: 'committee-decision', assetId: ids[0] })
+      .set(headers(actors.manager))
+      .expect(200);
+    expect(ledger.body).toHaveLength(1);
+    const entry = await client()
+      .get(`/api/inventory/transactions/${ledger.body[0].id}`)
+      .set(headers(actors.manager))
+      .expect(200);
+    expect(entry.body.items.map(({ outcome }: { outcome: string }) => outcome)).toEqual([
+      'approved-for-waste',
+      'rejected',
+      'deferred',
+    ]);
     const { db } = connection;
     const statuses = await db
       .select()
@@ -255,6 +287,33 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       .from(inventoryCustodies)
       .where(and(inArray(inventoryCustodies.assetId, ids), isNull(inventoryCustodies.endedAt)));
     expect(active.map(({ assetId }) => assetId).sort()).toEqual(ids.slice(1).sort());
+    const disposal = {
+      type: 'disposal',
+      eventDate: '2026-11-19',
+      name: 'Waste pickup',
+      reference: 'pickup',
+      items: [{ assetId: ids[0], expectedRevision: 2 }],
+    };
+    await client()
+      .post('/api/inventory/transactions')
+      .set(headers(actors.manager))
+      .send(disposal)
+      .expect(403);
+    await client()
+      .post('/api/inventory/transactions')
+      .set(headers(actors.reviewer))
+      .send(disposal)
+      .expect(201);
+    await client()
+      .post('/api/inventory/transactions')
+      .set(headers(actors.reviewer))
+      .send({ ...disposal, items: [{ assetId: ids[1], expectedRevision: 1 }] })
+      .expect(409);
+    const [disposed] = await db
+      .select()
+      .from(inventoryAssets)
+      .where(eq(inventoryAssets.id, ids[0]));
+    expect(disposed).toMatchObject({ status: 'disposed', roomId: null });
     const history = await client()
       .get(`/api/workflow/instances/${first.instanceId}`)
       .set(headers(actors.requester))
@@ -327,6 +386,235 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
         .from(inventoryRemovalDecisions)
         .where(eq(inventoryRemovalDecisions.requestId, subjectId)),
     ).toEqual([]);
+  });
+
+  it('routes a review return only to the requester and routes a new review after resubmission', async () => {
+    const ids = [await asset()];
+    const review = await start(ids);
+    await action(review.taskId, actors.reviewer, { action: 'return' }).expect(400);
+    const revision = started(
+      (
+        await action(review.taskId, actors.reviewer, {
+          action: 'return',
+          comment: 'Add details',
+        }).expect(200)
+      ).body,
+    );
+    const inbox = async (actor: string) =>
+      (await client().get(taskApi).set(headers(actor)).expect(200)).body;
+    const revisionTask = expect.objectContaining({
+      id: revision.taskId,
+      step: 'revise',
+      actions: ['resubmit'],
+    });
+    expect(await inbox(actors.requester)).toContainEqual(revisionTask);
+    expect(await inbox(actors.reviewer)).not.toContainEqual(revisionTask);
+    const next = started(
+      (
+        await action(revision.taskId, actors.requester, {
+          action: 'resubmit',
+          input: bodyFor(ids),
+        }).expect(200)
+      ).body,
+    );
+    expect(await inbox(actors.reviewer)).toContainEqual(
+      expect.objectContaining({ id: next.taskId, step: 'review' }),
+    );
+  });
+
+  it('posts mixed receipts, retains custody across relocation, and serializes stock deductions', async () => {
+    const { db } = connection;
+    const [building] = await db
+      .insert(facilitiesBuildings)
+      .values({ buildingCode: randomUUID(), title: 'Inventory test' })
+      .returning();
+    const [floor] = await db
+      .insert(facilitiesFloors)
+      .values({ buildingId: building.buildingId, floorNumber: 1 })
+      .returning();
+    const [roomType] = await db
+      .insert(facilitiesRoomTypes)
+      .values({ name: randomUUID() })
+      .returning();
+    const [store, other] = await db
+      .insert(facilitiesRooms)
+      .values(
+        ['Store', 'Annex'].map((title) => ({
+          roomCode: title,
+          title,
+          buildingId: building.buildingId,
+          floorId: floor.floorId,
+          roomTypeId: roomType.roomTypeId,
+        })),
+      )
+      .returning();
+    const manager = headers(actors.manager);
+    const prefix = '/api/inventory';
+    const shared = (
+      await client()
+        .post(prefix + '/shared-accounts')
+        .set(manager)
+        .send({ name: randomUUID() })
+        .expect(201)
+    ).body;
+    for (const room of [store, other])
+      await client()
+        .put(prefix + '/storage/' + room.roomId)
+        .set(manager)
+        .send({ sharedAccountId: shared.id })
+        .expect(200);
+    const item = (
+      await client()
+        .post(prefix + '/consumables')
+        .set(manager)
+        .send({
+          name: 'Paper',
+          code: randomUUID(),
+          unit: 'ream',
+        })
+        .expect(201)
+    ).body;
+    const tag = randomUUID();
+    const header = { eventDate: '2026-11-19', name: 'Inventory test' };
+    const receipt = {
+      ...header,
+      type: 'receipt',
+      source: 'purchase',
+      reference: randomUUID(),
+      destinationRoomId: store.roomId,
+      items: [
+        { kind: 'asset', tag, name: 'Projector' },
+        { kind: 'consumable', consumableId: item.id, quantity: 5 },
+      ],
+    };
+    const post = (body: object, key = randomUUID()) =>
+      client()
+        .post(prefix + '/transactions')
+        .set(manager)
+        .set('Idempotency-Key', key)
+        .send(body);
+    await client()
+      .post(prefix + '/transactions')
+      .set('x-test-actor', actors.manager)
+      .send(receipt)
+      .expect(403);
+    const key = randomUUID();
+    const [first, retry] = await Promise.all([
+      post(receipt, key).expect(201),
+      post(receipt, key).expect(201),
+    ]);
+    expect(retry.body).toEqual(first.body);
+    await post({ ...receipt, name: 'Changed' }, key).expect(409);
+    const [received] = (
+      await client()
+        .get(prefix + '/assets')
+        .query({ q: tag })
+        .set(manager)
+        .expect(200)
+    ).body;
+    expect(received).toMatchObject({
+      asset: { roomId: store.roomId },
+      custody: { sharedAccountId: shared.id },
+    });
+    const assetId = received.asset.id;
+    const stock = () =>
+      client()
+        .get(prefix + '/stock')
+        .query({ consumableId: item.id, roomId: store.roomId })
+        .set(manager)
+        .expect(200);
+    expect((await stock()).body).toMatchObject([{ quantity: 5 }]);
+    const issue = {
+      ...header,
+      type: 'asset-issue',
+      sourceRoomId: store.roomId,
+      recipient: { kind: 'employee', id: employeeId },
+      items: [{ assetId, expectedRevision: 1 }],
+    };
+    await post(issue).expect(201);
+    const move = {
+      ...header,
+      type: 'storage-relocation',
+      sourceRoomId: store.roomId,
+      destinationRoomId: other.roomId,
+      items: [
+        { kind: 'asset', assetId, expectedRevision: 2 },
+        { kind: 'consumable', consumableId: item.id, quantity: 9 },
+      ],
+    };
+    await post(move).expect(409);
+    const getAsset = async () =>
+      (
+        await client()
+          .get(prefix + '/assets')
+          .query({ q: tag })
+          .set(manager)
+          .expect(200)
+      ).body[0];
+    expect(await getAsset()).toMatchObject({
+      asset: { revision: 2, roomId: store.roomId },
+      custody: { employeeId },
+    });
+    await post({ ...move, items: move.items.slice(0, 1) }).expect(201);
+    expect(await getAsset()).toMatchObject({
+      asset: { roomId: other.roomId },
+      custody: { employeeId },
+    });
+    await post({
+      ...header,
+      type: 'asset-handover',
+      from: { kind: 'employee', id: employeeId },
+      recipient: { kind: 'employee', id: secondEmployee },
+      items: [{ assetId, expectedRevision: 3 }],
+    }).expect(201);
+    expect(await getAsset()).toMatchObject({
+      asset: { roomId: other.roomId },
+      custody: { employeeId: secondEmployee },
+    });
+    await post({
+      ...header,
+      type: 'asset-return',
+      from: { kind: 'employee', id: secondEmployee },
+      destinationRoomId: store.roomId,
+      items: [{ assetId, expectedRevision: 4 }],
+    }).expect(201);
+    await post({
+      ...header,
+      type: 'condition-change',
+      items: [
+        { assetId, expectedRevision: 5, condition: 'malfunctioning', reason: 'Lamp failure' },
+      ],
+    }).expect(201);
+    expect(await getAsset()).toMatchObject({
+      asset: { roomId: store.roomId, condition: 'malfunctioning', revision: 6 },
+      custody: { sharedAccountId: shared.id },
+    });
+    const consumableIssue = {
+      ...header,
+      type: 'consumable-issue',
+      sourceRoomId: store.roomId,
+      employeeId,
+      items: [{ consumableId: item.id, quantity: 4 }],
+    };
+    const prior = await db
+      .select()
+      .from(inventoryCustodies)
+      .where(eq(inventoryCustodies.employeeId, employeeId));
+    const responses = await Promise.all([post(consumableIssue), post(consumableIssue)]);
+    expect(responses.map(({ status }) => status).sort()).toEqual([201, 409]);
+    expect((await stock()).body).toMatchObject([{ quantity: 1 }]);
+    expect(
+      await db
+        .select()
+        .from(inventoryCustodies)
+        .where(eq(inventoryCustodies.employeeId, employeeId)),
+    ).toEqual(prior);
+    expect(
+      await db
+        .select()
+        .from(inventoryTransactions)
+        .where(eq(inventoryTransactions.idempotencyKey, key)),
+    ).toHaveLength(1);
   });
 
   it('rechecks a permission after the task has been opened', async () => {

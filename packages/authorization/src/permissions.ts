@@ -31,6 +31,10 @@ export const PERMISSION = {
     monitor: 'workflow:monitor',
   },
   inventory: {
+    read: 'inventory:read',
+    configure: 'inventory:configure',
+    postTransactions: 'inventory:post-transactions',
+    dispose: 'inventory:dispose',
     manageAssets: 'inventory:manage-assets',
     requestRemoval: 'inventory:request-removal',
     reviewRemoval: 'inventory:removal-review',
@@ -63,6 +67,13 @@ export const PERMISSION_CATALOG = [
     key: PERMISSION.inventory.manageAssets,
     description: 'Register assets and change asset custody',
   },
+  { key: PERMISSION.inventory.read, description: 'Read inventory and transaction history' },
+  { key: PERMISSION.inventory.configure, description: 'Configure inventory storage and catalogs' },
+  {
+    key: PERMISSION.inventory.postTransactions,
+    description: 'Post inventory movements and adjustments',
+  },
+  { key: PERMISSION.inventory.dispose, description: 'Record physical disposal of approved assets' },
   { key: PERMISSION.inventory.requestRemoval, description: 'Submit asset removal requests' },
   { key: PERMISSION.inventory.reviewRemoval, description: 'Review asset removal requests' },
   {

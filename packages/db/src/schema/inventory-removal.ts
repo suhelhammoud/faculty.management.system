@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  check,
   date,
   integer,
   pgTable,
@@ -11,15 +12,34 @@ import {
 } from 'drizzle-orm/pg-core';
 import { user } from './auth/users.js';
 import { hrEmployees } from './hr/employees.js';
+import { facilitiesRooms } from './facilities/rooms.js';
+import { inventorySharedAccounts } from './inventory-parties.js';
+
+export const inventoryConditions = [
+  'serviceable',
+  'malfunctioning',
+  'under-repair',
+  'lost',
+  'unassessed',
+] as const;
 
 export const inventoryAssets = pgTable('inventory_assets', {
   id: uuid().defaultRandom().primaryKey(),
   tag: text().notNull().unique(),
   name: text().notNull(),
-  status: text({ enum: ['active', 'decommissioned'] })
+  status: text({ enum: ['active', 'decommissioned', 'disposed'] })
     .notNull()
     .default('active'),
   revision: integer().default(1).notNull(),
+  condition: text({ enum: inventoryConditions }).notNull().default('unassessed'),
+  category: text(),
+  model: text(),
+  serialNumber: text('serial_number'),
+  acquisitionReference: text('acquisition_reference'),
+  notes: text(),
+  roomId: uuid('room_id').references(() => facilitiesRooms.roomId),
+  createdAt: timestamp('created_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }),
 });
 
 export const inventoryCustodies = pgTable(
@@ -29,13 +49,16 @@ export const inventoryCustodies = pgTable(
     assetId: uuid('asset_id')
       .notNull()
       .references(() => inventoryAssets.id),
-    employeeId: uuid('employee_id')
-      .notNull()
-      .references(() => hrEmployees.employeeId),
+    employeeId: uuid('employee_id').references(() => hrEmployees.employeeId),
+    sharedAccountId: uuid('shared_account_id').references(() => inventorySharedAccounts.id),
     openedAt: timestamp('opened_at', { withTimezone: true }).defaultNow().notNull(),
     endedAt: timestamp('ended_at', { withTimezone: true }),
   },
   (table) => [
+    check(
+      'inventory_custody_one_party',
+      sql`(${table.employeeId} is null) <> (${table.sharedAccountId} is null)`,
+    ),
     uniqueIndex('inventory_custodies_one_active_idx')
       .on(table.assetId)
       .where(sql`${table.endedAt} is null`),
