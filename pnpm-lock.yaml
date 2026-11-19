@@ -162,10 +162,70 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  frontend:
+    '@module-federation/vite':
+      specifier: ^1.23.11
+      version: 1.23.11
+    '@tailwindcss/vite':
+      specifier: ^4.3.5
+      version: 4.3.5
+    '@tanstack/react-query':
+      specifier: ^5.107.1
+      version: 5.107.1
+    '@types/react':
+      specifier: ^19.3.0
+      version: 19.3.0
+    '@types/react-dom':
+      specifier: ^19.3.0
+      version: 19.3.0
+    '@vitejs/plugin-react':
+      specifier: ^6.1.2
+      version: 6.2.1
+    class-variance-authority:
+      specifier: ^0.7.1
+      version: 0.7.1
+    clsx:
+      specifier: ^2.1.1
+      version: 2.1.1
+    oxlint:
+      specifier: ^1.90.0
+      version: 1.92.0
+    radix-ui:
+      specifier: ^1.8.1
+      version: 1.8.1
+    react:
+      specifier: ^19.3.1
+      version: 19.3.1
+    react-dom:
+      specifier: ^19.3.1
+      version: 19.3.1
+    react-router:
+      specifier: ^8.5.1
+      version: 8.5.1
+    tailwind-merge:
+      specifier: ^3.7.0
+      version: 3.7.0
+    tailwindcss:
+      specifier: ^4.3.5
+      version: 4.3.5
+    typescript:
+      specifier: ~7.0.2
+      version: 7.0.2
+    vite:
+      specifier: ^8.3.6
+      version: 8.3.6
+    zustand:
+      specifier: ^5.1.0
+      version: 5.1.0
+
 importers:
 
   .:
     devDependencies:
+      '@playwright/test':
+        specifier: 1.65.1
+        version: 1.65.1
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -179,7 +239,7 @@ importers:
   apps/admin:
     dependencies:
       '@module-federation/vite':
-        specifier: ^1.23.11
+        specifier: catalog:frontend
         version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@project/ui':
         specifier: workspace:*
@@ -188,53 +248,53 @@ importers:
         specifier: ^1.2.0
         version: 1.5.0(@types/react@19.3.0)(react@19.3.1)
       '@tanstack/react-query':
-        specifier: ^5.90.0
+        specifier: catalog:frontend
         version: 5.107.1(@types/react@19.3.0)(react@19.3.1)
       class-variance-authority:
-        specifier: ^0.7.1
+        specifier: catalog:frontend
         version: 0.7.1
       clsx:
-        specifier: ^2.1.1
+        specifier: catalog:frontend
         version: 2.1.1
       react:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1
       react-dom:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1(react@19.3.1)
       tailwind-merge:
-        specifier: ^3.0.0
+        specifier: catalog:frontend
         version: 3.7.0
       zustand:
-        specifier: ^5.0.0
+        specifier: catalog:frontend
         version: 5.1.0(@types/react@19.3.0)(react@19.3.1)
     devDependencies:
       '@tailwindcss/vite':
-        specifier: ^4.1.0
+        specifier: catalog:frontend
         version: 4.3.5(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2
       '@types/react':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0
       '@types/react-dom':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0(@types/react@19.3.0)
       '@vitejs/plugin-react':
-        specifier: ^6.1.2
+        specifier: catalog:frontend
         version: 6.2.1(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       oxlint:
-        specifier: ^1.90.0
+        specifier: catalog:frontend
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
       tailwindcss:
-        specifier: ^4.1.0
+        specifier: catalog:frontend
         version: 4.3.5
       typescript:
-        specifier: ~7.0.2
+        specifier: catalog:frontend
         version: 7.0.2
       vite:
-        specifier: ^8.3.6
+        specifier: catalog:frontend
         version: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
   apps/api:
@@ -331,124 +391,124 @@ importers:
   apps/attendance:
     dependencies:
       '@module-federation/vite':
-        specifier: ^1.23.11
+        specifier: catalog:frontend
         version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       react:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1
       react-dom:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1(react@19.3.1)
     devDependencies:
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2
       '@types/react':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0
       '@types/react-dom':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0(@types/react@19.3.0)
       '@vitejs/plugin-react':
-        specifier: ^6.1.2
+        specifier: catalog:frontend
         version: 6.2.1(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       oxlint:
-        specifier: ^1.90.0
+        specifier: catalog:frontend
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
       typescript:
-        specifier: ~7.0.2
+        specifier: catalog:frontend
         version: 7.0.2
       vite:
-        specifier: ^8.3.6
+        specifier: catalog:frontend
         version: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
   apps/correspondence:
     dependencies:
       '@module-federation/vite':
-        specifier: ^1.23.11
+        specifier: catalog:frontend
         version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       react:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1
       react-dom:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1(react@19.3.1)
     devDependencies:
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2
       '@types/react':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0
       '@types/react-dom':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0(@types/react@19.3.0)
       '@vitejs/plugin-react':
-        specifier: ^6.1.2
+        specifier: catalog:frontend
         version: 6.2.1(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       oxlint:
-        specifier: ^1.90.0
+        specifier: catalog:frontend
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
       typescript:
-        specifier: ~7.0.2
+        specifier: catalog:frontend
         version: 7.0.2
       vite:
-        specifier: ^8.3.6
+        specifier: catalog:frontend
         version: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
   apps/exams:
     dependencies:
       '@module-federation/vite':
-        specifier: ^1.23.11
+        specifier: catalog:frontend
         version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       react:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1
       react-dom:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1(react@19.3.1)
     devDependencies:
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2
       '@types/react':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0
       '@types/react-dom':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0(@types/react@19.3.0)
       '@vitejs/plugin-react':
-        specifier: ^6.1.2
+        specifier: catalog:frontend
         version: 6.2.1(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       oxlint:
-        specifier: ^1.90.0
+        specifier: catalog:frontend
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
       typescript:
-        specifier: ~7.0.2
+        specifier: catalog:frontend
         version: 7.0.2
       vite:
-        specifier: ^8.3.6
+        specifier: catalog:frontend
         version: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
   apps/facilities:
     dependencies:
       '@module-federation/vite':
-        specifier: ^1.23.11
+        specifier: catalog:frontend
         version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@tanstack/react-query':
-        specifier: ^5.107.1
+        specifier: catalog:frontend
         version: 5.107.1(@types/react@19.3.0)(react@19.3.1)
       lucide-react:
         specifier: ^1.73.0
         version: 1.73.0(@types/react@19.3.0)(react@19.3.1)
       react:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1
       react-dom:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1(react@19.3.1)
       react-router:
-        specifier: ^8.5.1
+        specifier: catalog:frontend
         version: 8.5.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
     devDependencies:
       '@testing-library/jest-dom':
@@ -464,25 +524,25 @@ importers:
         specifier: ^24.19.2
         version: 24.19.2
       '@types/react':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0
       '@types/react-dom':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0(@types/react@19.3.0)
       '@vitejs/plugin-react':
-        specifier: ^6.1.2
+        specifier: catalog:frontend
         version: 6.2.1(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       jsdom:
         specifier: ^31.0.1
         version: 31.0.1(@noble/hashes@2.4.0)
       oxlint:
-        specifier: ^1.90.0
+        specifier: catalog:frontend
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
       typescript:
-        specifier: ~7.0.2
+        specifier: catalog:frontend
         version: 7.0.2
       vite:
-        specifier: ^8.3.6
+        specifier: catalog:frontend
         version: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
       vitest:
         specifier: ^4.1.12
@@ -491,7 +551,7 @@ importers:
   apps/hr:
     dependencies:
       '@module-federation/vite':
-        specifier: ^1.23.11
+        specifier: catalog:frontend
         version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@project/ui':
         specifier: workspace:*
@@ -500,13 +560,13 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0(@types/react@19.3.0)(react@19.3.1)
       '@tanstack/react-query':
-        specifier: ^5.107.1
+        specifier: catalog:frontend
         version: 5.107.1(@types/react@19.3.0)(react@19.3.1)
       class-variance-authority:
-        specifier: ^0.7.1
+        specifier: catalog:frontend
         version: 0.7.1
       clsx:
-        specifier: ^2.1.1
+        specifier: catalog:frontend
         version: 2.1.1
       i18next:
         specifier: ^27.1.2
@@ -515,29 +575,29 @@ importers:
         specifier: ^1.73.0
         version: 1.73.0(@types/react@19.3.0)(react@19.3.1)
       radix-ui:
-        specifier: ^1.8.1
+        specifier: catalog:frontend
         version: 1.8.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1
       react-dom:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1(react@19.3.1)
       react-i18next:
         specifier: ^18.0.1
         version: 18.0.1(@types/react@19.3.0)(i18next@27.1.2(typescript@7.0.2))(react@19.3.1)(typescript@7.0.2)
       react-router:
-        specifier: ^8.5.1
+        specifier: catalog:frontend
         version: 8.5.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       tailwind-merge:
-        specifier: ^3.7.0
+        specifier: catalog:frontend
         version: 3.7.0
       zustand:
-        specifier: ^5.1.0
+        specifier: catalog:frontend
         version: 5.1.0(@types/react@19.3.0)(react@19.3.1)
     devDependencies:
       '@tailwindcss/vite':
-        specifier: ^4.3.5
+        specifier: catalog:frontend
         version: 4.3.5(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
@@ -552,28 +612,28 @@ importers:
         specifier: ^24.19.2
         version: 24.19.2
       '@types/react':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0
       '@types/react-dom':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0(@types/react@19.3.0)
       '@vitejs/plugin-react':
-        specifier: ^6.1.2
+        specifier: catalog:frontend
         version: 6.2.1(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       jsdom:
         specifier: ^31.0.1
         version: 31.0.1(@noble/hashes@2.4.0)
       oxlint:
-        specifier: ^1.90.0
+        specifier: catalog:frontend
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
       tailwindcss:
-        specifier: ^4.3.5
+        specifier: catalog:frontend
         version: 4.3.5
       typescript:
-        specifier: ~7.0.2
+        specifier: catalog:frontend
         version: 7.0.2
       vite:
-        specifier: ^8.3.6
+        specifier: catalog:frontend
         version: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
       vitest:
         specifier: ^4.1.12
@@ -582,19 +642,19 @@ importers:
   apps/inventory:
     dependencies:
       '@module-federation/vite':
-        specifier: ^1.23.11
+        specifier: catalog:frontend
         version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      '@project/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@radix-ui/react-direction':
         specifier: ^1.2.0
         version: 1.2.0(@types/react@19.3.0)(react@19.3.1)
       '@tanstack/react-query':
-        specifier: ^5.107.1
+        specifier: catalog:frontend
         version: 5.107.1(@types/react@19.3.0)(react@19.3.1)
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
       clsx:
-        specifier: ^2.1.1
+        specifier: catalog:frontend
         version: 2.1.1
       i18next:
         specifier: ^27.1.2
@@ -603,32 +663,32 @@ importers:
         specifier: ^1.73.0
         version: 1.73.0(@types/react@19.3.0)(react@19.3.1)
       radix-ui:
-        specifier: ^1.8.1
+        specifier: catalog:frontend
         version: 1.8.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1
       react-dom:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1(react@19.3.1)
       react-i18next:
         specifier: ^18.0.1
         version: 18.0.1(@types/react@19.3.0)(i18next@27.1.2(typescript@7.0.2))(react@19.3.1)(typescript@7.0.2)
       react-router:
-        specifier: ^8.5.1
+        specifier: catalog:frontend
         version: 8.5.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       tailwind-merge:
-        specifier: ^3.7.0
+        specifier: catalog:frontend
         version: 3.7.0
       zustand:
-        specifier: ^5.1.0
+        specifier: catalog:frontend
         version: 5.1.0(@types/react@19.3.0)(react@19.3.1)
     devDependencies:
       '@project/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@tailwindcss/vite':
-        specifier: ^4.3.5
+        specifier: catalog:frontend
         version: 4.3.5(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@testing-library/jest-dom':
         specifier: ^7.0.1
@@ -640,28 +700,28 @@ importers:
         specifier: ^24.19.2
         version: 24.19.2
       '@types/react':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0
       '@types/react-dom':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0(@types/react@19.3.0)
       '@vitejs/plugin-react':
-        specifier: ^6.1.2
+        specifier: catalog:frontend
         version: 6.2.1(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       jsdom:
         specifier: ^31.0.1
         version: 31.0.1(@noble/hashes@2.4.0)
       oxlint:
-        specifier: ^1.90.0
+        specifier: catalog:frontend
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
       tailwindcss:
-        specifier: ^4.3.5
+        specifier: catalog:frontend
         version: 4.3.5
       typescript:
-        specifier: ~7.0.2
+        specifier: catalog:frontend
         version: 7.0.2
       vite:
-        specifier: ^8.3.6
+        specifier: catalog:frontend
         version: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
       vitest:
         specifier: ^4.1.12
@@ -670,84 +730,84 @@ importers:
   apps/maintenance:
     dependencies:
       '@module-federation/vite':
-        specifier: ^1.23.11
+        specifier: catalog:frontend
         version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       react:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1
       react-dom:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1(react@19.3.1)
     devDependencies:
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2
       '@types/react':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0
       '@types/react-dom':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0(@types/react@19.3.0)
       '@vitejs/plugin-react':
-        specifier: ^6.1.2
+        specifier: catalog:frontend
         version: 6.2.1(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       oxlint:
-        specifier: ^1.90.0
+        specifier: catalog:frontend
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
       typescript:
-        specifier: ~7.0.2
+        specifier: catalog:frontend
         version: 7.0.2
       vite:
-        specifier: ^8.3.6
+        specifier: catalog:frontend
         version: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
   apps/meetings:
     dependencies:
       '@module-federation/vite':
-        specifier: ^1.23.11
+        specifier: catalog:frontend
         version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       react:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1
       react-dom:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1(react@19.3.1)
     devDependencies:
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2
       '@types/react':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0
       '@types/react-dom':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0(@types/react@19.3.0)
       '@vitejs/plugin-react':
-        specifier: ^6.1.2
+        specifier: catalog:frontend
         version: 6.2.1(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       oxlint:
-        specifier: ^1.90.0
+        specifier: catalog:frontend
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
       typescript:
-        specifier: ~7.0.2
+        specifier: catalog:frontend
         version: 7.0.2
       vite:
-        specifier: ^8.3.6
+        specifier: catalog:frontend
         version: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
   apps/shell:
     dependencies:
       '@module-federation/vite':
-        specifier: ^1.23.11
+        specifier: catalog:frontend
         version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       react:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1
       react-dom:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1(react@19.3.1)
       react-router:
-        specifier: ^8.5.1
+        specifier: catalog:frontend
         version: 8.5.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
     devDependencies:
       '@project/contracts':
@@ -757,90 +817,90 @@ importers:
         specifier: ^24.19.2
         version: 24.19.2
       '@types/react':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0
       '@types/react-dom':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0(@types/react@19.3.0)
       '@vitejs/plugin-react':
-        specifier: ^6.1.2
+        specifier: catalog:frontend
         version: 6.2.1(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       oxlint:
-        specifier: ^1.90.0
+        specifier: catalog:frontend
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
       typescript:
-        specifier: ~7.0.2
+        specifier: catalog:frontend
         version: 7.0.2
       vite:
-        specifier: ^8.3.6
+        specifier: catalog:frontend
         version: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
   apps/student-affairs:
     dependencies:
       '@module-federation/vite':
-        specifier: ^1.23.11
+        specifier: catalog:frontend
         version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       react:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1
       react-dom:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1(react@19.3.1)
     devDependencies:
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2
       '@types/react':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0
       '@types/react-dom':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0(@types/react@19.3.0)
       '@vitejs/plugin-react':
-        specifier: ^6.1.2
+        specifier: catalog:frontend
         version: 6.2.1(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       oxlint:
-        specifier: ^1.90.0
+        specifier: catalog:frontend
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
       typescript:
-        specifier: ~7.0.2
+        specifier: catalog:frontend
         version: 7.0.2
       vite:
-        specifier: ^8.3.6
+        specifier: catalog:frontend
         version: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
   apps/supervision:
     dependencies:
       '@module-federation/vite':
-        specifier: ^1.23.11
+        specifier: catalog:frontend
         version: 1.23.11(typescript@7.0.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       react:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1
       react-dom:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1(react@19.3.1)
     devDependencies:
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2
       '@types/react':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0
       '@types/react-dom':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0(@types/react@19.3.0)
       '@vitejs/plugin-react':
-        specifier: ^6.1.2
+        specifier: catalog:frontend
         version: 6.2.1(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       oxlint:
-        specifier: ^1.90.0
+        specifier: catalog:frontend
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
       typescript:
-        specifier: ~7.0.2
+        specifier: catalog:frontend
         version: 7.0.2
       vite:
-        specifier: ^8.3.6
+        specifier: catalog:frontend
         version: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
   packages/authorization:
@@ -884,12 +944,21 @@ importers:
 
   packages/ui:
     dependencies:
+      class-variance-authority:
+        specifier: catalog:frontend
+        version: 0.7.1
+      radix-ui:
+        specifier: catalog:frontend
+        version: 1.8.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react:
-        specifier: ^19.3.1
+        specifier: catalog:frontend
         version: 19.3.1
+      react-dom:
+        specifier: catalog:frontend
+        version: 19.3.1(react@19.3.1)
     devDependencies:
       '@types/react':
-        specifier: ^19.3.0
+        specifier: catalog:frontend
         version: 19.3.0
 
 packages:
@@ -1977,6 +2046,11 @@ packages:
 
   '@paralleldrive/cuid2@2.3.1':
     resolution: {integrity: sha512-XO7cAxhnTZl0Yggq6jOgjiOHhbgcO4NqFqwSmQpjK3b6TEE6Uj/jfSk6wzYyemh3+I0sHirKSetjQwn5cZktFw==}
+
+  '@playwright/test@1.65.1':
+    resolution: {integrity: sha512-y+NCIRm2LvY4slUVWvGh1nujJ8RF/hEisIsq2mtUPgdQC4L701bq5hZGMhrpeXjACvwvO9tj5dJqhvM6TP9lbw==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@radix-ui/number@1.1.3':
     resolution: {integrity: sha512-Road2bidD0uu/1BGDOWNdPI06g0lIRy6IF9GZcIrDK2KGItfor8IQwQa+yM2ERgHM1MmHxaxpTzk0/Jp42lNfA==}
@@ -4367,6 +4441,16 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
+  playwright-core@1.65.1:
+    resolution: {integrity: sha512-hqPpz7blSMPxWVdoeE1yiBSzXsKiVOd2k+kjCvmUywD2GPO2Dd9HfcWnq9NN0GHbNZDFgZ9JfBFr+X5/BLo0qw==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.65.1:
+    resolution: {integrity: sha512-vJ1FuoOrNwOKHUIVEvSt3jT1L+wjjDpwhwIstKtfvTh8XIG4FG4bIFuvNdMxi81LGfAhUgUZleVFaOLY4RIUUw==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   pluralize@8.0.0:
     resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
     engines: {node: '>=4'}
@@ -5797,6 +5881,10 @@ snapshots:
   '@paralleldrive/cuid2@2.3.1':
     dependencies:
       '@noble/hashes': 1.8.0
+
+  '@playwright/test@1.65.1':
+    dependencies:
+      playwright: 1.65.1
 
   '@radix-ui/number@1.1.3': {}
 
@@ -8026,6 +8114,12 @@ snapshots:
   picocolors@1.1.1: {}
 
   picomatch@4.0.7: {}
+
+  playwright-core@1.65.1: {}
+
+  playwright@1.65.1:
+    dependencies:
+      playwright-core: 1.65.1
 
   pluralize@8.0.0: {}
 

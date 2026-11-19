@@ -4,12 +4,18 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./date-input": "./src/date-input.tsx"
+    "./date-input": "./src/date-input.tsx",
+    "./form-primitives": "./src/form-primitives.tsx"
+  },
+  "dependencies": {
+    "class-variance-authority": "catalog:frontend",
+    "radix-ui": "catalog:frontend"
   },
   "peerDependencies": {
-    "react": "^19.3.1"
+    "react": "catalog:frontend",
+    "react-dom": "catalog:frontend"
   },
   "devDependencies": {
-    "@types/react": "^19.3.0"
+    "@types/react": "catalog:frontend"
   }
 }

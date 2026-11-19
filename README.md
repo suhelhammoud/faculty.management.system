@@ -4,8 +4,8 @@ Monorepo for the Faculty Management System: a NestJS API, PostgreSQL database, a
 
 ## Prerequisites
 
-- Node.js 22 or newer
-- pnpm 12
+- Node.js 22.23.3 (tested version)
+- pnpm 12.18.0
 - Podman
 
 Install workspace dependencies once:
@@ -94,7 +94,7 @@ Run the shell and all frontend apps in another terminal:
 pnpm dev
 ```
 
-The shell runs at `http://localhost:3000` and opens on Attendance. It loads all module remotes, so their dev servers must be running. `pnpm dev` starts every frontend workspace in parallel; the API is separate.
+The shell runs at `http://localhost:3000` and opens on Attendance. It loads each remote when you visit its route. `pnpm dev` starts the shell and all remotes in parallel. Start the API separately for modules that use it.
 
 | App             | Standalone dev URL                       | Shell route         | Focused command            |
 | --------------- | ---------------------------------------- | ------------------- | -------------------------- |
@@ -111,6 +111,19 @@ The shell runs at `http://localhost:3000` and opens on Attendance. It loads all 
 | Facilities      | <http://localhost:3010/facilities/rooms> | `/facilities/rooms` | `pnpm dev:facilities`      |
 
 Use either `pnpm dev` for the full frontend suite or a focused command for a standalone app. Do not start both for the same app at once; Vite uses strict, fixed local ports.
+
+## Build and test the frontends
+
+`pnpm build:frontends` builds the shell and all remotes. For deployment, set the `VITE_*_REMOTE_URL` variables listed in [the shell environment example](apps/shell/.env.example) before building the shell. Each URL must point to the deployed `remoteEntry.js` and be reachable by the browser. For cross-origin remotes, allow the shell origin to fetch the entry and its assets. Configure the shell host to serve `index.html` for nested routes such as `/hr/employees`. Unset remote URLs default to the localhost entries shown in the example, including for local build previews.
+
+Install the Chromium test browser once, then run the shell smoke suite against production builds. HR API responses are mocked, so the suite runs without the API or PostgreSQL.
+
+```sh
+pnpm exec playwright install chromium
+pnpm test:frontend:smoke
+```
+
+Use the `frontend` pnpm catalog when adding an existing shared dependency to another frontend. For new API-backed screens, use TanStack Query for fetching, caching, and mutations. Use Zustand for shared client state such as language preferences.
 
 ## More documentation
 

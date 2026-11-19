@@ -21,6 +21,7 @@
     "dev:student-affairs": "pnpm --filter ./apps/student-affairs dev",
     "dev:facilities": "pnpm --filter ./apps/facilities dev",
     "build:frontends": "pnpm --filter './apps/*' --filter '!./apps/api' -r run build",
+    "test:frontend:smoke": "playwright test --config playwright.frontend.config.ts",
     "build:shell": "pnpm --filter ./apps/shell build",
     "build:attendance": "pnpm --filter ./apps/attendance build",
     "build:maintenance": "pnpm --filter ./apps/maintenance build",
@@ -46,6 +47,7 @@
     }
   },
   "devDependencies": {
+    "@playwright/test": "1.65.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.2",
     "prettier": "^3.4.2"

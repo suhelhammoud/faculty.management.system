@@ -10,17 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@module-federation/vite": "^1.23.11",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "@module-federation/vite": "catalog:frontend",
+    "react": "catalog:frontend",
+    "react-dom": "catalog:frontend"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
-    "oxlint": "^1.90.0",
-    "typescript": "~7.0.2",
-    "vite": "^8.3.6"
+    "@types/react": "catalog:frontend",
+    "@types/react-dom": "catalog:frontend",
+    "@vitejs/plugin-react": "catalog:frontend",
+    "oxlint": "catalog:frontend",
+    "typescript": "catalog:frontend",
+    "vite": "catalog:frontend"
   }
 }
