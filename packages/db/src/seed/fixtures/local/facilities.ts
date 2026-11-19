@@ -21,6 +21,7 @@ export const localFacilities = {
     },
   ],
   roomTypes: [
+    { name: 'storage', description: 'Storage room' },
     {
       name: 'laboratory',
       description: 'Laboratory',
@@ -226,6 +227,20 @@ export const localFacilities = {
       roomCode: 'theater_6',
       title: 'Theater 6',
       status: 'active',
+    },
+    {
+      buildingCode: 'FACULTY_MAIN',
+      floorNumber: 1,
+      roomType: 'storage',
+      roomCode: 'demo_inventory_main',
+      title: 'Demo Inventory Main Store',
+    },
+    {
+      buildingCode: 'FACULTY_MAIN',
+      floorNumber: 2,
+      roomType: 'storage',
+      roomCode: 'demo_inventory_annex',
+      title: 'Demo Inventory Annex',
     },
   ],
 } satisfies FacilitiesSeed;

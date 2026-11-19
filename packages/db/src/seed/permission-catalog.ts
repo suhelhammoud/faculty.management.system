@@ -2,7 +2,7 @@ import { loadEnvFile } from 'node:process';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createDb } from '../client.js';
-import { seedPermissionCatalog } from './permissions.js';
+import { seedPermissionCatalog } from './access/permissions.js';
 
 const dbPackageRoot = resolve(import.meta.dirname, '../..');
 const envPath = resolve(dbPackageRoot, '.env.db');

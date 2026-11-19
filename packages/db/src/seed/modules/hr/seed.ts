@@ -1,7 +1,7 @@
-import type { ReferenceSeed, EmployeeSeed } from './fixtures/local/types.js';
+import type { ReferenceSeed, EmployeeSeed } from '../../fixtures/local/types.js';
 import { validateHr } from './validation.js';
 import { and, eq } from 'drizzle-orm';
-import type { SeedTransaction } from './types.js';
+import type { SeedTransaction } from '../../types.js';
 import {
   hrAcademicRanks,
   hrEmploymentGrades,
@@ -10,7 +10,7 @@ import {
   hrEmploymentRecords,
   hrPositions,
   hrStaffCategories,
-} from '../schema/hr/index.js';
+} from '../../../schema/hr/index.js';
 
 export async function seedHr(
   tx: SeedTransaction,

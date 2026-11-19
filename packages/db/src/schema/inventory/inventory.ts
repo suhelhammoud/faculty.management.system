@@ -12,13 +12,12 @@ import {
   unique,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { user } from './auth/users.js';
-import { facilitiesRooms } from './facilities/rooms.js';
-import { hrEmployees } from './hr/employees.js';
+import { user } from '../auth/users.js';
+import { facilitiesRooms } from '../facilities/rooms.js';
+import { hrEmployees } from '../hr/employees.js';
 import { inventoryAssets, inventoryRemovalDecisions } from './inventory-removal.js';
 
 import { inventorySharedAccounts } from './inventory-parties.js';
-export * from './inventory-parties.js';
 
 export const inventoryStorage = pgTable(
   'inventory_storage',

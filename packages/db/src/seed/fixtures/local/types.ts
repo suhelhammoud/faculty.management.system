@@ -1,6 +1,11 @@
 import type { DEFAULT_ROLE_TEMPLATES } from '@project/authorization';
 
-export type SeedRoleId = (typeof DEFAULT_ROLE_TEMPLATES)[number]['id'];
+import type { inventoryConditions } from '../../../schema/inventory/index.js';
+import type { inventoryDemoRoles } from './inventory-roles.js';
+
+export type SharedSeedRoleId = (typeof DEFAULT_ROLE_TEMPLATES)[number]['id'];
+export type InventoryDemoRoleId = (typeof inventoryDemoRoles)[number]['id'];
+export type SeedRoleId = SharedSeedRoleId | InventoryDemoRoleId;
 export type AuthSeedUser = { username: string; name: string; roles?: SeedRoleId[] };
 export type ReferenceSeed = {
   staffCategories: {
@@ -77,4 +82,26 @@ export type AdministratorSeed = {
   approved: boolean;
   enabled: boolean;
   mustChangePassword: boolean;
+};
+
+export type SeedRoom = { buildingCode: string; roomCode: string };
+type OpeningBatch = { id: string; name: string; reference: string; eventDate: string };
+type OpeningAsset = {
+  id: string;
+  tag: string;
+  name: string;
+  category: string;
+  condition: (typeof inventoryConditions)[number];
+};
+export type InventorySeed = {
+  sharedAccounts: { id: string; name: string }[];
+  storage: (SeedRoom & { sharedAccountId: string })[];
+  consumables: { id: string; code: string; name: string; unit: string }[];
+  receipts: (OpeningBatch & {
+    source: 'purchase' | 'head-administration';
+    room: SeedRoom;
+    assets: OpeningAsset[];
+    stock: { code: string; quantity: number }[];
+  })[];
+  issues: (OpeningBatch & { assetTag: string; employeeNumber: string; room: SeedRoom | null })[];
 };

@@ -1,5 +1,31 @@
 import { HR_DEFAULT_ROLE, FACILITIES_DEFAULT_ROLE } from '@project/authorization';
+import { inventoryDemoRoles } from './inventory-roles.js';
 import type { AuthSeedUser, AdministratorSeed } from './types.js';
+
+export const inventoryDemoUsers = [
+  {
+    username: 'inventory_operator',
+    name: 'Demo Inventory Operator',
+    roles: [inventoryDemoRoles[0].id],
+  },
+  {
+    username: 'inventory_requester',
+    name: 'Demo Inventory Requester',
+    roles: [inventoryDemoRoles[1].id],
+  },
+  {
+    username: 'inventory_reviewer',
+    name: 'Demo Inventory Reviewer',
+    roles: [inventoryDemoRoles[2].id],
+  },
+  {
+    username: 'inventory_recorder',
+    name: 'Demo Inventory Recorder',
+    roles: [inventoryDemoRoles[3].id],
+  },
+] satisfies AuthSeedUser[];
+
+export const inventoryOperatorUsername = inventoryDemoUsers[0].username;
 
 export const localUsers = [
   {
@@ -27,6 +53,7 @@ export const localUsers = [
     name: 'Staff Two',
     roles: [],
   },
+  ...inventoryDemoUsers,
 ] satisfies AuthSeedUser[];
 
 export const localAdministrator = {

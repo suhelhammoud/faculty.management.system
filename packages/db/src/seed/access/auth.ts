@@ -1,11 +1,13 @@
 import { assertSeedAccounts, demoIdentity } from './ownership.js';
-import { validatePassword, validateUsers } from './validation.js';
+import { validatePassword, validateUsers } from '../validation.js';
+import { inventoryDemoRoles } from '../fixtures/local/inventory-roles.js';
+import { inventoryDemoUsers } from '../fixtures/local/auth.js';
 import { DEFAULT_ROLE_TEMPLATES } from '@project/authorization';
-import type { AuthSeedUser, SeedRoleId } from './fixtures/local/types.js';
+import type { AuthSeedUser, SeedRoleId } from '../fixtures/local/types.js';
 import { hashPassword } from 'better-auth/crypto';
 import { and, eq, inArray } from 'drizzle-orm';
-import type { SeedTransaction } from './types.js';
-import { account, roles, user, userRoles } from '../schema/auth/index.js';
+import type { SeedTransaction } from '../types.js';
+import { account, roles, user, userRoles } from '../../schema/auth/index.js';
 
 export async function seedAuth(
   tx: SeedTransaction,
@@ -25,6 +27,11 @@ export async function seedAuth(
       );
     seedRoles.set(template.id, role.id);
   }
+
+  const sharedRoleIds = [...seedRoles.values()];
+  const inventoryRoleIds = inventoryDemoRoles.map(({ id }) => id);
+  for (const id of inventoryRoleIds) seedRoles.set(id, id);
+  const inventoryUsernames = new Set(inventoryDemoUsers.map(({ username }) => username));
 
   const passwordHash = await hashPassword(password);
   const userIds = new Map<string, string>();
@@ -70,7 +77,9 @@ export async function seedAuth(
         target: account.id,
         set: { password: passwordHash, updatedAt: new Date() },
       });
-    const seedRoleIds = [...seedRoles.values()];
+    const seedRoleIds = inventoryUsernames.has(seedUser.username)
+      ? inventoryRoleIds
+      : sharedRoleIds;
     await tx
       .delete(userRoles)
       .where(and(eq(userRoles.userId, createdUser.id), inArray(userRoles.roleId, seedRoleIds)));

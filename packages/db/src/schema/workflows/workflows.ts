@@ -9,7 +9,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { user } from './auth/users.js';
+import { user } from '../auth/users.js';
 
 const timestampWithZone = (name: string) => timestamp(name, { withTimezone: true });
 

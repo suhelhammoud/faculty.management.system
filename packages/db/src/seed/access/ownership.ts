@@ -1,7 +1,7 @@
 import { and, eq, or } from 'drizzle-orm';
-import { account, user } from '../schema/auth/index.js';
-import type { SeedTransaction } from './types.js';
-import type { AuthSeedUser } from './fixtures/local/types.js';
+import { account, user } from '../../schema/auth/index.js';
+import type { SeedTransaction } from '../types.js';
+import type { AuthSeedUser } from '../fixtures/local/types.js';
 
 type SeedIdentity = { id: string; username: string; email: string; accountId: string };
 export function demoIdentity(seedUser: AuthSeedUser): SeedIdentity {

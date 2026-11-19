@@ -1,9 +1,11 @@
 import type { Database } from '../client.js';
-import { seedLocalAccess } from './local-access.js';
-import { seedAuth } from './auth.js';
-import { seedHr } from './hr.js';
-import { seedFacilities } from './facilities.js';
-import { assertSeedAccounts, demoIdentity } from './ownership.js';
+import { seedLocalAccess } from './access/local-access.js';
+import { seedAuth } from './access/auth.js';
+import { seedHr } from './modules/hr/seed.js';
+import { seedInventory } from './modules/inventory/seed.js';
+import { inventoryOperatorUsername } from './fixtures/local/auth.js';
+import { seedFacilities } from './modules/facilities/seed.js';
+import { assertSeedAccounts, demoIdentity } from './access/ownership.js';
 import { validateLocalFixtures, type LocalSeedFixtures } from './validation.js';
 
 export async function seedLocalDatabase(
@@ -20,7 +22,10 @@ export async function seedLocalDatabase(
       const userIds = await seedAuth(tx, fixtures.users, password);
       const employeeCount = await seedHr(tx, fixtures.references, fixtures.employees, userIds);
       const roomCount = await seedFacilities(tx, fixtures.facilities);
-      return { userCount: userIds.size, employeeCount, roomCount };
+      const operator = userIds.get(inventoryOperatorUsername);
+      if (!operator) throw new Error('Inventory seed operator was not provisioned');
+      const inventory = await seedInventory(tx, fixtures.inventory, operator);
+      return { userCount: userIds.size, employeeCount, roomCount, ...inventory };
     },
     { isolationLevel: 'serializable' },
   );

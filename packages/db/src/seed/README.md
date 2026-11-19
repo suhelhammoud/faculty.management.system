@@ -1,6 +1,6 @@
 # Local seed fixtures
 
-These committed fixtures contain synthetic demo users and HR records. They are
+These committed fixtures contain synthetic demo users and HR, Facilities, and Inventory records. They are
 loaded by `pnpm --filter @project/db seed:local` after the database migrations have been
 applied. No separate administrator bootstrap is needed.
 
@@ -18,7 +18,7 @@ role and `FACILITIES_DEFAULT_ROLE.id` grants the Facilities Administrator role.
 Allowed fixture role IDs are derived from the shared default role templates. The
 `facility_1` demo account has Facilities permissions for managing facilities, and
 does not receive HR permissions. Re-running the seed reconciles these two seeded
-roles for fixture users.
+roles for the original demo users. Inventory demo users reconcile their Inventory roles separately.
 
 HR staff categories and initial academic ranks follow the examples in the HR
 documentation. Positions and the grade scheme are labeled as demo data because
@@ -27,8 +27,14 @@ records.
 
 Fixture data is defined in typed TypeScript modules under `fixtures/local/`, separate from database operations. `types.ts` defines their shapes; each data export uses `satisfies` to check its structure. HR reference data and employees have separate files. Passwords stay in environment variables.
 
-Seed logic is split across `auth.ts`, `hr.ts`, and
-`facilities.ts`; `local-access.ts` provisions local access first, and `local.ts` loads environment settings and calls `run-local.ts`. The runner validates fixture values, duplicates, and references before starting a transaction. Inside the transaction it checks account ownership before writing, then runs all seeders in order. `types.ts` defines their shared transaction type. Add future module seeders to the runner after their prerequisite seeders.
+Seed operations are grouped by module under `modules/hr/`, `modules/facilities/`, and
+`modules/inventory/`. Auth, account ownership, and permission setup live under
+`access/`. The `local.ts` and `permission-catalog.ts` command entry points load
+environment settings. The local runner in `run-local.ts` validates fixtures before
+opening a transaction, checks account ownership, and runs seeders after their
+prerequisites. Each module keeps its fixture rules in its own `validation.ts`. The root
+`validation.ts` coordinates fixture preflight. The seeders share the transaction
+type in `types.ts`.
 
 `fixtures/local/facilities.ts` seeds one placeholder building, two floors, and the supplied
 12 labs, 6 classrooms, and 6 theaters. Labs are assigned six per floor as
@@ -47,6 +53,24 @@ enabled, and does not require a password change.
 
 The runner only accepts loopback database hosts and rejects production-like
 database names. Never add real credentials or personnel data to these fixtures.
+
+## Inventory demo
+
+The TypeScript fixtures add two demo storage rooms, their shared custodians, six assets, and three consumable types. Opening receipts and two employee issues appear in transaction history. Reruns preserve current balances, custody, asset condition and location, storage configuration, and workflow progress. Add new opening data in new transaction batches.
+
+| Username              | Demo access                                                      |
+| --------------------- | ---------------------------------------------------------------- |
+| `inventory_operator`  | Inventory reads, configuration, movements, and physical disposal |
+| `inventory_requester` | Start removal proposals and revise returned requests             |
+| `inventory_reviewer`  | Review requests and open the workflow monitor                    |
+| `inventory_recorder`  | Record committee decisions or return requests                    |
+
+Use the configured `SEED_USER_PASSWORD` for each account. These roles are provisioned only by the local seed.
+
+1. In the shell, sign in as `inventory_requester`. Open **Workflows** and start an asset removal proposal with `DEMO-INV-003`, `DEMO-INV-004`, and `DEMO-INV-005`. Include a reason for each.
+2. In the reviewer inbox, return the proposal with a comment. Sign back in as requester and resubmit the revision. Then forward it from the reviewer inbox.
+3. Open the recorder inbox and record a named, dated decision with a reference. Approve `DEMO-INV-003` for waste, reject `DEMO-INV-004`, and defer `DEMO-INV-005`, giving a reason for each.
+4. As `inventory_operator`, post a separate `disposal` transaction for the approved asset through the [Inventory API](../../../../docs/modules/inventory/API.md). The decision and disposal appear as separate ledger entries.
 
 ## Seed tests
 

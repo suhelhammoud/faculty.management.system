@@ -1,12 +1,13 @@
 import { assertSeedAccounts } from './ownership.js';
-import { validatePassword } from './validation.js';
+import { validatePassword } from '../validation.js';
 import { ADMINISTRATOR_DEFAULT_ROLE, DEFAULT_ROLE_TEMPLATES } from '@project/authorization';
 import { hashPassword } from 'better-auth/crypto';
-import { eq } from 'drizzle-orm';
-import type { SeedTransaction } from './types.js';
-import { account, rolePermissions, roles, user, userRoles } from '../schema/auth/index.js';
+import { eq, or } from 'drizzle-orm';
+import type { SeedTransaction } from '../types.js';
+import { account, rolePermissions, roles, user, userRoles } from '../../schema/auth/index.js';
 import { seedPermissionCatalog } from './permissions.js';
-import type { AdministratorSeed } from './fixtures/local/types.js';
+import { inventoryDemoRoles } from '../fixtures/local/inventory-roles.js';
+import type { AdministratorSeed } from '../fixtures/local/types.js';
 
 export async function seedLocalAccess(
   tx: SeedTransaction,
@@ -36,6 +37,27 @@ export async function seedLocalAccess(
       .onConflictDoNothing();
     if (template.name === ADMINISTRATOR_DEFAULT_ROLE.name) administratorRoleId = role.id;
   }
+  for (const template of inventoryDemoRoles) {
+    const matches = await tx
+      .select()
+      .from(roles)
+      .where(or(eq(roles.id, template.id), eq(roles.name, template.name)));
+    if (matches.some((role) => role.id !== template.id || role.name !== template.name))
+      throw new Error(`Inventory seed role collision for ${template.name}`);
+    await tx
+      .insert(roles)
+      .values({
+        id: template.id,
+        name: template.name,
+        description: template.description,
+      })
+      .onConflictDoNothing();
+    await tx
+      .insert(rolePermissions)
+      .values(template.permissions.map((permission) => ({ roleId: template.id, permission })))
+      .onConflictDoNothing();
+  }
+
   if (!administratorRoleId) throw new Error('Failed to provision local administrator role');
 
   const { accountId, ...profile } = administrator;

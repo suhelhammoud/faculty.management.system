@@ -1,12 +1,12 @@
-import type { FacilitiesSeed } from './fixtures/local/types.js';
+import type { FacilitiesSeed } from '../../fixtures/local/types.js';
 import { validateFacilities } from './validation.js';
-import type { SeedTransaction } from './types.js';
+import type { SeedTransaction } from '../../types.js';
 import {
   facilitiesBuildings,
   facilitiesFloors,
   facilitiesRoomTypes,
   facilitiesRooms,
-} from '../schema/facilities/index.js';
+} from '../../../schema/facilities/index.js';
 
 export async function seedFacilities(tx: SeedTransaction, seed: FacilitiesSeed): Promise<number> {
   validateFacilities(seed);

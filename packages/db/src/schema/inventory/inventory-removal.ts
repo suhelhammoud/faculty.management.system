@@ -10,9 +10,9 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { user } from './auth/users.js';
-import { hrEmployees } from './hr/employees.js';
-import { facilitiesRooms } from './facilities/rooms.js';
+import { user } from '../auth/users.js';
+import { hrEmployees } from '../hr/employees.js';
+import { facilitiesRooms } from '../facilities/rooms.js';
 import { inventorySharedAccounts } from './inventory-parties.js';
 
 export const inventoryConditions = [
