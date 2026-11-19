@@ -12,6 +12,7 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { PERMISSION } from '@project/authorization';
+import { AuthorizationService } from '../../auth/authorization.service.js';
 import type { z } from 'zod';
 import { ActorId, RequirePermission, RequireSession } from '../../auth/auth.guard.js';
 import { parseIdempotencyKey } from '../workflows/workflows.controller.js';
@@ -21,6 +22,7 @@ import {
   assetQuery,
   consumableInput,
   historyQuery,
+  myItemsQuery,
   referenceQuery,
   sharedInput,
   stockQuery,
@@ -37,7 +39,40 @@ export class InventoryController {
     @Inject(InventoryReadService) private readonly inventory: InventoryReadService,
     @Inject(InventoryTransactionsService)
     private readonly transactions: InventoryTransactionsService,
+    @Inject(AuthorizationService) private readonly auth: AuthorizationService,
   ) {}
+
+  @Get('capabilities')
+  async capabilities(@ActorId() actorId: string) {
+    const keys = PERMISSION.inventory;
+    const [read, configure, postTransactions, dispose, requestRemoval, monitorWorkflows, employee] =
+      await Promise.all([
+        this.auth.can(actorId, keys.read),
+        this.auth.can(actorId, keys.configure),
+        this.auth.can(actorId, keys.postTransactions),
+        this.auth.can(actorId, keys.dispose),
+        this.auth.can(actorId, keys.requestRemoval),
+        this.auth.can(actorId, PERMISSION.workflow.monitor),
+        this.inventory.employeeProfile(actorId),
+      ]);
+    return {
+      read,
+      configure,
+      postTransactions,
+      dispose,
+      requestRemoval,
+      monitorWorkflows,
+      hasEmployeeProfile: Boolean(employee),
+    };
+  }
+
+  @Get('my-items')
+  myItems(
+    @ActorId() actorId: string,
+    @Query({ schema: myItemsQuery }) query: z.infer<typeof myItemsQuery>,
+  ) {
+    return this.inventory.myItems(actorId, query);
+  }
 
   @Get('assets')
   @RequirePermission(PERMISSION.inventory.read)

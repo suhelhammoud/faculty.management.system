@@ -7,13 +7,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import type {
+  WorkflowActionResult,
+  WorkflowHistoryEvent,
+  WorkflowInstance as WorkflowInstanceResponse,
+  WorkflowInstanceDetail,
+  WorkflowTask as WorkflowTaskResponse,
+} from '@project/contracts/workflow';
 import type { Database } from '@project/db';
-import {
-  workflowEvents,
-  workflowInstances,
-  workflowTasks,
-  type WorkflowResult,
-} from '@project/db/schema';
+import { workflowEvents, workflowInstances, workflowTasks } from '@project/db/schema';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { AuthorizationService } from '../../auth/authorization.service.js';
 import { DATABASE } from '../../database/database.constants.js';
@@ -72,7 +74,7 @@ export class WorkflowsService {
     @Inject(AuthorizationService) private readonly authorization: AuthorizationService,
   ) {}
 
-  async start(command: StartCommand): Promise<WorkflowResult> {
+  async start(command: StartCommand): Promise<WorkflowActionResult> {
     return this.db.transaction(async (tx) => {
       if (!(await this.authorization.isActive(command.actorId, tx))) throw new ForbiddenException();
       const retry = {
@@ -119,7 +121,7 @@ export class WorkflowsService {
     });
   }
 
-  async act(command: ActCommand): Promise<WorkflowResult> {
+  async act(command: ActCommand): Promise<WorkflowActionResult> {
     return this.db.transaction(async (tx) => {
       const [target] = await tx
         .select({ instanceId: workflowTasks.instanceId })
@@ -179,7 +181,7 @@ export class WorkflowsService {
         .update(workflowTasks)
         .set({ status: 'completed', completedAt: now })
         .where(eq(workflowTasks.id, task.id));
-      const status: WorkflowResult['status'] =
+      const status: WorkflowActionResult['status'] =
         'finish' in transition ? transition.finish : 'running';
       const nextStep = 'next' in transition ? transition.next : null;
       const [updated] = await tx
@@ -209,7 +211,7 @@ export class WorkflowsService {
     });
   }
 
-  async inbox(actorId: string) {
+  async inbox(actorId: string): Promise<WorkflowTaskResponse[]> {
     const rows = await this.db
       .select({ task: workflowTasks, instance: workflowInstances })
       .from(workflowTasks)
@@ -227,7 +229,7 @@ export class WorkflowsService {
     return visible;
   }
 
-  async task(id: string, actorId: string) {
+  async task(id: string, actorId: string): Promise<WorkflowTaskResponse> {
     const [row] = await this.db
       .select({ task: workflowTasks, instance: workflowInstances })
       .from(workflowTasks)
@@ -245,7 +247,7 @@ export class WorkflowsService {
     );
   }
 
-  async instance(id: string, actorId: string) {
+  async instance(id: string, actorId: string): Promise<WorkflowInstanceDetail> {
     const row = await this.findInstance(this.db, id);
     if (!row) throw new NotFoundException();
     const context = this.access(this.db, actorId, row);
@@ -256,7 +258,7 @@ export class WorkflowsService {
       .from(workflowEvents)
       .where(eq(workflowEvents.instanceId, id))
       .orderBy(asc(workflowEvents.occurredAt), asc(workflowEvents.id));
-    const history = [];
+    const history: WorkflowHistoryEvent[] = [];
     for (const event of rows) {
       if (registration.canViewEvent && !(await registration.canViewEvent(context, event))) continue;
       const showComment = registration.canViewComment
@@ -267,7 +269,7 @@ export class WorkflowsService {
         taskId: event.taskId,
         actorId: event.actorId,
         action: event.action,
-        occurredAt: event.occurredAt,
+        occurredAt: event.occurredAt.toISOString(),
         comment: showComment ? event.comment : null,
       });
     }
@@ -282,7 +284,11 @@ export class WorkflowsService {
     };
   }
 
-  async monitor(actorId: string, status?: WorkflowInstance['status'], step?: string) {
+  async monitor(
+    actorId: string,
+    status?: WorkflowInstance['status'],
+    step?: string,
+  ): Promise<WorkflowInstanceResponse[]> {
     const rows = await this.db
       .select()
       .from(workflowInstances)
@@ -403,7 +409,7 @@ export class WorkflowsService {
 
   private async record(
     tx: WorkflowTransaction,
-    result: WorkflowResult,
+    result: WorkflowActionResult,
     taskId: string,
     action: string,
     retry: Idempotency,
@@ -429,9 +435,23 @@ export class WorkflowsService {
     });
   }
 
-  private instanceView(row: WorkflowInstance, registration: WorkflowRegistration) {
+  private instanceView(
+    row: WorkflowInstance,
+    registration: WorkflowRegistration,
+  ): WorkflowInstanceResponse {
     return {
-      ...row,
+      id: row.id,
+      definitionKey: row.definitionKey,
+      definitionVersion: row.definitionVersion,
+      subjectModule: row.subjectModule,
+      subjectType: row.subjectType,
+      subjectId: row.subjectId,
+      startedBy: row.startedBy,
+      status: row.status,
+      currentStep: row.currentStep,
+      startedAt: row.startedAt.toISOString(),
+      lastActivityAt: row.lastActivityAt.toISOString(),
+      completedAt: row.completedAt?.toISOString() ?? null,
       title: registration.definition.title,
       description: registration.definition.description,
     };
@@ -442,10 +462,16 @@ export class WorkflowsService {
     row: WorkflowInstance,
     registration: WorkflowRegistration,
     actions: string[],
-  ) {
+  ): WorkflowTaskResponse {
     const step = registration.definition.steps[task.step];
     return {
-      ...task,
+      id: task.id,
+      instanceId: task.instanceId,
+      step: task.step,
+      assignedUserId: task.assignedUserId,
+      status: task.status,
+      openedAt: task.openedAt.toISOString(),
+      completedAt: task.completedAt?.toISOString() ?? null,
       instance: this.instanceView(row, registration),
       title: step.title,
       instructions: step.instructions,

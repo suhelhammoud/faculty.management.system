@@ -17,6 +17,25 @@ Write requests use the existing authenticated session and trusted browser origin
 
 All paths below are relative to `/api/inventory`.
 
+Active signed-in users can call `GET /my-items` without `inventory:read`. It accepts only
+`offset` and `limit`, resolves the caller’s HR employee record from the session, and
+returns `{ linkedEmployee, items }`. Each item includes its ID, tag, name, condition,
+nullable `room` label and `assignedAt` timestamp. The list contains only active durable assets in
+the caller’s current custody. An unlinked account receives an empty list and
+`linkedEmployee: false`.
+
+`GET /capabilities` returns `read`, `configure`, `postTransactions`, `dispose`,
+`requestRemoval`, `monitorWorkflows`, and `hasEmployeeProfile` for the current session.
+These flags help clients show relevant controls. Resource access and actions are
+authorized by their own endpoints. The settings UI requires both `inventory:read`
+and `inventory:configure`. The transaction UI requires `inventory:read` and the
+applicable `inventory:post-transactions` or `inventory:dispose` grant. My Items and
+the workflow inbox use their own access rules.
+
+General Inventory reads provide display labels alongside the existing IDs for rooms,
+custodians, transaction actors and ledger items. Employee display names include both
+languages where available.
+
 | Method and path                                                            | Input or filters                                                                                                                 |
 | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /assets`                                                              | `q`, `category`, `status`, `condition`, `roomId`, `employeeId`, `sharedAccountId`. Returns asset and current custody separately. |
@@ -54,7 +73,12 @@ For asset issue and handover, omit `destinationRoomId` to preserve the room, sup
 
 Start with `POST /workflow/removal-requests` relative to `/api/inventory`. Supply active asset IDs and a reason for each. Use the existing proposal detail and asset picker endpoints under `/api/inventory/workflow`.
 
-Use `GET /api/workflow/tasks` for the signed-in user's inbox. Open the task at `/workflow/tasks/:id` in the shell and submit actions to `POST /api/workflow/tasks/:id/actions`.
+Use `GET /api/workflow/tasks` for the signed-in user's inbox and
+`GET /api/workflow/tasks/:id` for the selected task and allowed actions. The
+standalone and embedded Inventory app open task details at
+`/inventory/workflow/tasks/:id`. Existing shell links at `/workflow/tasks/:id`
+resolve to the Inventory route for removal tasks. Submit all actions to
+`POST /api/workflow/tasks/:id/actions`.
 
 1. Review can **forward** to an authorized decision recorder, **return** with a reason to the original requester, or **reject** the proposal and close the workflow.
 2. The requester can **resubmit** a new revision. This opens a new review task and keeps the old revisions.

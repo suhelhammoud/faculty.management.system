@@ -115,6 +115,7 @@ export type Party = z.infer<typeof recipient>;
 const offset = z.coerce.number().int().min(0).max(2147483647).default(0);
 const limit = z.coerce.number().int().min(1).max(100).default(50);
 const page = { offset, limit };
+export const myItemsQuery = z.strictObject(page);
 export const referenceQuery = z.strictObject({ ...page, q: label.optional() });
 export const assetQuery = z.strictObject({
   ...page,

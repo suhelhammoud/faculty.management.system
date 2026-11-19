@@ -106,7 +106,7 @@ The shell runs at `http://localhost:3000` and opens on Attendance. It loads all 
 | HR              | <http://localhost:3005/hr/employees>     | `/hr/employees`     | `pnpm dev:hr`              |
 | Exams           | <http://localhost:3006>                  | `/exams`            | `pnpm dev:exams`           |
 | Correspondence  | <http://localhost:3007>                  | `/correspondence`   | `pnpm dev:correspondence`  |
-| Inventory       | <http://localhost:3008>                  | `/inventory`        | `pnpm dev:inventory`       |
+| Inventory       | <http://localhost:3008/inventory>        | `/inventory`        | `pnpm dev:inventory`       |
 | Student Affairs | <http://localhost:3009>                  | `/student-affairs`  | `pnpm dev:student-affairs` |
 | Facilities      | <http://localhost:3010/facilities/rooms> | `/facilities/rooms` | `pnpm dev:facilities`      |
 

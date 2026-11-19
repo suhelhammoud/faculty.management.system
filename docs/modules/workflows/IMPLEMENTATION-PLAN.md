@@ -123,9 +123,40 @@ Accept an idempotency key for starts and action submissions. Scope it to the aut
 
 The module records the version of the data being reviewed and checks for relevant changes before applying a decision. On a stale-record conflict, roll back the submission and leave its task pending so the actor can use the recovery action defined for that step. A return opens a new revision task and preserves the prior submission and history. Resubmission sends a new revision through review.
 
+### HTTP response contracts
+
+The API, shell, and Inventory use type imports from `@project/contracts/workflow`.
+The [contract declarations](../../../packages/contracts/workflow.d.ts) describe JSON
+responses and have no runtime dependencies.
+
+| Response                            | Shared type                         |
+| ----------------------------------- | ----------------------------------- |
+| Task inbox and task detail          | `WorkflowTask[]` and `WorkflowTask` |
+| Instance monitor                    | `WorkflowInstance[]`                |
+| Instance detail and visible history | `WorkflowInstanceDetail`            |
+| Start or submit an action           | `WorkflowActionResult`              |
+
+The API explicitly maps records to these types and serializes timestamps as ISO
+strings. Instances include the pinned definition key and version. Task status
+and instance status have separate types. Nullable values such as a task's
+assignee, a completed instance's current task, and an event's task ID or hidden
+comment are represented as `null`.
+
+Step and action keys remain strings so different modules can use their own keys.
+The UI uses the task's `actions` list to display the actions available to the
+current user. The API still applies record access and action authorization.
+Engine definitions, registration hooks, and Drizzle records stay in the backend.
+Inventory owns its removal proposal and committee decision types.
+
 ## Inbox and monitor
 
 Use one shared inbox, with module review pages for domain details and forms. Support refresh and deep links by fetching current data using stable IDs in paths such as `/workflow/tasks/:taskId` and `/inventory/workflow/removal-requests/:requestId`. Show the workflow title and purpose, step instructions, actions the user can take, and the history they may view.
+
+Inventory implements its task, proposal, history, and monitor screens under
+`/inventory/workflow/`. These screens work both standalone and in the shell.
+The shell retains the shared inbox and monitor. Its Inventory removal task and
+history links open the corresponding localized Inventory screens.
+[Inventory routing](inventory-removal.md#inbox-and-pages)
 
 The read-only monitor shows the current step, start date, last activity, and chronological history. Authorized users can filter by lifecycle status and step.
 
@@ -133,7 +164,7 @@ The read-only monitor shows the current step, start date, last activity, and chr
 
 ### Inventory removal
 
-An Inventory requester submits proposed assets and removal reasons. These are the transitions for the illustrative definition above.
+An Inventory requester submits proposed assets and removal reasons. The implemented workflow uses these transitions.
 
 | Step               | Eligible actor                                                    | Action               | Result                                                                                                          |
 | ------------------ | ----------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------- |
@@ -144,7 +175,7 @@ An Inventory requester submits proposed assets and removal reasons. These are th
 | Committee decision | User authorized to record the committee decision for the request  | Record decision      | Record the dated, named committee decision and an outcome and reason for each item, then complete the workflow. |
 | Committee decision | Same committee decision eligibility                               | Return with a reason | Open a revision task for the requester.                                                                         |
 
-The committee action accepts approved-for-waste, rejected, and deferred item outcomes in the same request. Before applying approved results, Inventory locks the affected assets and verifies the relevant asset status and custody against the reviewed proposal. Approved items become decommissioned and their active custody ends. Rejected and deferred items retain their status and custody. A deferred item is a recorded committee outcome. The workflow completes when the committee decision is recorded. Record any later physical disposal as a separate Inventory transaction. Confirm the review sequence and whether one authorized recorder or multiple committee members must act. [Inventory implementation specification](../inventory/IMPLEMENTATION-SPEC.md#initial-transaction-workflows)
+The committee action accepts approved-for-waste, rejected, and deferred item outcomes in the same request. Before applying approved results, Inventory locks the affected assets and verifies each approved asset’s status, revision, and custody against the reviewed proposal. Approved items become decommissioned and their active custody ends. Rejected and deferred items retain their status and custody. A deferred item is a recorded committee outcome. The workflow completes when the committee decision is recorded. Record any later physical disposal as a separate Inventory transaction. One authorized recorder submits each committee decision. [Inventory implementation specification](../inventory/IMPLEMENTATION-SPEC.md#initial-transaction-workflows)
 
 ### Exams results approval
 
@@ -163,7 +194,7 @@ A staff member could open a certificate request on behalf of a student. The requ
 - An out-of-scope user cannot discover the task in the inbox, open its history by direct link, or act on it. A user who loses the step permission after opening the task cannot submit a decision.
 - An instance started under an older definition version can still advance using its matching handlers after a new version becomes active.
 
-## Run the Inventory pilot
+## Run Inventory removal
 
 Apply the database migration and synchronize the shared permission catalog before starting the updated API.
 
@@ -182,4 +213,9 @@ Use shared Administration to grant the permissions appropriate to each existing 
 | `inventory:removal-decide`  | Record the committee's decision or return a proposal for revision.              |
 | `workflow:monitor`          | Open the shared read-only monitor for records within the user's access scope.   |
 
-Set the shell's `VITE_API_URL` to the API origin and include the shell origin in the API's `TRUSTED_ORIGINS`. Open **Workflows** in the shell to see the inbox and start a proposal. The pilot supports one authorized recorder for each committee decision. Exams and Student Affairs can register their own processes when their policies are confirmed.
+Set `VITE_API_URL` for Inventory and the shell when using a custom API origin.
+Include both frontend origins in the API's `TRUSTED_ORIGINS`. Start from
+**Propose asset removal** in Inventory or open the shared inbox with **Workflows**
+in the shell. The [local Inventory guide](../../../apps/inventory/README.md) lists
+the seeded accounts and walkthrough. Exams and Student Affairs can register
+their own processes when their policies are confirmed.

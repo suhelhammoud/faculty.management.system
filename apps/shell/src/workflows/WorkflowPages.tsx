@@ -1,15 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import {
-  workflowApi,
-  type Asset,
-  type Detail,
-  type Instance,
-  type ProposalLine,
-  type RemovalRequest,
-  type Result,
-  type Task,
-} from './api';
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router';
+import type {
+  WorkflowActionResult,
+  WorkflowInstance,
+  WorkflowInstanceDetail,
+  WorkflowTask as WorkflowTaskResponse,
+} from '@project/contracts/workflow';
+import { workflowApi } from './api';
 import './workflows.css';
 
 const removalPath = 'inventory/workflow/removal-requests';
@@ -69,7 +66,7 @@ function Frame({ title, children }: { title: string; children: ReactNode }) {
 }
 
 export function WorkflowInbox() {
-  const state = useResource<Task[]>('workflow/tasks');
+  const state = useResource<WorkflowTaskResponse[]>('workflow/tasks');
   return (
     <Frame title="Task inbox">
       <Resource state={state}>
@@ -95,7 +92,7 @@ export function WorkflowInbox() {
 export function WorkflowMonitor() {
   const [params, setParams] = useSearchParams();
   const query = params.toString();
-  const state = useResource<Instance[]>(`workflow/instances${query ? `?${query}` : ''}`);
+  const state = useResource<WorkflowInstance[]>(`workflow/instances${query ? `?${query}` : ''}`);
   function filter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
@@ -153,45 +150,46 @@ export function WorkflowMonitor() {
 
 export function WorkflowHistory() {
   const { id } = useParams();
-  const state = useResource<Detail>(id && `workflow/instances/${id}`);
+  const state = useResource<WorkflowInstanceDetail>(id && `workflow/instances/${id}`);
   return (
     <Frame title="Workflow history">
       <Resource state={state}>
-        {(instance) => (
-          <>
-            <h3>{instance.title}</h3>
-            <p>{instance.description}</p>
-            <p>
-              {instance.status}
-              {instance.currentStep && ` · ${label(instance.currentStep)}`}
-            </p>
-            <p>
-              Started {dateTime(instance.startedAt)} · Last activity{' '}
-              {dateTime(instance.lastActivityAt)}
-            </p>
-            {isRemoval(instance) && (
-              <Link to={`/${removalPath}/${instance.subjectId}`}>View removal proposal</Link>
-            )}
-            {instance.currentTaskId && (
-              <Link to={`/workflow/tasks/${instance.currentTaskId}`}>View current task</Link>
-            )}
-            <ol>
-              {instance.history.map((event) => (
-                <li key={event.id}>
-                  <strong>{label(event.action)}</strong> · {dateTime(event.occurredAt)} ·{' '}
-                  {event.actorId}
-                  {event.comment && <p>{event.comment}</p>}
-                </li>
-              ))}
-            </ol>
-          </>
-        )}
+        {(instance) =>
+          isRemoval(instance) ? (
+            <Navigate replace to={`/inventory/workflow/instances/${instance.id}`} />
+          ) : (
+            <>
+              <h3>{instance.title}</h3>
+              <p>{instance.description}</p>
+              <p>
+                {instance.status}
+                {instance.currentStep && ` · ${label(instance.currentStep)}`}
+              </p>
+              <p>
+                Started {dateTime(instance.startedAt)} · Last activity{' '}
+                {dateTime(instance.lastActivityAt)}
+              </p>
+              {instance.currentTaskId && (
+                <Link to={`/workflow/tasks/${instance.currentTaskId}`}>View current task</Link>
+              )}
+              <ol>
+                {instance.history.map((event) => (
+                  <li key={event.id}>
+                    <strong>{label(event.action)}</strong> · {dateTime(event.occurredAt)} ·{' '}
+                    {event.actorId}
+                    {event.comment && <p>{event.comment}</p>}
+                  </li>
+                ))}
+              </ol>
+            </>
+          )
+        }
       </Resource>
     </Frame>
   );
 }
 
-function isRemoval(instance: Instance) {
+function isRemoval(instance: WorkflowInstance) {
   return instance.subjectModule === 'inventory' && instance.subjectType === 'removal-request';
 }
 
@@ -206,7 +204,10 @@ function useSubmit(path: string) {
     const json = JSON.stringify(body);
     if (retry.current?.json !== json) retry.current = { json, key: crypto.randomUUID() };
     try {
-      const result = await workflowApi<Result>(path, { body, key: retry.current.key });
+      const result = await workflowApi<WorkflowActionResult>(path, {
+        body,
+        key: retry.current.key,
+      });
       void navigate(`/workflow/instances/${result.instanceId}`);
     } catch (error) {
       setError(errorMessage(error));
@@ -219,19 +220,23 @@ function useSubmit(path: string) {
 
 export function WorkflowTask() {
   const { id } = useParams();
-  const state = useResource<Task>(id && `workflow/tasks/${id}`);
+  const state = useResource<WorkflowTaskResponse>(id && `workflow/tasks/${id}`);
   return (
     <Frame title="Review task">
-      <Resource state={state}>{(task) => <TaskBody key={task.id} task={task} />}</Resource>
+      <Resource state={state}>
+        {(task) =>
+          isRemoval(task.instance) ? (
+            <Navigate replace to={`/inventory/workflow/tasks/${task.id}`} />
+          ) : (
+            <TaskBody key={task.id} task={task} />
+          )
+        }
+      </Resource>
     </Frame>
   );
 }
 
-function TaskBody({ task }: { task: Task }) {
-  const removal = isRemoval(task.instance);
-  const state = useResource<RemovalRequest>(
-    removal ? `${removalPath}/${task.instance.subjectId}` : undefined,
-  );
+function TaskBody({ task }: { task: WorkflowTaskResponse }) {
   return (
     <>
       <h3>{task.title}</h3>
@@ -240,32 +245,25 @@ function TaskBody({ task }: { task: Task }) {
       </p>
       <p>{task.instructions}</p>
       <Link to={`/workflow/instances/${task.instance.id}`}>View workflow history</Link>
-      {removal ? (
-        <Resource state={state}>
-          {(request) => (
-            <>
-              <ProposalHistory request={request} />
-              <TaskActions task={task} request={request} />
-            </>
-          )}
-        </Resource>
-      ) : (
-        <TaskActions task={task} />
-      )}
+      <TaskActions task={task} />
     </>
   );
 }
 
-function TaskActions({ task, request }: { task: Task; request?: RemovalRequest }) {
+function TaskActions({ task }: { task: WorkflowTaskResponse }) {
   const [action, setAction] = useState(task.actions[0] ?? '');
   const [comment, setComment] = useState('');
   const { submit, pending, error } = useSubmit(`workflow/tasks/${task.id}/actions`);
-  const items = request?.items.filter(({ revision }) => revision === request.currentRevision) ?? [];
   if (!task.actions.length) return <p>No actions are available.</p>;
-  const controls = (
-    <>
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit({ action, comment: comment || undefined });
+      }}
+    >
       <label>
-        Action{' '}
+        Action
         <select value={action} onChange={(event) => setAction(event.target.value)}>
           {task.actions.map((key) => (
             <option key={key} value={key}>
@@ -275,7 +273,7 @@ function TaskActions({ task, request }: { task: Task; request?: RemovalRequest }
         </select>
       </label>
       <label>
-        {action === 'return' ? 'Reason for return' : 'Comment'}{' '}
+        {action === 'return' ? 'Reason for return' : 'Comment'}
         <textarea
           value={comment}
           required={action === 'return'}
@@ -283,263 +281,8 @@ function TaskActions({ task, request }: { task: Task; request?: RemovalRequest }
           onChange={(event) => setComment(event.target.value)}
         />
       </label>
-    </>
-  );
-  const finish = (input?: unknown) => void submit({ action, comment: comment || undefined, input });
-  return (
-    <>
       {error && <p role="alert">{error}</p>}
-      {action === 'resubmit' && request ? (
-        <ProposalForm
-          key={action}
-          requestId={task.instance.subjectId}
-          initial={items}
-          onSubmit={(lines) => finish({ items: lines })}
-          pending={pending}
-        >
-          {controls}
-        </ProposalForm>
-      ) : (
-        <form
-          key={action}
-          onSubmit={(event) => {
-            event.preventDefault();
-            const fields = new FormData(event.currentTarget);
-            finish(
-              action === 'record-decision' && request
-                ? {
-                    name: fields.get('name'),
-                    reference: fields.get('reference'),
-                    decidedOn: fields.get('decidedOn'),
-                    items: items.map(({ assetId }) => ({
-                      assetId,
-                      outcome: fields.get(`outcome-${assetId}`),
-                      reason: fields.get(`reason-${assetId}`),
-                    })),
-                  }
-                : undefined,
-            );
-          }}
-        >
-          {controls}
-          {action === 'record-decision' && request && (
-            <>
-              <label>
-                Decision name <input name="name" required maxLength={200} />
-              </label>
-              <label>
-                Reference <input name="reference" required maxLength={200} />
-              </label>
-              <label>
-                Decision date <input name="decidedOn" type="date" required />
-              </label>
-              {items.map((item) => (
-                <fieldset key={item.assetId}>
-                  <legend>
-                    {item.tag} · {item.name}
-                  </legend>
-                  <label>
-                    Outcome{' '}
-                    <select name={`outcome-${item.assetId}`} required defaultValue="">
-                      <option value="" disabled>
-                        Select outcome
-                      </option>
-                      <option value="approved-for-waste">Approved for waste</option>
-                      <option value="rejected">Rejected</option>
-                      <option value="deferred">Deferred</option>
-                    </select>
-                  </label>
-                  <label>
-                    Reason <textarea name={`reason-${item.assetId}`} required maxLength={2000} />
-                  </label>
-                </fieldset>
-              ))}
-            </>
-          )}
-          <button disabled={pending}>Submit action</button>
-        </form>
-      )}
-    </>
-  );
-}
-
-export function NewRemovalRequest() {
-  const { submit, pending, error } = useSubmit(removalPath);
-  return (
-    <Frame title="Propose asset removal">
-      {error && <p role="alert">{error}</p>}
-      <ProposalForm onSubmit={(items) => void submit({ items })} pending={pending} />
-    </Frame>
-  );
-}
-
-export function RemovalRequestDetail() {
-  const { id } = useParams();
-  const state = useResource<RemovalRequest>(id && `${removalPath}/${id}`);
-  return (
-    <Frame title="Asset removal proposal">
-      <Resource state={state}>
-        {(request) => (
-          <>
-            <Link to={`/workflow/instances/${request.instanceId}`}>View workflow history</Link>
-            <ProposalHistory request={request} />
-          </>
-        )}
-      </Resource>
-    </Frame>
-  );
-}
-
-function ProposalHistory({ request }: { request: RemovalRequest }) {
-  const revisions = [...new Set(request.items.map(({ revision }) => revision))].reverse();
-  return (
-    <>
-      {request.decision && (
-        <p>
-          {request.decision.name} · {request.decision.reference} · {request.decision.decidedOn}
-        </p>
-      )}
-      {revisions.map((revision) => (
-        <section key={revision}>
-          <h4>
-            Revision {revision}
-            {revision === request.currentRevision ? ' (current)' : ''}
-          </h4>
-          <ul>
-            {request.items
-              .filter((line) => line.revision === revision)
-              .map((item) => (
-                <li key={item.assetId}>
-                  <strong>
-                    {item.tag} · {item.name}
-                  </strong>
-                  <p>{item.reason}</p>
-                  {item.outcome && (
-                    <p>
-                      {label(item.outcome)} · {item.decisionReason}
-                    </p>
-                  )}
-                </li>
-              ))}
-          </ul>
-        </section>
-      ))}
-    </>
-  );
-}
-
-function ProposalForm({
-  requestId,
-  initial,
-  onSubmit,
-  pending,
-  children,
-}: {
-  requestId?: string;
-  initial?: ProposalLine[];
-  onSubmit: (items: ProposalLine[]) => void;
-  pending: boolean;
-  children?: ReactNode;
-}) {
-  const assets = useResource<Asset[]>(
-    `inventory/workflow/assets${requestId ? `?requestId=${encodeURIComponent(requestId)}` : ''}`,
-  );
-  const [lines, setLines] = useState(() =>
-    (initial?.length ? initial : [{ assetId: '', reason: '' }]).map(
-      ({ assetId, reason }, index) => ({ assetId, reason, key: index }),
-    ),
-  );
-  const nextKey = useRef(lines.length);
-  function update(key: number, patch: Partial<ProposalLine>) {
-    setLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)));
-  }
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit(lines.map(({ assetId, reason }) => ({ assetId, reason })));
-      }}
-    >
-      {children}
-      <Resource state={assets}>
-        {(all) => {
-          const active = all.filter(({ status }) => status === 'active');
-          if (!active.length && !initial?.length)
-            return <p>No active Inventory assets are available.</p>;
-          return (
-            <>
-              {lines.map((line) => (
-                <fieldset key={line.key}>
-                  <legend>Proposed asset</legend>
-                  <label>
-                    Asset{' '}
-                    <select
-                      required
-                      value={line.assetId}
-                      onChange={(event) => update(line.key, { assetId: event.target.value })}
-                    >
-                      <option value="" disabled>
-                        Select asset
-                      </option>
-                      {line.assetId && !active.some(({ id }) => id === line.assetId) && (
-                        <option value={line.assetId} disabled>
-                          Asset no longer active
-                        </option>
-                      )}
-                      {active
-                        .filter(
-                          ({ id }) =>
-                            id === line.assetId || !lines.some(({ assetId }) => assetId === id),
-                        )
-                        .map((asset) => (
-                          <option key={asset.id} value={asset.id}>
-                            {asset.tag} · {asset.name}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  <label>
-                    Removal reason{' '}
-                    <textarea
-                      required
-                      maxLength={2000}
-                      value={line.reason}
-                      onChange={(event) => update(line.key, { reason: event.target.value })}
-                    />
-                  </label>
-                  {lines.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setLines((current) => current.filter(({ key }) => key !== line.key))
-                      }
-                    >
-                      Remove asset
-                    </button>
-                  )}
-                </fieldset>
-              ))}
-              <button
-                type="button"
-                disabled={lines.length >= Math.min(active.length, 100)}
-                onClick={() => {
-                  const key = nextKey.current++;
-                  setLines((current) => [...current, { assetId: '', reason: '', key }]);
-                }}
-              >
-                Add asset
-              </button>
-              <button
-                disabled={
-                  pending || lines.some(({ assetId }) => !active.some(({ id }) => id === assetId))
-                }
-              >
-                Submit proposal
-              </button>
-            </>
-          );
-        }}
-      </Resource>
+      <button disabled={pending}>Submit action</button>
     </form>
   );
 }

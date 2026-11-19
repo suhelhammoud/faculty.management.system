@@ -71,7 +71,7 @@ export default defineConfig(({ mode }) => {
           inventory: {
             type: 'module',
             name: 'inventory',
-            entry: 'http://localhost:3008/remoteEntry.js',
+            entry: env.VITE_INVENTORY_REMOTE_URL || 'http://localhost:3008/remoteEntry.js',
             entryGlobalName: 'inventory',
             shareScope: 'default',
           },

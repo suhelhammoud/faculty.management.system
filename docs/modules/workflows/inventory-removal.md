@@ -2,6 +2,24 @@
 
 This document describes the asset removal workflow implemented by the Inventory module. It covers proposal submission, review and revision, and recording the committee decision.
 
+## Inbox and pages
+
+Start from **Propose asset removal** in Inventory in the standalone app or the
+shell. Both use the same English and Arabic pages. The shell's shared inbox at
+`/workflow/tasks` links to an Inventory removal task through the shared task
+route, which forwards the task to `/inventory/workflow/tasks/:taskId`.
+
+| Task step          | Who sees it in their inbox                     | Actions on the Inventory page                         |
+| ------------------ | ---------------------------------------------- | ----------------------------------------------------- |
+| Review             | Eligible users with `inventory:removal-review` | Forward to committee, return with a reason, or reject |
+| Revise             | Original requester                             | Edit and resubmit the proposal                        |
+| Committee decision | Eligible users with `inventory:removal-decide` | Record each item's outcome or return with a reason    |
+
+A successful action opens `/inventory/workflow/instances/:instanceId` for the
+person who submitted it. Any next task appears in the next eligible user's
+inbox. The same task page loads the task by ID and displays the actions returned
+by the API. [Inventory routes](../inventory/IMPLEMENTATION-SPEC.md#removal-pages-and-task-routing)
+
 ## Submit and review
 
 The requester submits proposed assets and reasons. The API checks the request-removal permission, saves the proposal and starts a workflow in one transaction. A reviewer can forward the proposal to the committee, return it for revision with a reason, or reject it.
@@ -45,7 +63,7 @@ sequenceDiagram
 
 ## Return and resubmit
 
-When a reviewer returns the request, the requester can submit a revised proposal. Inventory saves the new items as a new revision and routes the workflow back to review.
+When a reviewer or committee decision recorder returns the request, the requester can submit a revised proposal. Inventory saves the new items as a new revision and routes the workflow back to review.
 
 ```mermaid
 sequenceDiagram
@@ -92,9 +110,11 @@ sequenceDiagram
         loop Each approved-for-waste asset
             API->>DB: Decommission asset and end active custody
         end
-        API->>DB: Save dated committee decision and per-item outcomes
+        API->>DB: Save dated committee decision, per-item outcomes, and ledger entry
         WF->>DB: Complete task, mark workflow completed, and append event
         WF->>DB: Commit
         WF-->>Recorder: Completed workflow
     end
 ```
+
+Record physical disposal as a separate Inventory transaction after committee approval.

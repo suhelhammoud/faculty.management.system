@@ -58,19 +58,22 @@ database names. Never add real credentials or personnel data to these fixtures.
 
 The TypeScript fixtures add two demo storage rooms, their shared custodians, six assets, and three consumable types. Opening receipts and two employee issues appear in transaction history. Reruns preserve current balances, custody, asset condition and location, storage configuration, and workflow progress. Add new opening data in new transaction batches.
 
-| Username              | Demo access                                                      |
-| --------------------- | ---------------------------------------------------------------- |
-| `inventory_operator`  | Inventory reads, configuration, movements, and physical disposal |
-| `inventory_requester` | Start removal proposals and revise returned requests             |
-| `inventory_reviewer`  | Review requests and open the workflow monitor                    |
-| `inventory_recorder`  | Record committee decisions or return requests                    |
+| Username                    | Demo access                                                      |
+| --------------------------- | ---------------------------------------------------------------- |
+| `staff_one` and `staff_two` | My Items shows their own current equipment assignments           |
+| `inventory_operator`        | Inventory reads, configuration, movements, and physical disposal |
+| `inventory_requester`       | Start removal proposals and revise returned requests             |
+| `inventory_reviewer`        | Review requests and open the workflow monitor                    |
+| `inventory_recorder`        | Record committee decisions or return requests                    |
 
 Use the configured `SEED_USER_PASSWORD` for each account. These roles are provisioned only by the local seed.
 
-1. In the shell, sign in as `inventory_requester`. Open **Workflows** and start an asset removal proposal with `DEMO-INV-003`, `DEMO-INV-004`, and `DEMO-INV-005`. Include a reason for each.
+1. Open Inventory standalone or in the shell. Sign in as `inventory_requester` and use **Propose asset removal** to start a proposal with `DEMO-INV-003`, `DEMO-INV-004`, and `DEMO-INV-005`. Include a reason for each.
 2. In the reviewer inbox, return the proposal with a comment. Sign back in as requester and resubmit the revision. Then forward it from the reviewer inbox.
 3. Open the recorder inbox and record a named, dated decision with a reference. Approve `DEMO-INV-003` for waste, reject `DEMO-INV-004`, and defer `DEMO-INV-005`, giving a reason for each.
-4. As `inventory_operator`, post a separate `disposal` transaction for the approved asset through the [Inventory API](../../../../docs/modules/inventory/API.md). The decision and disposal appear as separate ledger entries.
+4. As `inventory_operator`, open **Transactions**, choose **Disposal**, and post a separate disposal transaction for the approved asset. The decision and disposal appear as separate ledger entries.
+
+See the [Inventory app guide](../../../../apps/inventory/README.md) for both frontend entry points.
 
 ## Seed tests
 

@@ -1,8 +1,6 @@
 import { Component, lazy, Suspense, type ReactNode } from 'react';
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router';
 import {
-  NewRemovalRequest,
-  RemovalRequestDetail,
   WorkflowHistory,
   WorkflowInbox,
   WorkflowMonitor,
@@ -92,14 +90,6 @@ export default function App() {
               <Route path="/workflow/tasks/:id" element={<WorkflowTask />} />
               <Route path="/workflow/monitor" element={<WorkflowMonitor />} />
               <Route path="/workflow/instances/:id" element={<WorkflowHistory />} />
-              <Route
-                path="/inventory/workflow/removal-requests/new"
-                element={<NewRemovalRequest />}
-              />
-              <Route
-                path="/inventory/workflow/removal-requests/:id"
-                element={<RemovalRequestDetail />}
-              />
               {Object.entries(modules).map(([name, { Component: Module }]) => (
                 <Route key={name} path={`/${name}/*`} element={<Module />} />
               ))}

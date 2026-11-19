@@ -2,15 +2,20 @@
 
 ## Project context
 
-This repository is a monorepo with a React/TypeScript frontend, a NestJS API, PostgreSQL, and Drizzle ORM. The Inventory API implements asset custody, stock and transaction posting, and the removal workflow. See the [API reference](API.md) for the current endpoints and permission model. The shared shell provides proposal and decision screens. The standalone Inventory frontend is a starter scaffold. Database schema and migrations live in `packages/db`.
+Inventory runs as a standalone app at `http://localhost:3008/inventory` and as a
+module in the faculty shell at `/inventory`. Both use the same React and TypeScript
+screens backed by the shared NestJS API. React Router handles navigation, TanStack
+Query handles server data, Zustand stores language preference, and i18next provides
+Arabic and English text. The UI uses shadcn components with scoped Tailwind styles.
 
-Follow the architecture, authentication, validation, styling, and error-handling patterns used by existing modules. Inventory should work as a standalone frontend and through the shared app shell.
+The API uses PostgreSQL and Drizzle. See the [API reference](API.md) for endpoint
+contracts and the [local app guide](../../../apps/inventory/README.md) for setup.
 
 ## Purpose
 
 Track durable equipment and consumable stock, their locations, responsible parties, receipts, issues, transfers, and removal decisions.
 
-Inventory owns equipment details and custody history. Room locations should reference rooms maintained by Facilities. Do not duplicate employee records owned by HR.
+Inventory owns equipment details and custody history. Room locations reference Facilities records and individual custodians reference HR employees.
 
 ## Tracking modes
 
@@ -53,6 +58,8 @@ Retain transaction history. Do not erase history when an item is transferred, de
 
 ### Initial transaction workflows
 
+Authorized operators post inventory movements directly. Committee removal is the only operation that uses the approval inbox.
+
 1. **Receipt into storage**
    - Support receipts based on a purchase receipt or a transfer from Head Administration.
    - Record the source, receiving storage location, date, reference, and item lines.
@@ -86,11 +93,15 @@ Retain transaction history. Do not erase history when an item is transferred, de
    - Preserve the adjustment in transaction history.
 
 8. **Committee removal decision**
-   - Allow malfunctioning assets to be proposed for review by the removal committee.
+   - Allow any active asset to be proposed for committee removal, with a reason for each asset.
    - Record the proposed items and the committee decision per item in a named, dated transaction, including decision reference and reason.
-   - Support at least approved for waste, not approved, and deferred outcomes. Keep the outcome structure easy to extend if the institution defines additional decisions.
+   - Record one of three outcomes per item: approved for waste, rejected, or deferred.
    - Only an approved-for-waste decision changes the asset to a decommissioned/waste status and ends its active custody. Rejected or deferred items retain their current status and custody.
-   - Keep the asset and all its history for audit purposes. If physical disposal occurs later, record it as a separate dated transaction.
+   - Commit asset changes, the committee ledger entry, and workflow completion together. A stale approval returns `409` and leaves the task open so the recorder can return the proposal for revision.
+9. **Asset condition change**
+   - Record the new condition and a reason. The current room and custodian stay the same.
+10. **Physical disposal**
+    - An authorized operator records disposal as a separate dated transaction after committee approval. Disposal clears the asset's current room, changes its lifecycle to disposed, and preserves its history.
 
 ## Storage locations and integrations
 
@@ -102,9 +113,9 @@ Retain transaction history. Do not erase history when an item is transferred, de
 
 ## API and permissions
 
-- Add the Inventory module to the NestJS API using the project’s existing module, controller, service, validation, and database patterns.
 - Use validated request schemas and transactional database writes for multi-item receipts and movements so partial failures do not leave balances or custody inconsistent.
-- Add Inventory permissions through `@project/authorization`. Require a dedicated step permission and access to the request for recording committee decisions. Grant the permission through the shared role administration process.
+- Grant Inventory permissions through shared Administration. General reads and reference pickers require `inventory:read`. Settings and movement forms require their corresponding write grants as well. Workflow task access depends on the request and the active step.
+- `GET /api/inventory/capabilities` reports the signed-in user's capabilities and whether they have a linked HR profile. The UI uses those flags for navigation. Each API endpoint still enforces its own access rules.
 - Provide endpoints for listing/searching assets and stock, reading transaction history, and creating the supported transactions.
 - Start removal requests with `POST /api/inventory/workflow/removal-requests` and load proposal details with `GET /api/inventory/workflow/removal-requests/:requestId`.
 - Use `GET /api/inventory/workflow/assets` to choose assets for a proposal. Asset managers can register an asset with `POST /api/inventory/workflow/assets` and update its HR employee custody with `PATCH /api/inventory/workflow/assets/:id/custody`.
@@ -113,24 +124,65 @@ Retain transaction history. Do not erase history when an item is transferred, de
 
 ## Frontend
 
-Build the Inventory app using existing frontend conventions and shared components.
+English is the default. The language switch is available on the sign-in screen and
+persists separately for the standalone and shell browser origins. Arabic uses
+right to left layout within Inventory, including dialogs. Asset tags and
+references retain their own text direction. The shell's top level navigation
+keeps its existing language.
 
-All frontend workflow routes must include the `/workflow/` path segment. Use routes such as `/workflow/tasks`, `/workflow/tasks/:taskId`, and module-specific routes such as `/inventory/workflow/removal-requests/:requestId`. Pass stable IDs in the URL and fetch workflow and business data from the API so deep links and refreshes work.
+| Route                               | What users can do                                                                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `/inventory/my-items`               | View their current durable asset assignments.                                                                                         |
+| `/inventory/assets`                 | Search by tag, name, or category and filter by lifecycle, condition, room, or responsible party. View details and open asset history. |
+| `/inventory/stock`                  | Search consumables and filter balances by item and storage room. View each item's unit.                                               |
+| `/inventory/transactions`           | Filter posted history by type, date range, recording user, asset or consumable, and reference.                                        |
+| `/inventory/transactions/:id`       | Read movement details, including recorded dates, participants, quantities, and committee outcomes where applicable.                   |
+| `/inventory/transactions/new/:type` | Fill in fields and repeatable item lines for a receipt, movement, adjustment, condition change, or disposal.                          |
+| `/inventory/settings`               | Designate Facilities rooms as storage, assign shared custodians, and create shared accounts and consumables.                          |
 
-Provide screens or views for:
+Lists use URL filters and pagination. For an asset issue or handover, users can
+keep, change, or clear the room independently of custody. Transaction forms
+retry unchanged submissions with the same idempotency key. If an asset revision
+is stale, the form keeps the draft and lets the user review refreshed asset
+details before trying again.
 
-- Asset register with search and filters by tag, name/category, status, responsible party, and room.
-- Consumable stock by item and storage location, showing on-hand quantity and unit.
-- Transaction history with filters by type, date, user, item, and reference.
-- Forms for receiving items, assigning/transferring/returning assets, moving stock, issuing consumables, and recording stock adjustments.
-- Committee removal proposals and decisions, showing each item’s outcome and reason.
+### My Items
 
-Show the current asset custodian and physical location as separate fields. Show consumable issues in transaction history without displaying them as employee-held assets.
+Any active signed-in user can open My Items without `inventory:read`. The API
+identifies the employee through the account's HR link and takes no employee ID
+from the caller. It returns active durable assets with current individual
+custody, including the asset tag, name, condition, optional room, and assignment
+date. Shared custody, past assignments, consumable issues, and retired assets
+are excluded. The screen distinguishes an unlinked account from an employee
+with no active assignments.
+
+The Inventory landing route opens Assets for users with register access, My Items
+for linked employees without that access, and the Inventory task inbox for other
+active users. My Items refreshes on entry and when the window regains focus.
+
+### Removal pages and task routing
+
+| Route                                             | Page                                                                  |
+| ------------------------------------------------- | --------------------------------------------------------------------- |
+| `/inventory/workflow/tasks`                       | Inventory task inbox                                                  |
+| `/inventory/workflow/tasks/:taskId`               | Review, Revise, or Committee Decision based on the current task       |
+| `/inventory/workflow/instances/:instanceId`       | Instance status and history                                           |
+| `/inventory/workflow/monitor`                     | Inventory monitor for users with `workflow:monitor` and record access |
+| `/inventory/workflow/removal-requests/new`        | Start a removal proposal                                              |
+| `/inventory/workflow/removal-requests/:requestId` | Proposal revisions and the recorded committee decision                |
+
+The shell keeps its shared inbox and monitor. When a shell task or history link
+identifies an Inventory removal record, it opens the localized Inventory page
+for the same ID. The page shows the actions allowed by the shared workflow API.
+After a successful action, it opens instance history. The next task appears in the
+inbox of eligible users. A return sends the proposal to its original requester,
+and resubmission opens a fresh review task. See the
+[workflow diagrams](../workflows/inventory-removal.md).
 
 ## Data integrity and audit requirements
 
 - Use database constraints for unique asset tags and valid foreign-key relationships.
-- Prevent stock issues that exceed available stock unless the institution explicitly allows negative stock.
+- Prevent stock issues that exceed the available balance.
 - Apply multi-item transactions atomically.
 - Record who entered each transaction and when.
 - Preserve completed transactions and asset history; use corrective transactions rather than silently rewriting history.
@@ -145,7 +197,8 @@ Show the current asset custodian and physical location as separate fields. Show 
 - A consumable issue to an employee reduces storage stock and appears in transaction history, but does not appear in that employee’s assigned assets.
 - A committee can record a dated, named decision per proposed asset. Approved items become decommissioned/waste and are no longer actively assigned; rejected or deferred items remain in their existing state.
 - Existing shared authentication and permission checks protect Inventory API operations.
-- Inventory navigation and standalone development continue to follow the repository’s app conventions.
+- Linked employees without `inventory:read` can see only their current assignments. A return or handover changes what the affected employees see in My Items.
+- English and Arabic are usable both standalone and in the shell. Existing Inventory task and history links still resolve to the same records.
 
 ## Operational decisions
 

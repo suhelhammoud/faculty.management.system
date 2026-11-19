@@ -4,6 +4,7 @@ import type { INestApplication } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { PERMISSION } from '@project/authorization';
+import type { WorkflowActionResult } from '@project/contracts/workflow';
 import { createDb } from '@project/db';
 import {
   facilitiesBuildings,
@@ -66,8 +67,12 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
   let app: INestApplication;
   const client = () => request(app.getHttpServer());
   const headers = (actorId: string) => ({ origin, 'x-test-actor': actorId });
-  type WorkflowResult = { instanceId: string; taskId: string; status: string };
-  const started = (body: unknown) => body as WorkflowResult;
+  const started = (body: unknown) => {
+    const result = body as WorkflowActionResult;
+    if (result.status !== 'running' || !result.taskId) throw new Error('Expected a pending task');
+    return { ...result, taskId: result.taskId, status: result.status };
+  };
+  const isoTimestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
   const bodyFor = (ids: string[]) => ({
     items: ids.map((assetId) => ({ assetId, reason: 'Damaged' })),
   });
@@ -218,6 +223,38 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
     const inbox = await client().get(taskApi).set(headers(actors.outsider)).expect(200);
     expect(inbox.body).toEqual([]);
     await client().get(`${taskApi}/${first.taskId}`).set(headers(actors.outsider)).expect(404);
+    const task = await client()
+      .get(`${taskApi}/${first.taskId}`)
+      .set(headers(actors.reviewer))
+      .expect(200);
+    expect(task.body).toEqual({
+      id: first.taskId,
+      instanceId: first.instanceId,
+      step: 'review',
+      assignedUserId: null,
+      status: 'pending',
+      openedAt: expect.stringMatching(isoTimestamp),
+      completedAt: null,
+      title: expect.any(String),
+      instructions: expect.any(String),
+      actions: ['forward', 'return', 'reject'],
+      instance: {
+        id: first.instanceId,
+        definitionKey: 'inventory.removal',
+        definitionVersion: 1,
+        subjectModule: 'inventory',
+        subjectType: 'removal-request',
+        subjectId: expect.any(String),
+        startedBy: actors.requester,
+        status: 'running',
+        currentStep: 'review',
+        startedAt: expect.stringMatching(isoTimestamp),
+        lastActivityAt: expect.stringMatching(isoTimestamp),
+        completedAt: null,
+        title: expect.any(String),
+        description: expect.any(String),
+      },
+    });
     await client()
       .get(`/api/workflow/instances/${first.instanceId}`)
       .set(headers(actors.outsider))
@@ -320,7 +357,19 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       .expect(200);
     expect(history.body).toMatchObject({
       status: 'completed',
-      history: [{ action: 'started' }, { action: 'forward' }, { action: 'record-decision' }],
+      currentStep: null,
+      completedAt: expect.stringMatching(isoTimestamp),
+      currentTaskId: null,
+      history: [
+        {
+          action: 'started',
+          taskId: first.taskId,
+          occurredAt: expect.stringMatching(isoTimestamp),
+          comment: null,
+        },
+        { action: 'forward', taskId: first.taskId },
+        { action: 'record-decision', taskId: committee.taskId },
+      ],
     });
   });
 
@@ -463,6 +512,10 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
         .set(manager)
         .send({ sharedAccountId: shared.id })
         .expect(200);
+    const storageList = await client().get('/api/inventory/storage').set(manager).expect(200);
+    expect(storageList.body).toContainEqual(
+      expect.objectContaining({ roomId: store.roomId, sharedAccount: shared.name }),
+    );
     const item = (
       await client()
         .post(prefix + '/consumables')
@@ -615,6 +668,48 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
         .from(inventoryTransactions)
         .where(eq(inventoryTransactions.idempotencyKey, key)),
     ).toHaveLength(1);
+  });
+
+  it('lists only the signed-in employee’s current assets without inventory read access', async () => {
+    const { db } = connection;
+    await db
+      .update(hrEmployees)
+      .set({ userId: actors.outsider })
+      .where(eq(hrEmployees.employeeId, employeeId));
+    await db
+      .update(hrEmployees)
+      .set({ userId: actors.requester })
+      .where(eq(hrEmployees.employeeId, secondEmployee));
+    const id = await asset();
+    const mine = '/api/inventory/my-items';
+    await client().get(mine).expect(401);
+    await client().get('/api/inventory/assets').set(headers(actors.outsider)).expect(403);
+    const initial = (await client().get(mine).set(headers(actors.outsider)).expect(200)).body;
+    expect(initial).toMatchObject({
+      linkedEmployee: true,
+      items: expect.arrayContaining([
+        expect.objectContaining({ id, tag: expect.any(String), assignedAt: expect.any(String) }),
+      ]),
+    });
+    expect(
+      (await client().get('/api/inventory/capabilities').set(headers(actors.outsider)).expect(200))
+        .body,
+    ).toMatchObject({ hasEmployeeProfile: true, read: false });
+    await client()
+      .get(mine + '?employeeId=' + secondEmployee)
+      .set(headers(actors.outsider))
+      .expect(400);
+    const unlinked = await client().get(mine).set(headers(actors.manager)).expect(200);
+    expect(unlinked.body).toEqual({ linkedEmployee: false, items: [] });
+    await client()
+      .patch('/api/inventory/workflow/assets/' + id + '/custody')
+      .set(headers(actors.manager))
+      .send({ employeeId: secondEmployee })
+      .expect(204);
+    const after = (await client().get(mine).set(headers(actors.outsider)).expect(200)).body;
+    expect(after.items).not.toContainEqual(expect.objectContaining({ id }));
+    const recipient = (await client().get(mine).set(headers(actors.requester)).expect(200)).body;
+    expect(recipient.items).toContainEqual(expect.objectContaining({ id }));
   });
 
   it('rechecks a permission after the task has been opened', async () => {
