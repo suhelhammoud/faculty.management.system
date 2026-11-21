@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import { DirectionProvider } from '@radix-ui/react-direction';
-import { Navigate, NavLink, Route, Routes, useParams } from 'react-router';
+import { Navigate, NavLink, Route, Routes, useLocation, useParams } from 'react-router';
 import { ModuleHeaderActions } from '../../components/ModuleDirectoryLink';
 import { createClient, useResource, workflow, type Capabilities } from './lib/api';
 import { i18n, useLanguage } from './lib/i18n';
@@ -35,10 +35,11 @@ function Permit({ allow, children }: { allow: boolean; children: ReactNode }) {
 function NewTransaction({ access }: { access: Capabilities }) {
   const { t } = useTranslation();
   const { type } = useParams();
+  const { key, state } = useLocation();
   const kind = operations.find((candidate) => candidate === type);
   return kind ? (
     <Permit allow={access.read && (kind === 'disposal' ? access.dispose : access.postTransactions)}>
-      <TransactionForm key={kind} kind={kind} />
+      <TransactionForm key={key} kind={kind} selected={state} />
     </Permit>
   ) : (
     <p role="alert">{t('Page not found')}</p>
@@ -93,7 +94,7 @@ function Workspace() {
               path="assets"
               element={
                 <Permit allow={access.read}>
-                  <AssetsPage />
+                  <AssetsPage post={access.postTransactions} />
                 </Permit>
               }
             />
@@ -101,7 +102,7 @@ function Workspace() {
               path="stock"
               element={
                 <Permit allow={access.read}>
-                  <StockPage />
+                  <StockPage post={access.postTransactions} />
                 </Permit>
               }
             />

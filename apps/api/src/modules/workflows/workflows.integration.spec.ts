@@ -660,8 +660,25 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
     expect(received).toMatchObject({
       asset: { roomId: store.roomId },
       custody: { sharedAccountId: shared.id },
+      isStorage: true,
     });
+    await db
+      .update(hrEmployees)
+      .set({ userId: actors.outsider })
+      .where(eq(hrEmployees.employeeId, employeeId));
+    await db
+      .update(hrEmployees)
+      .set({ userId: actors.requester })
+      .where(eq(hrEmployees.employeeId, secondEmployee));
     const assetId = received.asset.id;
+    const assignment = expect.objectContaining({ id: assetId });
+    const myItems = async (actorId: string) =>
+      (
+        await client()
+          .get(prefix + '/my-items')
+          .set(headers(actorId))
+          .expect(200)
+      ).body.items;
     const stock = () =>
       client()
         .get(prefix + '/stock')
@@ -677,6 +694,8 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       items: [{ assetId, expectedRevision: 1 }],
     };
     await post(issue).expect(201);
+    expect(await myItems(actors.outsider)).toContainEqual(assignment);
+    expect(await myItems(actors.requester)).not.toContainEqual(assignment);
     const move = {
       ...header,
       type: 'storage-relocation',
@@ -716,6 +735,8 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       asset: { roomId: other.roomId },
       custody: { employeeId: secondEmployee },
     });
+    expect(await myItems(actors.outsider)).not.toContainEqual(assignment);
+    expect(await myItems(actors.requester)).toContainEqual(assignment);
     await post({
       ...header,
       type: 'asset-return',
@@ -723,6 +744,7 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       destinationRoomId: store.roomId,
       items: [{ assetId, expectedRevision: 4 }],
     }).expect(201);
+    expect(await myItems(actors.requester)).not.toContainEqual(assignment);
     await post({
       ...header,
       type: 'condition-change',

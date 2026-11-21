@@ -155,7 +155,7 @@ function AssetDetail({ row }: { row: AssetRow }) {
   );
 }
 
-export function AssetsPage() {
+export function AssetsPage({ post }: { post: boolean }) {
   const { t } = useTranslation();
   const p = usePage();
   const language = useLanguage((s) => s.language);
@@ -217,7 +217,7 @@ export function AssetsPage() {
                 'Condition',
                 'Room',
                 'Responsible party',
-                'Asset details',
+                'Actions',
               ]}
               rows={rows.map((row) => ({
                 id: row.asset.id,
@@ -237,11 +237,37 @@ export function AssetsPage() {
                   ) : (
                     t('No custodian')
                   ),
-                  <div className="inv-actions">
+                  <div key="actions" className="inv-actions">
                     <AssetDetail row={row} />
                     <Link to={asQuery('/inventory/transactions', { assetId: row.asset.id })}>
                       {t('View history')}
                     </Link>
+                    {post && row.asset.status === 'active' && (
+                      <>
+                        {row.isStorage && row.custody?.sharedAccountId ? (
+                          <Link to="/inventory/transactions/new/asset-issue" state={{ asset: row }}>
+                            {t('asset-issue')}
+                          </Link>
+                        ) : (
+                          (row.custody?.employeeId || row.custody?.sharedAccountId) && (
+                            <Link
+                              to="/inventory/transactions/new/asset-handover"
+                              state={{ asset: row }}
+                            >
+                              {t('asset-handover')}
+                            </Link>
+                          )
+                        )}
+                        {row.custody?.employeeId && (
+                          <Link
+                            to="/inventory/transactions/new/asset-return"
+                            state={{ asset: row }}
+                          >
+                            {t('asset-return')}
+                          </Link>
+                        )}
+                      </>
+                    )}
                   </div>,
                 ],
               }))}
@@ -254,7 +280,7 @@ export function AssetsPage() {
   );
 }
 
-export function StockPage() {
+export function StockPage({ post }: { post: boolean }) {
   const { t } = useTranslation();
   const p = usePage();
   const lang = useLanguage((s) => s.language);
@@ -288,7 +314,7 @@ export function StockPage() {
         {(rows) => (
           <>
             <Grid
-              columns={['Code', 'Consumable', 'Storage room', 'Quantity', 'Unit', 'View history']}
+              columns={['Code', 'Consumable', 'Storage room', 'Quantity', 'Unit', 'Actions']}
               rows={rows.map((row) => ({
                 id: row.item.id + row.roomId,
                 cells: [
@@ -297,9 +323,19 @@ export function StockPage() {
                   bidi(row.room),
                   new Intl.NumberFormat(lang).format(row.quantity),
                   t(row.item.unit ?? ''),
-                  <Link to={asQuery('/inventory/transactions', { consumableId: row.item.id })}>
-                    {t('View history')}
-                  </Link>,
+                  <div key="actions" className="inv-actions">
+                    <Link to={asQuery('/inventory/transactions', { consumableId: row.item.id })}>
+                      {t('View history')}
+                    </Link>
+                    {post && row.quantity > 0 && (
+                      <Link
+                        to="/inventory/transactions/new/consumable-issue"
+                        state={{ stock: row }}
+                      >
+                        {t('consumable-issue')}
+                      </Link>
+                    )}
+                  </div>,
                 ],
               }))}
             />

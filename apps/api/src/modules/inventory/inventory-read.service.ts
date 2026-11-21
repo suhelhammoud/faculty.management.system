@@ -90,6 +90,7 @@ export class InventoryReadService {
         asset: inventoryAssets,
         custody: inventoryCustodies,
         room: facilitiesRooms.title,
+        isStorage: sql<boolean>`${inventoryStorage.roomId} is not null`,
         employee: { id: hrEmployees.employeeId, ...this.names() },
         sharedAccount: inventorySharedAccounts.name,
       })
@@ -99,6 +100,7 @@ export class InventoryReadService {
         and(eq(inventoryCustodies.assetId, inventoryAssets.id), isNull(inventoryCustodies.endedAt)),
       )
       .leftJoin(facilitiesRooms, eq(facilitiesRooms.roomId, inventoryAssets.roomId))
+      .leftJoin(inventoryStorage, eq(inventoryStorage.roomId, inventoryAssets.roomId))
       .leftJoin(hrEmployees, eq(hrEmployees.employeeId, inventoryCustodies.employeeId))
       .leftJoin(
         inventorySharedAccounts,

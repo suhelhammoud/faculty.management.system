@@ -19,7 +19,9 @@ All demo users use the local `SEED_USER_PASSWORD`.
 - Sign in as `staff_one` or `staff_two` and open **My Items**. Each account sees its
   own current durable assets without permission to browse the register.
 - Sign in as `inventory_operator` to browse assets, stock and transactions. Use
-  **New transaction** to receive stock, issue equipment and return it to storage.
+  **New transaction** to receive stock. Open an issue, handover or return from
+  an eligible **Assets** row, or start a consumable issue from **Stock**.
+  The form preselects the item and shows the expected custody or stock balance.
   Use **Settings** to configure storage rooms, shared custody and the consumable catalog.
 - In **Task inbox**, `inventory_requester` can propose tagged assets
   `DEMO-INV-003` through `DEMO-INV-005`. The `inventory_reviewer` can return the

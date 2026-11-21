@@ -63,6 +63,7 @@ export type AssetRow = {
   };
   custody: { employeeId: string | null; sharedAccountId: string | null } | null;
   room: string | null;
+  isStorage: boolean;
   employee: { id: string; nameEn: string | null; nameAr: string | null } | null;
   sharedAccount: string | null;
 };

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
@@ -109,6 +109,106 @@ describe('Inventory workspace', () => {
     expect(
       await screen.findByText('No HR employee profile is linked to this account.'),
     ).toBeInTheDocument();
+  });
+
+  it('posts an asset issue from the register with the prefilled asset and source', async () => {
+    const post = vi.fn(() => response({ id: 'posted' }, 201));
+    mount('/inventory/assets', {
+      '/api/inventory/capabilities': { ...capabilities, read: true, postTransactions: true },
+      '/api/inventory/assets': [
+        {
+          asset: {
+            id: 'a1',
+            tag: 'INV-1',
+            name: 'Projector',
+            status: 'active',
+            roomId: 'store',
+            revision: 4,
+          },
+          custody: { sharedAccountId: 'custodian' },
+          sharedAccount: 'Storage team',
+          room: 'Main store',
+          isStorage: true,
+        },
+      ],
+      '/api/inventory/rooms': [],
+      '/api/inventory/storage': [],
+      '/api/inventory/shared-accounts': [],
+      '/api/inventory/employees': [{ id: 'e1', name: 'Employee One' }],
+      '/api/inventory/transactions': post,
+      '/api/inventory/transactions/posted': {
+        name: 'Issue projector',
+        type: 'asset-issue',
+        eventDate: '2026-11-20',
+        recordedAt: '2026-11-20T12:00:00Z',
+        labels: { employees: [], rooms: [], sharedAccounts: [] },
+        items: [],
+      },
+    });
+    fireEvent.click(await screen.findByRole('link', { name: 'Asset issue' }));
+    const source = screen.getByLabelText('Source storage');
+    expect(source).toHaveValue('store');
+    expect(
+      within(source).getByRole('option', { name: 'Main store', selected: true }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Asset')).toHaveValue('a1');
+    await screen.findByRole('option', { name: 'Employee One' });
+    fireEvent.change(screen.getByLabelText('Employee'), { target: { value: 'e1' } });
+    expect(screen.getByText('Resulting custodian').nextElementSibling).toHaveTextContent(
+      'Employee One',
+    );
+    expect(screen.getByText('Resulting room').nextElementSibling).toHaveTextContent('Main store');
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Issue projector' } });
+    fireEvent.change(screen.getByLabelText('Event date'), { target: { value: '2026-11-20' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Post transaction' }));
+    await screen.findByRole('heading', { name: 'Issue projector' });
+    expect(post).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        body: JSON.stringify({
+          type: 'asset-issue',
+          name: 'Issue projector',
+          eventDate: '2026-11-20',
+          items: [{ assetId: 'a1', expectedRevision: 4 }],
+          sourceRoomId: 'store',
+          recipient: { kind: 'employee', id: 'e1' },
+        }),
+      }),
+    );
+  });
+
+  it('refreshes a stock issue preview after a conflict and keeps the draft for correction', async () => {
+    const item = { id: 'paper', code: 'PAPER', name: 'Copy paper', unit: 'ream' };
+    let quantity = 10;
+    const post = vi.fn(() => {
+      quantity = 2;
+      return response({ message: 'Insufficient stock' }, 409);
+    });
+    mount('/inventory/stock', {
+      '/api/inventory/capabilities': { ...capabilities, read: true, postTransactions: true },
+      '/api/inventory/stock': () =>
+        response([{ roomId: 'store', room: 'Main store', item, quantity }]),
+      '/api/inventory/rooms': [],
+      '/api/inventory/storage': [],
+      '/api/inventory/consumables': [],
+      '/api/inventory/employees': [{ id: 'e1', name: 'Employee One' }],
+      '/api/inventory/transactions': post,
+    });
+    fireEvent.click(await screen.findByRole('link', { name: 'Consumable issue' }));
+    expect(screen.getByLabelText('Consumable')).toHaveValue('paper');
+    expect(screen.getByLabelText('Source storage')).toHaveValue('store');
+    await screen.findByText(/Available stock.*10 Ream/);
+    await screen.findByRole('option', { name: 'Employee One' });
+    fireEvent.change(screen.getByLabelText('Recipient'), { target: { value: 'e1' } });
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Issue paper' } });
+    fireEvent.change(screen.getByLabelText('Event date'), { target: { value: '2026-11-20' } });
+    fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '4' } });
+    expect(screen.getByText(/Expected remaining stock.*6 Ream/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Post transaction' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Insufficient stock');
+    await screen.findByText(/Available stock.*2 Ream/);
+    expect(screen.getByLabelText('Quantity')).toHaveValue('4');
+    fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '1' } });
+    expect(screen.getByText(/Expected remaining stock.*1 Ream/)).toBeInTheDocument();
   });
 
   it('uses the same key when retrying a review action after a network failure', async () => {

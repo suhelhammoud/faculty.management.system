@@ -128,6 +128,15 @@ export const ar: Record<string, string> = {
   Reason: 'السبب',
   Outcome: 'النتيجة',
   'Post transaction': 'تسجيل الحركة',
+  Actions: 'الإجراءات',
+  'Resulting custodian': 'المسؤول بعد الحركة',
+  'Resulting room': 'الغرفة بعد الحركة',
+  'Available stock': 'المخزون المتاح',
+  'Expected remaining stock': 'المخزون المتوقع بعد الحركة',
+  'Reduce the quantity or choose another source storage room.':
+    'خفّض الكمية أو اختر غرفة تخزين أخرى للصرف منها.',
+  'Review the latest stock balance and reduce the quantity or choose another source storage room.':
+    'راجع رصيد المخزون المحدّث ثم خفّض الكمية أو اختر غرفة تخزين أخرى للصرف منها.',
   'Refresh and review assets': 'تحديث الأصول ومراجعتها',
   'Review updated revisions': 'راجع نسخ الأصول المحدثة',
   'Asset is no longer eligible.': 'لم يعد الأصل مؤهلًا لهذه الحركة.',

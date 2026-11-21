@@ -122,6 +122,7 @@ export function Picker<T extends Ref>({
   value,
   onChange,
   required = false,
+  selectedOption,
   filter,
   normalize,
 }: {
@@ -130,6 +131,7 @@ export function Picker<T extends Ref>({
   value: string;
   onChange: (id: string, record?: T) => void;
   required?: boolean;
+  selectedOption?: Ref;
   filter?: (item: T) => boolean;
   normalize?: (items: unknown) => T[];
 }) {
@@ -141,6 +143,7 @@ export function Picker<T extends Ref>({
   const query = useResource<unknown>(asQuery(path, { q: search.trim(), limit: 50, offset }));
   const items = normalize ? normalize(query.data) : ((query.data as T[] | undefined) ?? []);
   const choices = items.filter((item) => !filter || filter(item));
+  const fallback = selectedOption?.id === value ? selectedOption : selected;
   return (
     <div className="inv-picker">
       <Field label={label}>
@@ -157,7 +160,7 @@ export function Picker<T extends Ref>({
           <option value="">{t('Select an option')}</option>
           {value && !choices.some(({ id }) => id === value) && (
             <option value={value}>
-              {selected?.id === value ? localizedName(selected, language) : value}
+              {fallback?.id === value ? localizedName(fallback, language) : value}
             </option>
           )}
           {choices.map((item) => (

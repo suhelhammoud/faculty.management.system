@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ApiError,
   api,
@@ -9,6 +10,7 @@ import {
   useWrite,
   type AssetRow,
   type Ref,
+  type Stock,
   type Storage,
 } from '../lib/api';
 import {
@@ -31,7 +33,9 @@ import { assetOptions, conditions, operations } from './reads';
 
 type Kind = (typeof operations)[number];
 type AssetOption = ReturnType<typeof assetOptions>[number];
-type Party = { kind: 'employee' | 'shared'; id: string };
+type Party = { kind: 'employee' | 'shared'; option?: Ref };
+type RoomOption = Ref & { sharedAccount?: string };
+const partyInput = ({ kind, option }: Party) => ({ kind, id: option?.id });
 type Line = {
   key: string;
   mode: 'asset' | 'consumable';
@@ -55,8 +59,8 @@ function Store({
   inbound = false,
 }: {
   label: string;
-  value: string;
-  set: (value: string) => void;
+  value?: RoomOption;
+  set: (value: RoomOption | undefined) => void;
   inbound?: boolean;
 }) {
   return (
@@ -64,8 +68,9 @@ function Store({
       label={label}
       path="inventory/storage"
       required
-      value={value}
-      onChange={set}
+      value={value?.id ?? ''}
+      selectedOption={value}
+      onChange={(_, item) => set(item)}
       normalize={storageOptions}
       filter={inbound ? receivable : undefined}
     />
@@ -86,13 +91,14 @@ function PartyPicker({
         label={label}
         choices={['employee', 'shared']}
         value={value.kind}
-        onChange={(kind) => set({ kind: kind as Party['kind'], id: '' })}
+        onChange={(kind) => set({ kind: kind as Party['kind'] })}
       />
       <Picker
         label={value.kind === 'employee' ? 'Employee' : 'Shared account'}
         path={value.kind === 'employee' ? 'inventory/employees' : 'inventory/shared-accounts'}
-        value={value.id}
-        onChange={(id) => set({ ...value, id })}
+        value={value.option?.id ?? ''}
+        selectedOption={value.option}
+        onChange={(_, option) => set({ ...value, option })}
         required
       />
     </div>
@@ -113,20 +119,90 @@ const forms = {
   change: 'change',
   clear: 'clear',
 };
-export function TransactionForm({ kind }: { kind: Kind }) {
+
+function StockPreview({ item, roomId, amount }: { item: Ref; roomId: string; amount: number }) {
+  const { t } = useTranslation();
+  const lang = useLanguage((s) => s.language);
+  const query = useResource<Stock[]>(
+    asQuery('inventory/stock', { roomId, consumableId: item.id, limit: 1 }),
+    true,
+    true,
+  );
+  const number = new Intl.NumberFormat(lang);
+  const unit = item.unit ? t(item.unit) : '';
+  return (
+    <div aria-live="polite">
+      <Resource query={query}>
+        {(rows) => {
+          const available = rows[0]?.quantity ?? 0;
+          return (
+            <>
+              <div>
+                {t('Available stock')}: {number.format(available)} {unit}
+              </div>
+              {amount > available ? (
+                <div>{t('Reduce the quantity or choose another source storage room.')}</div>
+              ) : (
+                amount > 0 && (
+                  <div>
+                    {t('Expected remaining stock')}: {number.format(available - amount)} {unit}
+                  </div>
+                )
+              )}
+            </>
+          );
+        }}
+      </Resource>
+    </div>
+  );
+}
+
+export function TransactionForm({
+  kind,
+  selected,
+}: {
+  kind: Kind;
+  selected?: { asset?: AssetRow; stock?: Stock } | null;
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const lang = useLanguage((s) => s.language);
+  const queryClient = useQueryClient();
   const write = useWrite<{ id: string }>('inventory/transactions');
+  const asset = ['asset-issue', 'asset-handover', 'asset-return'].includes(kind)
+    ? selected?.asset
+    : undefined;
+  const stock = kind === 'consumable-issue' ? selected?.stock : undefined;
+  const issueRoomId = kind === 'asset-issue' ? asset?.asset.roomId : undefined;
   const [header, setHeader] = useState({ name: '', reference: '', notes: '', eventDate: '' });
-  const [sourceRoomId, setSourceRoom] = useState('');
-  const [destinationRoomId, setDestinationRoom] = useState('');
+  const [sourceRoom, setSourceRoom] = useState<RoomOption | undefined>(() => {
+    if (stock) return { id: stock.roomId, name: stock.room };
+    if (issueRoomId) return { id: issueRoomId, name: asset?.room ?? '' };
+    return undefined;
+  });
+  const [destinationRoom, setDestinationRoom] = useState<RoomOption>();
+  const sourceRoomId = sourceRoom?.id ?? '';
+  const destinationRoomId = destinationRoom?.id ?? '';
   const [source, setSource] = useState('purchase');
   const [mode, setMode] = useState('keep');
-  const [from, setFrom] = useState<Party>({ kind: 'employee', id: '' });
-  const [recipient, setRecipient] = useState<Party>({ kind: 'employee', id: '' });
-  const [lines, setLines] = useState(() => [
-    line(kind.startsWith('consumable-') ? 'consumable' : 'asset'),
+  const [from, setFrom] = useState<Party>(() => {
+    if (asset?.custody?.sharedAccountId)
+      return {
+        kind: 'shared',
+        option: { id: asset.custody.sharedAccountId, name: asset.sharedAccount ?? '' },
+      };
+    return {
+      kind: 'employee',
+      option: asset?.employee ? { ...asset.employee, name: '' } : undefined,
+    };
+  });
+  const [recipient, setRecipient] = useState<Party>({ kind: 'employee' });
+  const [lines, setLines] = useState<Line[]>(() => [
+    {
+      ...line(kind.startsWith('consumable-') ? 'consumable' : 'asset'),
+      asset: assetOptions(asset ? [asset] : [])[0],
+      item: stock?.item,
+    },
   ]);
   const [validation, setValidation] = useState('');
   const [reloading, setReloading] = useState(false);
@@ -145,16 +221,19 @@ export function TransactionForm({ kind }: { kind: Kind }) {
     if (kind === 'asset-issue' && !item.custody?.sharedAccountId) return false;
     return (
       !partyFrom ||
-      (from.kind === 'employee' ? item.custody?.employeeId : item.custody?.sharedAccountId) ===
-        from.id
+      (from.option !== undefined &&
+        (from.kind === 'employee' ? item.custody?.employeeId : item.custody?.sharedAccountId) ===
+          from.option.id)
     );
   };
   const assetPath = asQuery('inventory/assets', {
     status: kind === 'disposal' ? 'decommissioned' : 'active',
     roomId: kind === 'asset-issue' || relocate ? sourceRoomId : undefined,
-    employeeId: partyFrom && from.kind === 'employee' ? from.id : undefined,
-    sharedAccountId: partyFrom && from.kind === 'shared' ? from.id : undefined,
+    employeeId: partyFrom && from.kind === 'employee' ? from.option?.id : undefined,
+    sharedAccountId: partyFrom && from.kind === 'shared' ? from.option?.id : undefined,
   });
+  const insufficientStock =
+    write.error instanceof ApiError && write.error.message === 'Insufficient stock';
   const stale =
     write.error instanceof ApiError &&
     [
@@ -267,11 +346,22 @@ export function TransactionForm({ kind }: { kind: Kind }) {
         ...(src && { sourceRoomId }),
         ...(dst && { destinationRoomId }),
         ...(adjustment && { roomId: sourceRoomId }),
-        ...(partyFrom && { from }),
-        ...(partyTo && { recipient, ...roomPatch(mode, destinationRoomId) }),
-        ...(kind === 'consumable-issue' && { employeeId: recipient.id }),
+        ...(partyFrom && { from: partyInput(from) }),
+        ...(partyTo && { recipient: partyInput(recipient), ...roomPatch(mode, destinationRoomId) }),
+        ...(kind === 'consumable-issue' && { employeeId: recipient.option?.id }),
       },
-      { onSuccess: (result) => void navigate(`/inventory/transactions/${result.id}`) },
+      {
+        onSuccess: (result) => void navigate(`/inventory/transactions/${result.id}`),
+        onError: (error) => {
+          if (error instanceof ApiError && error.message === 'Insufficient stock')
+            void queryClient.invalidateQueries({
+              predicate: ({ queryKey }) =>
+                queryKey[0] === 'inventory' &&
+                typeof queryKey[1] === 'string' &&
+                queryKey[1].startsWith('inventory/stock?'),
+            });
+        },
+      },
     );
   }
   return (
@@ -317,14 +407,14 @@ export function TransactionForm({ kind }: { kind: Kind }) {
             {(src || adjustment) && (
               <Store
                 label={adjustment ? 'Storage room' : 'Source storage'}
-                value={sourceRoomId}
+                value={sourceRoom}
                 set={setSourceRoom}
               />
             )}
             {dst && (
               <Store
                 label="Destination storage"
-                value={destinationRoomId}
+                value={destinationRoom}
                 set={setDestinationRoom}
                 inbound
               />
@@ -344,7 +434,8 @@ export function TransactionForm({ kind }: { kind: Kind }) {
                     label="Destination"
                     path="inventory/rooms"
                     value={destinationRoomId}
-                    onChange={setDestinationRoom}
+                    selectedOption={destinationRoom}
+                    onChange={(_, room) => setDestinationRoom(room)}
                     filter={(room) => room.status === 'active'}
                     required
                   />
@@ -355,13 +446,22 @@ export function TransactionForm({ kind }: { kind: Kind }) {
               <Picker
                 label="Recipient"
                 path="inventory/employees"
-                value={recipient.id}
-                onChange={(id) => setRecipient({ kind: 'employee', id })}
+                value={recipient.option?.id ?? ''}
+                onChange={(_, option) => setRecipient({ kind: 'employee', option })}
                 required
               />
             )}
           </div>
           {lines.map((row, index) => {
+            const resultingParty = partyTo
+              ? localizedName(recipient.option, lang)
+              : destinationRoom?.sharedAccount;
+            const resultingRoom =
+              partyTo && mode === 'keep'
+                ? row.asset?.room
+                : partyTo && mode === 'clear'
+                  ? null
+                  : destinationRoom?.name;
             const field = (key: string, label: string, required = false) => (
               <Field key={key} label={label}>
                 <Input
@@ -401,6 +501,7 @@ export function TransactionForm({ kind }: { kind: Kind }) {
                         label="Consumable"
                         path="inventory/consumables"
                         value={row.item?.id ?? ''}
+                        selectedOption={row.item}
                         onChange={(_, item) => change(row, { item })}
                         required
                       />
@@ -414,10 +515,18 @@ export function TransactionForm({ kind }: { kind: Kind }) {
                           }
                         />
                       </Field>
-                      {row.item?.unit && (
-                        <p>
-                          {t('Unit')} · {t(row.item.unit)}
-                        </p>
+                      {row.item && sourceRoomId && (kind === 'consumable-issue' || relocate) ? (
+                        <StockPreview
+                          item={row.item}
+                          roomId={sourceRoomId}
+                          amount={whole(row.fields.amount ?? '')}
+                        />
+                      ) : (
+                        row.item?.unit && (
+                          <p>
+                            {t('Unit')} · {t(row.item.unit)}
+                          </p>
+                        )
                       )}
                       {adjustment && field('reason', 'Reason', true)}
                     </>
@@ -450,6 +559,7 @@ export function TransactionForm({ kind }: { kind: Kind }) {
                         label="Asset"
                         path={assetPath}
                         value={row.asset?.id ?? ''}
+                        selectedOption={row.asset}
                         onChange={(_, asset) => change(row, { asset })}
                         normalize={assetOptions}
                         filter={isAllowed}
@@ -457,7 +567,8 @@ export function TransactionForm({ kind }: { kind: Kind }) {
                       />
                       {row.asset && (
                         <p>
-                          {bidi(row.asset.code)} · {bidi(row.asset.room ?? t('No room'))} ·{' '}
+                          {bidi(row.asset.code)} · {bidi(row.asset.name)} ·{' '}
+                          {bidi(row.asset.room ?? t('No room'))} ·{' '}
                           {bidi(
                             localizedName(row.asset.employee, lang) ??
                               row.asset.sharedAccount ??
@@ -469,6 +580,24 @@ export function TransactionForm({ kind }: { kind: Kind }) {
                       )}
                       {row.asset && !isAllowed(row.asset) && (
                         <p role="alert">{t('Asset is no longer eligible.')}</p>
+                      )}
+                      {row.asset && (partyTo || kind === 'asset-return') && (
+                        <dl>
+                          <div>
+                            <dt>{t('Resulting custodian')}</dt>
+                            <dd>{resultingParty ? bidi(resultingParty) : t('Select an option')}</dd>
+                          </div>
+                          <div>
+                            <dt>{t('Resulting room')}</dt>
+                            <dd>
+                              {resultingRoom === null
+                                ? t('No room')
+                                : resultingRoom
+                                  ? bidi(resultingRoom)
+                                  : t('Select an option')}
+                            </dd>
+                          </div>
+                        </dl>
                       )}
                       {kind === 'condition-change' && (
                         <>
@@ -514,6 +643,13 @@ export function TransactionForm({ kind }: { kind: Kind }) {
         </fieldset>
         {validation && <p role="alert">{t(validation)}</p>}
         <ErrorMessage error={write.error} />
+        {insufficientStock && (kind === 'consumable-issue' || relocate) && (
+          <p>
+            {t(
+              'Review the latest stock balance and reduce the quantity or choose another source storage room.',
+            )}
+          </p>
+        )}
         <ErrorMessage error={reloadError} />
         {stale && (
           <Button
