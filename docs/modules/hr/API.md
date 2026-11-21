@@ -4,7 +4,7 @@ The API manages employee personal details, current employment information, and t
 
 ## Access and setup
 
-Apply migrations with `pnpm --filter @project/db migrate`, then synchronize the permission catalog with `pnpm --filter @project/db seed:permissions`, and build with `pnpm --filter api build`. Permission keys and descriptions are defined in the shared authorization catalog. Migration `0001_hr-admin-permissions.sql` remains in migration history and provides initial grants for existing installations; new bootstrap administrators receive the configured defaults. No users are automatically assigned to HR Administrator. See the [shared authorization guide](../authorization/README.md) for how to add permissions and manage grants.
+Apply migrations with `pnpm --filter @project/db migrate`, synchronize the permission catalog with `pnpm --filter @project/db seed:permissions`, and build with `pnpm --filter api build`. Fresh administrator bootstrap and local seeding provision the HR Administrator role. Assign it to users who need the role’s ongoing access. [Shared authorization guide](../authorization/README.md)
 
 An approved, enabled shared administrator who has completed their password change can assign an HR user through the existing administration API:
 
@@ -22,7 +22,7 @@ HR endpoints use shared session cookies. Browser clients must include `credentia
 | `hr-reference-data:read`  | Reference lists                       |
 | `hr-reference-data:write` | Create/edit reference records         |
 
-Permissions apply across the HR module. HR does not expose employee-specific ACLs. User/account administration remains separate.
+The three HR write permissions support global elevated grants. Employee and reference lists continue to require their read permissions. [Elevated grants](../authorization/README.md#elevated-grants)
 
 ## Employees
 

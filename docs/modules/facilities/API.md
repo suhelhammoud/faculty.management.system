@@ -2,7 +2,7 @@
 
 Facilities uses the shared authenticated API and cookie session. The frontend is served at port 3010 by default. Add its exact origin, and the shell origin when applicable, to `TRUSTED_ORIGINS`.
 
-The shared authorization catalog defines `facilities:read` and `facilities:write`; synchronize it after migrations with `pnpm --filter @project/db seed:permissions`. Migration `0002_facilities-permissions.sql` remains in migration history and provides the initial **Facilities Administrator** role and grants. New bootstrap administrators receive the configured defaults. Other accounts must be assigned Facilities Administrator through shared Administration. See the [shared authorization guide](../authorization/README.md) for the permission, role, and seed workflow.
+Run `pnpm --filter @project/db seed:permissions` after migrations to synchronize `facilities:read` and `facilities:write` from the shared catalog. The **Facilities Administrator** role bundles both permissions by default. A global elevated grant can provide `facilities:write` for a limited number of attempts. Listing Facilities records requires `facilities:read`. [Shared authorization guide](../authorization/README.md#elevated-grants)
 
 ## Endpoints
 

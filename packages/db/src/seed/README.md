@@ -65,6 +65,17 @@ The `elevation_demo` account uses `SEED_USER_PASSWORD` and receives two direct g
 
 Sign in as `admin`, open **Administration → Resource access**, and select `elevation_demo` to inspect or revoke these grants. Rerunning the local seed preserves each grant’s original deadline, remaining attempts, and revocation state. `seed:permissions` synchronizes the permission catalog only.
 
+To exercise the one-attempt grant, sign in as `elevation_demo` in a separate browser session at `http://localhost:3011`. With the local API running at its default port and the Administration origin trusted, run this request twice from the browser console.
+
+```js
+await fetch('http://localhost:4000/api/admin/users/seed-staff_two/approve', {
+  method: 'POST',
+  credentials: 'include',
+}).then((response) => response.status);
+```
+
+With a fresh grant, the first request returns `201` and the second returns `403`. The first request spends the attempt even though the demo account is already approved. [How permissions are checked](../../../../docs/modules/authorization/README.md#how-the-api-checks-a-request)
+
 ## Inventory demo
 
 The TypeScript fixtures add two demo storage rooms, their shared custodians, six assets, and three consumable types. Opening receipts and two employee issues appear in transaction history. Reruns preserve current balances, custody, asset condition and location, storage configuration, and workflow progress. Add new opening data in new transaction batches.

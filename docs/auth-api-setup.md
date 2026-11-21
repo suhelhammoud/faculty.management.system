@@ -2,7 +2,7 @@
 
 Configure `DATABASE_URL` once in `packages/db/.env.db`. The API and database package load the shared value from there. Configure `BETTER_AUTH_SECRET` (random, at least 32 characters), `BETTER_AUTH_URL`, and comma-separated `TRUSTED_ORIGINS` in `apps/api/.env` using `apps/api/.env.example` as a reference. Use HTTPS in production.
 
-Run the database migrations with `pnpm --filter @project/db migrate`, synchronize the version-controlled permission catalog with `pnpm --filter @project/db seed:permissions`, then build with `pnpm --filter api build`. The catalog seed inserts new permissions and updates descriptions; it does not change role grants or delete catalog entries. Run it after migrations on every deployment. See the [shared authorization guide](modules/authorization/README.md) for the permission, role, and seed workflow.
+Run the database migrations with `pnpm --filter @project/db migrate`, synchronize the version-controlled permission catalog with `pnpm --filter @project/db seed:permissions`, then build with `pnpm --filter api build`. Migration `0003_elevated_grants.sql` adds the elevated grants table. Run the catalog seed after migrations on every deployment to insert missing keys and update their descriptions. [Shared authorization guide](modules/authorization/README.md)
 
 For an empty user database, put `BOOTSTRAP_USERNAME` and `BOOTSTRAP_PASSWORD` in a temporary ignored file and run `node --env-file=packages/db/.env.db --env-file=apps/api/.env.bootstrap apps/api/dist/auth/bootstrap-admin.js`. The bootstrap administrator must change their password after signing in. Do not put passwords in shell history or commit them.
 
@@ -29,9 +29,9 @@ New accounts are pending approval and require a password change. Passwords must 
 
 Administrators supply temporary passwords through a separate channel. Password reset and password change revoke all existing sessions. Sign in again after changing a password. Pending users may change their password, but cannot access business endpoints until approved.
 
-Admin actions require an approved, enabled account without a pending password change. Resource ACL deny takes precedence over grant, followed by role permissions. Unannotated Nest endpoints deny access by default. Delegation requires the actor to hold every permission being granted.
+Admin actions require an approved, enabled account without a pending password change. A matching record-level deny takes precedence over ACL allows, role permissions, and elevated grants. A matching ACL allow or role permission grants access before elevation is considered. Unannotated Nest endpoints deny access by default. [Request authorization order](modules/authorization/README.md#how-the-api-checks-a-request)
 
-Dashboard UI is not implemented here. Database migrations are generated, not automatically applied at startup.
+Apply migrations explicitly before starting the API. The Administration dashboard calls the account and access management endpoints. [Administration guide](../apps/admin/README.md)
 
 ## Account disabling and role removal
 
@@ -59,6 +59,33 @@ Currently registered resource types are `users` and `roles`, matching the backen
 
 Permission removal revokes affected sessions and applies the existing last-administrator invariant in a serializable transaction. ACL changes take effect on subsequent authorization checks without a new login, and all mutations write audit records. ACL listing is scoped to the user named in the URL; deleting another user's ACL ID returns 404. No schema migration is needed for these endpoints.
 
+## Elevated grants
+
+The `:id` in these routes identifies the user receiving the grant. All three endpoints require `users:assign-roles` on that user. The actor must also hold the affected permission at the requested scope to issue or revoke a grant. The API checks the actor’s existing role or ACL access for this purpose.
+
+| Method | Path                                            | Response                                                        |
+| ------ | ----------------------------------------------- | --------------------------------------------------------------- |
+| GET    | `/api/admin/users/:id/elevated-grants`          | `200` with `{ grants, eligiblePermissions }`.                   |
+| POST   | `/api/admin/users/:id/elevated-grants`          | `201` with the new grant.                                       |
+| DELETE | `/api/admin/users/:id/elevated-grants/:grantId` | `200` with `{ success: true }`. Revocation records `revokedAt`. |
+
+Each listed grant includes its deadline, remaining attempts, and revocation timestamp. Each eligible permission includes its `key`, `description`, and `resourceType`. A `null` resource type means the permission supports global grants only.
+
+To issue a grant, send an eligible `permission` key, a future ISO 8601 `expiresAt` with a time zone, and a positive integer `maxUses`. Include `resourceId` for a grant limited to one user account or asset, according to the permission. The API derives the resource type from the permission. Omitting `resourceId` grants the permission at global scope. The following request grants one attempt to use `users:approve` on `TARGET_USER_ID`.
+
+```json
+{
+  "permission": "users:approve",
+  "resourceId": "TARGET_USER_ID",
+  "expiresAt": "2030-07-15T17:00:00Z",
+  "maxUses": 1
+}
+```
+
+At an eligible endpoint, the API claims a grant attempt after input validation and before running the action. A failed action still spends the attempt. Existing role or ACL access and read-only checks leave the counter intact. Expired, exhausted, or revoked grants cannot authorize a request. [Supported permissions and scopes](modules/authorization/README.md#elevated-grants)
+
 ## Audit log
 
-`GET /api/admin/audit-log` requires the `audit:read` permission and returns up to 200 newest records with actor name/username, action, target, and timestamp. Passwords and session tokens are never included. The admin dashboard's **Audit log** tab uses this endpoint; access is enforced by the API. The permission catalog seed registers `audit:read`; an administrator must grant it to an authorized role through role administration.
+`GET /api/admin/audit-log` requires `audit:read` and returns `{ records, page, pageSize, total }`, newest first. It defaults to 25 records per page and accepts up to 100. Filter by actor ID with `actor`, event name with `action`, or date range with `from` and `to`. The Administration dashboard’s **Audit log** tab uses this endpoint. Bootstrap grants `audit:read` to Administrator.
+
+Elevated access records `elevated-grants:issue`, `elevated-grants:use`, and `elevated-grants:revoke` events. A use event records the claimed attempt, including when the protected action subsequently fails.

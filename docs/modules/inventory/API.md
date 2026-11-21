@@ -6,6 +6,8 @@ Inventory owns asset custody, stock balances, and posted transaction history. Fa
 
 Write requests use the existing authenticated session and trusted browser origin. Grant Inventory permissions through Administration after running `pnpm --filter @project/db migrate` and `pnpm --filter @project/db seed:permissions`.
 
+`inventory:configure` supports global elevated grants. `inventory:manage-assets` supports global grants for asset registration and custody changes, or a grant for custody changes to one asset. Inventory posting and workflow actions use their standard checks. [Elevated grants](../authorization/README.md#elevated-grants)
+
 | Permission                                                                          | Access                                                                      |
 | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | `inventory:read`                                                                    | Asset and stock lists, transaction history, and reference lists             |
@@ -28,7 +30,9 @@ the caller’s current custody. An unlinked account receives an empty list and
 `requestRemoval`, `monitorWorkflows`, and `hasEmployeeProfile` for the current session.
 These flags help clients show relevant controls. Resource access and actions are
 authorized by their own endpoints. The settings UI requires both `inventory:read`
-and `inventory:configure`. The transaction UI requires `inventory:read` and the
+and `inventory:configure`. A valid elevated configuration grant can set the
+`configure` flag, and checking capabilities leaves the grant’s attempts intact.
+The transaction UI requires `inventory:read` and the
 applicable `inventory:post-transactions` or `inventory:dispose` grant. My Items and
 the workflow inbox use their own access rules.
 
