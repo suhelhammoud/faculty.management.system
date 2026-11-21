@@ -78,9 +78,8 @@ For asset issue and handover, omit `destinationRoomId` to preserve the room, sup
 Start with `POST /workflow/removal-requests` relative to `/api/inventory`. Supply active asset IDs and a reason for each. Use the existing proposal detail and asset picker endpoints under `/api/inventory/workflow`.
 
 Use `GET /api/workflow/tasks` for the signed-in user's inbox and
-`GET /api/workflow/tasks/:id` for the selected task and allowed actions. The
-standalone and embedded Inventory app open task details at
-`/inventory/workflow/tasks/:id`. Existing shell links at `/workflow/tasks/:id`
+`GET /api/workflow/tasks/:id` for the selected task and allowed actions. Inventory opens task details at
+`/inventory/workflow/tasks/:id`. Shared links at `/workflow/tasks/:id`
 resolve to the Inventory route for removal tasks. Submit all actions to
 `POST /api/workflow/tasks/:id/actions`.
 

@@ -65,7 +65,7 @@ The `elevation_demo` account uses `SEED_USER_PASSWORD` and receives two direct g
 
 Sign in as `admin`, open **Administration → Resource access**, and select `elevation_demo` to inspect or revoke these grants. Rerunning the local seed preserves each grant’s original deadline, remaining attempts, and revocation state. `seed:permissions` synchronizes the permission catalog only.
 
-To exercise the one-attempt grant, sign in as `elevation_demo` in a separate browser session at `http://localhost:3011`. With the local API running at its default port and the Administration origin trusted, run this request twice from the browser console.
+To exercise the one-attempt grant, sign in as `elevation_demo` in a separate browser session at `http://localhost:3000/admin`. With the local API running at its default port and the web origin trusted, run this request twice from the browser console.
 
 ```js
 await fetch('http://localhost:4000/api/admin/users/seed-staff_two/approve', {
@@ -90,12 +90,12 @@ The TypeScript fixtures add two demo storage rooms, their shared custodians, six
 
 Use the configured `SEED_USER_PASSWORD` for each account. These roles are provisioned only by the local seed.
 
-1. Open Inventory standalone or in the shell. Sign in as `inventory_requester` and use **Propose asset removal** to start a proposal with `DEMO-INV-003`, `DEMO-INV-004`, and `DEMO-INV-005`. Include a reason for each.
+1. Open Inventory at `/inventory` in the web app. Sign in as `inventory_requester` and use **Propose asset removal** to start a proposal with `DEMO-INV-003`, `DEMO-INV-004`, and `DEMO-INV-005`. Include a reason for each.
 2. In the reviewer inbox, return the proposal with a comment. Sign back in as requester and resubmit the revision. Then forward it from the reviewer inbox.
 3. Open the recorder inbox and record a named, dated decision with a reference. Approve `DEMO-INV-003` for waste, reject `DEMO-INV-004`, and defer `DEMO-INV-005`, giving a reason for each.
 4. As `inventory_operator`, open **Transactions**, choose **Disposal**, and post a separate disposal transaction for the approved asset. The decision and disposal appear as separate ledger entries.
 
-See the [Inventory app guide](../../../../apps/inventory/README.md) for both frontend entry points.
+See the [Inventory app guide](../../../../apps/web/src/modules/inventory/README.md) for the frontend setup.
 
 ## Seed tests
 

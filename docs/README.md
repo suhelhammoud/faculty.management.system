@@ -1,17 +1,20 @@
-# Planning drafts
+# Faculty Management System documentation
 
-These drafts describe one shared university application in a pnpm monorepo. They are planning material only; they do not establish implementation decisions.
+The pnpm workspace contains one React and Vite frontend at `apps/web` and one
+NestJS API at `apps/api`. The overview describes the implemented architecture.
+Module specifications also record proposed requirements and open decisions.
 
-## Shared specifications
+## Architecture and setup
 
-- [Project overview](project-overview.md) — shared application, repository shape, and known technical notes.
-- [Identity and access](identity-and-access.md) — shared sign-in, account types, activation, recovery, and unresolved access rules.
-- [Roadmap](roadmap.md) — provisional sequencing and open planning choices.
-- [Milestone 01: shared shell and sign-in](milestones/01-shared-shell-and-sign-in.md) — foundation scope and observable acceptance checks.
+- [Project overview](project-overview.md) covers the workspace, frontend routes, and deployment.
+- [Local setup](../README.md#configure-migrate-and-seed) covers configuration, migrations, and demo data.
+- [Auth API setup](auth-api-setup.md) covers sessions, trusted origins, and administrator bootstrap.
+- [Shared authorization](modules/authorization/README.md) describes roles, permissions, and record access.
+- [Development handover](IT_Faculty_Project_Context.md) records project context and collaboration preferences.
 
 ## Module specifications
 
-Each module folder starts with a single `README.md` as its initial specification. Module sequence here is for navigation only, not priority.
+Each module has a specification in `docs/modules/`. Implemented modules also link to their frontend and API guides.
 
 - [Attendance](modules/attendance/README.md)
 - [Maintenance](modules/maintenance/README.md)
@@ -23,12 +26,9 @@ Each module folder starts with a single `README.md` as its initial specification
 - [Inventory](modules/inventory/README.md)
 - [Facilities](modules/facilities/README.md)
 - [Student Affairs](modules/student-affairs/README.md)
+- [Workflows](modules/workflows/IMPLEMENTATION-PLAN.md)
 
-## Draft repository guidance
+## Planning notes
 
-- [Agent guide draft](agent-guide.md) — proposed guidance for a future repository-root `AGENTS.md`. It is not active.
-
-## Source notes
-
-- [Titles.md](Titles.md) — original module names and descriptions.
-- [Tec Stack.md](Tec%20Stack.md) — original technology notes.
+- [Identity and access](identity-and-access.md) records requirements and open questions for account provisioning and recovery.
+- [Authentication and authorization plan](authentication-and-authorization-plan.md) records the original design.

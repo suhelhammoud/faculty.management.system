@@ -2,14 +2,13 @@
 
 ## Project context
 
-Inventory runs as a standalone app at `http://localhost:3008/inventory` and as a
-module in the faculty shell at `/inventory`. Both use the same React and TypeScript
-screens backed by the shared NestJS API. React Router handles navigation, TanStack
+Inventory runs at `http://localhost:3000/inventory` in the faculty web app. Its
+React and TypeScript screens use the shared NestJS API. React Router handles navigation, TanStack
 Query handles server data, Zustand stores language preference, and i18next provides
 Arabic and English text. The UI uses shadcn components with scoped Tailwind styles.
 
 The API uses PostgreSQL and Drizzle. See the [API reference](API.md) for endpoint
-contracts and the [local app guide](../../../apps/inventory/README.md) for setup.
+contracts and the [local app guide](../../../apps/web/src/modules/inventory/README.md) for setup.
 
 ## Purpose
 
@@ -125,9 +124,9 @@ Authorized operators post inventory movements directly. Committee removal is the
 ## Frontend
 
 English is the default. The language switch is available on the sign-in screen and
-persists separately for the standalone and shell browser origins. Arabic uses
-right to left layout within Inventory, including dialogs. Asset tags and
-references retain their own text direction. The shell's top level navigation
+persists in the browser. Arabic uses right-to-left layout within Inventory,
+including dialogs. Asset tags and references retain their own text direction.
+The web app’s top-level navigation
 keeps its existing language.
 
 | Route                               | What users can do                                                                                                                     |
@@ -171,7 +170,7 @@ active users. My Items refreshes on entry and when the window regains focus.
 | `/inventory/workflow/removal-requests/new`        | Start a removal proposal                                              |
 | `/inventory/workflow/removal-requests/:requestId` | Proposal revisions and the recorded committee decision                |
 
-The shell keeps its shared inbox and monitor. When a shell task or history link
+The web app provides a shared inbox and monitor. When a shared task or history link
 identifies an Inventory removal record, it opens the localized Inventory page
 for the same ID. The page shows the actions allowed by the shared workflow API.
 After a successful action, it opens instance history. The next task appears in the
@@ -198,7 +197,7 @@ and resubmission opens a fresh review task. See the
 - A committee can record a dated, named decision per proposed asset. Approved items become decommissioned/waste and are no longer actively assigned; rejected or deferred items remain in their existing state.
 - Existing shared authentication and permission checks protect Inventory API operations.
 - Linked employees without `inventory:read` can see only their current assignments. A return or handover changes what the affected employees see in My Items.
-- English and Arabic are usable both standalone and in the shell. Existing Inventory task and history links still resolve to the same records.
+- Inventory supports English and Arabic. Existing Inventory task and history links still resolve to the same records.
 
 ## Operational decisions
 

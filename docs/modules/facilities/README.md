@@ -6,6 +6,12 @@ See [Data model](./DATA-MODEL.md) for the implemented Drizzle entities, relation
 
 Maintains the faculty's physical location registry and provides room context for equipment tracked by Inventory.
 
+## Facilities in the faculty web app
+
+Open `/facilities/rooms` to browse and edit rooms, or `/facilities/settings` to
+manage buildings, floors, and room types. Both screens live in
+`apps/web/src/modules/facilities` and use the shared API session. [Facilities frontend setup](../../../apps/web/src/modules/facilities/README.md) · [Facilities API](API.md)
+
 ## Initial entities
 
 - **Building** — a faculty building.

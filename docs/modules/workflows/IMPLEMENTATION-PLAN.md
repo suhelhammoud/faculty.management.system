@@ -125,7 +125,7 @@ The module records the version of the data being reviewed and checks for relevan
 
 ### HTTP response contracts
 
-The API, shell, and Inventory use type imports from `@project/contracts/workflow`.
+The API, shared Workflows pages, and Inventory use type imports from `@project/contracts/workflow`.
 The [contract declarations](../../../packages/contracts/workflow.d.ts) describe JSON
 responses and have no runtime dependencies.
 
@@ -153,9 +153,8 @@ Inventory owns its removal proposal and committee decision types.
 Use one shared inbox, with module review pages for domain details and forms. Support refresh and deep links by fetching current data using stable IDs in paths such as `/workflow/tasks/:taskId` and `/inventory/workflow/removal-requests/:requestId`. Show the workflow title and purpose, step instructions, actions the user can take, and the history they may view.
 
 Inventory implements its task, proposal, history, and monitor screens under
-`/inventory/workflow/`. These screens work both standalone and in the shell.
-The shell retains the shared inbox and monitor. Its Inventory removal task and
-history links open the corresponding localized Inventory screens.
+`/inventory/workflow/`. The web app’s shared inbox and monitor link to the
+corresponding localized Inventory screens for removal tasks and history.
 [Inventory routing](inventory-removal.md#inbox-and-pages)
 
 The read-only monitor shows the current step, start date, last activity, and chronological history. Authorized users can filter by lifecycle status and step.
@@ -213,9 +212,8 @@ Use shared Administration to grant the permissions appropriate to each existing 
 | `inventory:removal-decide`  | Record the committee's decision or return a proposal for revision.              |
 | `workflow:monitor`          | Open the shared read-only monitor for records within the user's access scope.   |
 
-Set `VITE_API_URL` for Inventory and the shell when using a custom API origin.
-Include both frontend origins in the API's `TRUSTED_ORIGINS`. Start from
-**Propose asset removal** in Inventory or open the shared inbox with **Workflows**
-in the shell. The [local Inventory guide](../../../apps/inventory/README.md) lists
+Set the web app’s `VITE_API_URL` when using a custom API origin. Include the
+web origin in the API's `TRUSTED_ORIGINS`. Start from **Propose asset removal**
+in Inventory or open the shared inbox with **Workflows**. The [local Inventory guide](../../../apps/web/src/modules/inventory/README.md) lists
 the seeded accounts and walkthrough. Exams and Student Affairs can register
 their own processes when their policies are confirmed.

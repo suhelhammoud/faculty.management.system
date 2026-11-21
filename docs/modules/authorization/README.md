@@ -101,7 +101,7 @@ The catalog seeder preserves existing rows. When retiring a permission, remove i
 ## Related implementation and setup
 
 - [API authentication and authorization setup](../../auth-api-setup.md)
-- [Administration dashboard](../../../apps/admin/README.md#manage-elevated-grants)
+- [Administration dashboard](../../../apps/web/src/modules/admin/README.md#manage-elevated-grants)
 - [Authorization catalog package](../../../packages/authorization/README.md)
 - [HR API access and setup](../hr/API.md)
 - [Facilities API access and setup](../facilities/API.md)

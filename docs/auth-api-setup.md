@@ -1,6 +1,10 @@
 # Auth API setup
 
-Configure `DATABASE_URL` once in `packages/db/.env.db`. The API and database package load the shared value from there. Configure `BETTER_AUTH_SECRET` (random, at least 32 characters), `BETTER_AUTH_URL`, and comma-separated `TRUSTED_ORIGINS` in `apps/api/.env` using `apps/api/.env.example` as a reference. Use HTTPS in production.
+Configure `DATABASE_URL` once in `packages/db/.env.db`. The API and database package load the shared value from there. Set a random `BETTER_AUTH_SECRET` of at least 32 characters in `apps/api/.env`.
+
+For local development, set `PORT=4000`, `BETTER_AUTH_URL=http://localhost:4000`, and `TRUSTED_ORIGINS=http://localhost:3000` in `apps/api/.env`. Run `pnpm dev:api` and `pnpm dev` in separate terminals. The web app uses `http://localhost:4000` as its default `VITE_API_URL`. [API environment example](../apps/api/.env.example)
+
+In production, use HTTPS. Set `BETTER_AUTH_URL` to the public API URL and include the exact origin serving `apps/web` in the API's comma-separated `TRUSTED_ORIGINS`. Set `VITE_API_URL` before building the frontend. Administration lives at `/admin` on the same web origin as the other modules. [Web deployment guide](../apps/web/README.md#build-and-host)
 
 Run the database migrations with `pnpm --filter @project/db migrate`, synchronize the version-controlled permission catalog with `pnpm --filter @project/db seed:permissions`, then build with `pnpm --filter api build`. Migration `0003_elevated_grants.sql` adds the elevated grants table. Run the catalog seed after migrations on every deployment to insert missing keys and update their descriptions. [Shared authorization guide](modules/authorization/README.md)
 
@@ -31,7 +35,7 @@ Administrators supply temporary passwords through a separate channel. Password r
 
 Admin actions require an approved, enabled account without a pending password change. A matching record-level deny takes precedence over ACL allows, role permissions, and elevated grants. A matching ACL allow or role permission grants access before elevation is considered. Unannotated Nest endpoints deny access by default. [Request authorization order](modules/authorization/README.md#how-the-api-checks-a-request)
 
-Apply migrations explicitly before starting the API. The Administration dashboard calls the account and access management endpoints. [Administration guide](../apps/admin/README.md)
+Apply migrations explicitly before starting the API. The Administration dashboard calls the account and access management endpoints. [Administration guide](../apps/web/src/modules/admin/README.md)
 
 ## Account disabling and role removal
 

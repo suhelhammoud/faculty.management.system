@@ -1,31 +1,62 @@
 # Project overview
 
-## Purpose
+The Faculty Management System combines ten academic and administrative domains
+in one university application. Administration and Workflows provide shared
+tools across these domains.
 
-Plan a shared university application that brings together the nine modules listed in the source notes. They are parts of one application, not separate products.
+## Architecture
 
-## Repository and application shape
+| Workspace location       | Responsibility                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| `apps/web`               | React, Vite, and TypeScript frontend with one React Router and a shared layout |
+| `apps/api`               | NestJS HTTP API with domain modules, Better Auth sessions, and authorization   |
+| `packages/db`            | PostgreSQL schema, Drizzle migrations, and database access                     |
+| `packages/authorization` | Typed permission catalog and default role templates                            |
+| `packages/contracts`     | Shared TypeScript contracts for workflows                                      |
+| `packages/ui`            | Shared React form controls                                                     |
 
-- The planned repository is a pnpm monorepo with one Next.js web frontend at `apps/web` and one NestJS API.
-- The frontend uses the Next.js App Router. A minimal root layout provides the global shell, and the application shares one sign-in flow and session.
-- Each of the nine modules has its own route subtree, layout, and navigation. Module navigation is scoped to that module.
-- Each module has a planning folder under `modules/` with one initial `README.md` specification.
-- The boundaries between modules and any shared data contracts remain open.
+Each frontend feature has its own folder under `apps/web/src/modules`. The web
+app lazy-loads the domain and Administration entry points from a single build.
+A shared browser router handles navigation and delegates nested routes to the
+feature that owns them. Feature screens reuse the same API session, and NestJS
+enforces access on protected endpoints. [Shared authorization](modules/authorization/README.md)
 
-## Technology notes
+## Frontend routes
 
-The technology source note lists React. Next.js is the chosen React frontend framework, and NestJS is the chosen API framework. Better Auth, Drizzle ORM, React Query, and dynamic role-based access remain planning inputs. The need for Zustand, the role model, package boundaries, and integration details remain open. Google account linking is deferred.
+The root route `/` redirects to `/attendance`. Existing module paths and deep
+links use the web app's origin. The standalone development ports were retired.
+Inventory selects its default view based on the signed-in user's capabilities.
 
-## Planning principles
+| Feature folder    | Entry route        | Example nested route                        |
+| ----------------- | ------------------ | ------------------------------------------- |
+| `admin`           | `/admin`           |                                             |
+| `attendance`      | `/attendance`      |                                             |
+| `maintenance`     | `/maintenance`     |                                             |
+| `supervision`     | `/supervision`     |                                             |
+| `meetings`        | `/meetings`        |                                             |
+| `hr`              | `/hr`              | `/hr/employees`, `/hr/employees/new`        |
+| `exams`           | `/exams`           |                                             |
+| `correspondence`  | `/correspondence`  |                                             |
+| `inventory`       | `/inventory`       | `/inventory/my-items`, `/inventory/assets`  |
+| `student-affairs` | `/student-affairs` |                                             |
+| `facilities`      | `/facilities`      | `/facilities/rooms`, `/facilities/settings` |
+| `workflows`       | `/workflow/tasks`  | `/workflow/tasks/:id`, `/workflow/monitor`  |
 
-- Keep identity and access shared across modules.
-- Treat role assignment, approvals, workflows, priorities, and inter-module data exchange as undecided unless confirmed in a later spec.
-- Add module-specific detail only when supported by source notes or an explicit decision.
-- Record decisions and observable acceptance checks as the plan becomes more concrete.
+Attendance, Maintenance, Supervision, Meetings, Exams, Correspondence, and
+Student Affairs currently have placeholder screens. Their module specifications
+describe the intended features. [Module specifications](README.md#module-specifications) · [Route definitions](../apps/web/src/App.tsx)
 
-## Open decisions
+## Run and deploy
 
-- Which remaining technology choices and versions will be selected, and how will shared packages be organized?
-- What does dynamic role-based access mean in this application, and how will it relate to the minimum permissions required by each operation?
-- Which module boundaries and data contracts are needed?
-- What further implementation sequencing is appropriate after the shared foundation?
+- Run `pnpm dev` or `pnpm dev:web` for the web app at `http://localhost:3000`.
+  Run `pnpm dev:api` for the API at `http://localhost:4000` using the local
+  environment examples.
+- Set the frontend's public `VITE_API_URL` in `apps/web/.env` when the API origin
+  differs from the local default. Include the web origin in the API's
+  `TRUSTED_ORIGINS` so credentialed browser requests can use the shared session.
+- Run `pnpm build:web` to generate `apps/web/dist`. `pnpm build:frontends` runs the
+  same build. Serve that directory as static files and return `index.html` for
+  client-side navigation paths such as `/hr/employees/new`. Serve assets directly
+  and forward API requests to NestJS when both run behind the same reverse proxy.
+- Run `pnpm --filter web test` for feature tests and `pnpm test:frontend:smoke`
+  for browser tests against a production build. [Web setup and hosting](../apps/web/README.md) · [Test setup](../README.md#build-and-test-the-frontend)

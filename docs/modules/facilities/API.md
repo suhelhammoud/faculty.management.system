@@ -1,6 +1,6 @@
 # Facilities administration API
 
-Facilities uses the shared authenticated API and cookie session. The frontend is served at port 3010 by default. Add its exact origin, and the shell origin when applicable, to `TRUSTED_ORIGINS`.
+Facilities uses the shared authenticated API and cookie session. The frontend is served at `http://localhost:3000` by default. Add the exact web origin to `TRUSTED_ORIGINS`.
 
 Run `pnpm --filter @project/db seed:permissions` after migrations to synchronize `facilities:read` and `facilities:write` from the shared catalog. The **Facilities Administrator** role bundles both permissions by default. A global elevated grant can provide `facilities:write` for a limited number of attempts. Listing Facilities records requires `facilities:read`. [Shared authorization guide](../authorization/README.md#elevated-grants)
 

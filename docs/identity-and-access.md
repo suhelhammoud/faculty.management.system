@@ -1,9 +1,11 @@
 # Identity and access
 
+This document records account requirements and open policy decisions. For the current username sign-in and shared cookie session used by `apps/web`, see [Auth API setup](auth-api-setup.md).
+
 ## Shared sign-in foundation
 
-- The application has one shared sign-in and session across its modules.
-- Accounts are managed by the application through Better Auth (a technology note, subject to confirmation).
+- The modules share a Better Auth session. API-backed screens use the same username sign-in endpoint.
+- Better Auth manages the current application accounts.
 - Employee accounts with different roles and student accounts are required.
 - An administrator exists, but the administrator's specific powers are not defined here.
 - Google account linking is deferred.

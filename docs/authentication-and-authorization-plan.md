@@ -1,5 +1,7 @@
 # Authentication and Authorization Implementation Plan
 
+This document records the original implementation plan. See [Auth API setup](auth-api-setup.md) and [Shared authorization](modules/authorization/README.md) for the current `apps/api` implementation and its integration with `apps/web`.
+
 ## Scope
 
 Implement authentication and backend authorization in `apps/api` using Better Auth, NestJS, PostgreSQL, and the existing Drizzle database package in `packages/db`. Connect the React frontend after the backend endpoints are verified.
@@ -126,5 +128,3 @@ The backend is complete when migrations and administrator bootstrap work, userna
 
 - [Better Auth NestJS integration](https://better-auth.com/docs/integrations/nestjs)
 - [Better Auth Drizzle adapter](https://better-auth.com/docs/adapters/drizzle)
-
-This document is an implementation plan; it does not indicate that the described features are already implemented.

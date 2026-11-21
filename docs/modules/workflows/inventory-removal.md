@@ -4,8 +4,7 @@ This document describes the asset removal workflow implemented by the Inventory 
 
 ## Inbox and pages
 
-Start from **Propose asset removal** in Inventory in the standalone app or the
-shell. Both use the same English and Arabic pages. The shell's shared inbox at
+Start from **Propose asset removal** in Inventory. The shared inbox at
 `/workflow/tasks` links to an Inventory removal task through the shared task
 route, which forwards the task to `/inventory/workflow/tasks/:taskId`.
 

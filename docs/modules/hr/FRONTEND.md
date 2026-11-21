@@ -12,7 +12,7 @@ The interface uses a minimal light theme with neutral colors, readable labels, b
 
 English is the default interface language and uses a left-to-right layout. Users can switch to Arabic, which changes labels, messages, and layout direction to right-to-left. The selected language is remembered on subsequent visits. Reference names prefer the selected language and fall back to an available name; employee names remain as entered.
 
-Employee details include a decorative portrait placeholder. The asset can be replaced later at [`apps/hr/public/images/employee-placeholder.svg`](../../../apps/hr/public/images/employee-placeholder.svg). The current interface does not upload or store employee photographs.
+Employee details include a decorative portrait placeholder. The asset can be replaced later at [`apps/web/public/images/employee-placeholder.svg`](../../../apps/web/public/images/employee-placeholder.svg). The current interface does not upload or store employee photographs.
 
 ## Screens and routes
 
@@ -54,21 +54,21 @@ Create and edit dialogs use the relevant text fields, numeric inputs, checkboxes
 
 ## Technology and state ownership
 
-| Technology                 | Responsibility                                                                                |
-| -------------------------- | --------------------------------------------------------------------------------------------- |
-| React and TypeScript       | Components, screen composition, local form state, and API response types.                     |
-| Vite and Module Federation | Standalone frontend build and the `hr/App` remote consumed by the shell.                      |
-| React Router               | Screen routes, navigation, route parameters, and URL search parameters.                       |
-| React Query                | API queries, session checks, mutations, cache invalidation, cancellation, and request states. |
-| Zustand                    | The selected UI language.                                                                     |
-| react-i18next              | Scoped English and Arabic translations.                                                       |
-| shadcn/ui and Tailwind     | Accessible controls and minimal styling.                                                      |
+| Technology             | Responsibility                                                                                |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| React and TypeScript   | Components, screen composition, local form state, and API response types.                     |
+| Vite                   | Builds the web app and bundles HR as a lazy-loaded module.                                    |
+| React Router           | Screen routes, navigation, route parameters, and URL search parameters.                       |
+| React Query            | API queries, session checks, mutations, cache invalidation, cancellation, and request states. |
+| Zustand                | The selected UI language.                                                                     |
+| react-i18next          | Scoped English and Arabic translations.                                                       |
+| shadcn/ui and Tailwind | Accessible controls and minimal styling.                                                      |
 
-The selected shadcn components are Button, Input, Label, Textarea, Native Select, Checkbox, Table, Card, Tabs, Dialog, Alert, and Skeleton. Their source lives in [`apps/hr/src/components/ui`](../../../apps/hr/src/components/ui/).
+The selected shadcn components are Button, Input, Label, Textarea, Native Select, Checkbox, Table, Card, Tabs, Dialog, Alert, and Skeleton. Their source lives in [`apps/web/src/modules/hr/components/ui`](../../../apps/web/src/modules/hr/components/ui/).
 
-Tailwind utilities use the `hr:` prefix, global preflight is omitted, and HR styling is scoped to its root. Dialogs render inside that root to inherit its theme and language direction. These choices limit interference with other federated modules.
+Tailwind utilities use the `hr:` prefix, global preflight is omitted, and HR styling is scoped to its root. Dialogs render inside that root to inherit its theme and language direction. These choices limit interference with other web modules.
 
-The shell owns a single browser router and mounts HR at `/hr/*`. The exported HR app uses that parent router; the standalone entry point supplies its own router. Shell and HR share React Router as a federation singleton.
+The web app owns the browser router and mounts HR at `/hr/*`. HR uses the parent router for its nested routes.
 
 ## Authentication and feedback
 
@@ -80,11 +80,11 @@ Only the language preference is persisted in browser local storage, under `facul
 
 ## Setup and verification
 
-The standalone entry point is `http://localhost:3005/hr/employees`; the shell entry point is `http://localhost:3000/hr/employees`. The API defaults to `http://localhost:4000` through `VITE_API_URL`. The shell's `VITE_HR_REMOTE_URL` selects HR's federation entry.
+Open HR at `http://localhost:3000/hr/employees`. The web app defaults to `http://localhost:4000` for the API.
 
-Both frontend origins must be allowed by the API. Hosting must serve the appropriate `index.html` for nested navigation routes while serving federation entries and static assets directly. See the [HR app setup guide](../../../apps/hr/README.md) for environment configuration, commands, and hosting details.
+Add the web origin to the API’s trusted origins. The host serves `index.html` for nested navigation routes and serves static assets directly. See the [HR setup guide](../../../apps/web/src/modules/hr/README.md) for environment configuration, commands, and hosting details.
 
-Automated frontend tests use jsdom and mocked API responses. They cover language defaults and switching, authentication states, URL filters, profile creation, independent employment saves, dependent selectors, reference dialogs, session expiry, and failed-save recovery. Production builds, lint checks, and nested-route HTTP responses were checked during implementation. Visual browser verification was unavailable in that session.
+Automated frontend tests use jsdom and mocked API responses. They cover language defaults and switching, authentication states, URL filters, profile creation, independent employment saves, dependent selectors, reference dialogs, session expiry, and failed-save recovery. The web app’s Playwright smoke suite verifies HR deep links, navigation, and stylesheet loading in a production build.
 
 ## Current scope
 

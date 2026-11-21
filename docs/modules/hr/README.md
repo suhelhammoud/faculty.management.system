@@ -2,11 +2,11 @@
 
 See the [HR data model guide](DATA-MODEL.md) for the database tables, relationships, legal notes, and schema/migration links.
 
-## HR admin web app
+## HR in the faculty web app
 
-The HR admin interface manages employee profiles, personal details, current employment information, and reference lists. English is the default language, with an Arabic/RTL option. It uses React, React Router, React Query, Zustand, shadcn/ui, and Tailwind with minimal styling.
+The HR admin interface at `/hr/employees` manages employee profiles, personal details, current employment information, and reference lists. English is the default language, with an Arabic/RTL option. It uses React, React Router, React Query, Zustand, shadcn/ui, and Tailwind with minimal styling.
 
-See the [frontend description](FRONTEND.md) for screens, workflows, architecture, authentication, and the image placeholder. The [app setup guide](../../../apps/hr/README.md) covers local startup, configuration, hosting, and verification commands.
+See the [frontend description](FRONTEND.md) for screens, workflows, architecture, authentication, and the image placeholder. The [app setup guide](../../../apps/web/src/modules/hr/README.md) covers local startup, configuration, hosting, and verification commands.
 
 ## Implemented HR admin API
 

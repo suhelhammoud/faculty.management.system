@@ -1,6 +1,6 @@
 # Faculty Management System
 
-Monorepo for the Faculty Management System: a NestJS API, PostgreSQL database, a React shell, and independently runnable frontend apps.
+Monorepo for the Faculty Management System: a NestJS API, PostgreSQL database, and one React web app with feature modules.
 
 ## Prerequisites
 
@@ -53,7 +53,7 @@ Stop it when finished with `pnpm --filter @project/db db:stop`. The named volume
 3. Set `TRUSTED_ORIGINS` in `apps/api/.env` to the exact local browser origins used during development:
 
    ```dotenv
-   TRUSTED_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007,http://localhost:3008,http://localhost:3009,http://localhost:3010,http://localhost:3011
+   TRUSTED_ORIGINS=http://localhost:3000
    ```
 
    Keep the hostname consistent: `localhost` and `127.0.0.1` are different browser origins.
@@ -81,45 +81,49 @@ Stop it when finished with `pnpm --filter @project/db db:stop`. The named volume
 
    For deployments without demo data, create the first administrator using the separate [bootstrap procedure](docs/auth-api-setup.md). Bootstrap requires an empty user table; local development does not require it.
 
-## Run the API and apps
+## Run the API and web app
 
-Run the API in one terminal:
+Start the API in one terminal:
 
 ```sh
 pnpm dev:api
 ```
 
-Run the shell and all frontend apps in another terminal:
+Start the frontend in another terminal:
 
 ```sh
 pnpm dev
 ```
 
-The shell runs at `http://localhost:3000` and opens on Attendance. It loads each remote when you visit its route. `pnpm dev` starts the shell and all remotes in parallel. Start the API separately for modules that use it.
+Open [http://localhost:3000](http://localhost:3000). The app opens on Attendance.
+Each feature lives in its own folder under `apps/web/src/modules`.
 
-| App             | Standalone dev URL                       | Shell route         | Focused command            |
-| --------------- | ---------------------------------------- | ------------------- | -------------------------- |
-| Administration  | <http://localhost:3011>                  | `/admin`            | `pnpm dev:admin`           |
-| Attendance      | <http://localhost:3001>                  | `/attendance`       | `pnpm dev:attendance`      |
-| Maintenance     | <http://localhost:3002>                  | `/maintenance`      | `pnpm dev:maintenance`     |
-| Supervision     | <http://localhost:3003>                  | `/supervision`      | `pnpm dev:supervision`     |
-| Meetings        | <http://localhost:3004>                  | `/meetings`         | `pnpm dev:meetings`        |
-| HR              | <http://localhost:3005/hr/employees>     | `/hr/employees`     | `pnpm dev:hr`              |
-| Exams           | <http://localhost:3006>                  | `/exams`            | `pnpm dev:exams`           |
-| Correspondence  | <http://localhost:3007>                  | `/correspondence`   | `pnpm dev:correspondence`  |
-| Inventory       | <http://localhost:3008/inventory>        | `/inventory`        | `pnpm dev:inventory`       |
-| Student Affairs | <http://localhost:3009>                  | `/student-affairs`  | `pnpm dev:student-affairs` |
-| Facilities      | <http://localhost:3010/facilities/rooms> | `/facilities/rooms` | `pnpm dev:facilities`      |
+| Feature         | Route               |
+| --------------- | ------------------- |
+| Administration  | `/admin`            |
+| Attendance      | `/attendance`       |
+| Maintenance     | `/maintenance`      |
+| Supervision     | `/supervision`      |
+| Meetings        | `/meetings`         |
+| HR              | `/hr/employees`     |
+| Exams           | `/exams`            |
+| Correspondence  | `/correspondence`   |
+| Inventory       | `/inventory`        |
+| Student Affairs | `/student-affairs`  |
+| Facilities      | `/facilities/rooms` |
+| Workflows       | `/workflow/tasks`   |
 
-Use either `pnpm dev` for the full frontend suite or a focused command for a standalone app. Do not start both for the same app at once; Vite uses strict, fixed local ports.
+## Build and test the frontend
 
-## Build and test the frontends
+`pnpm build:web` builds the frontend into `apps/web/dist`.
+Set `VITE_API_URL` before building when the app uses an API origin other than
+`http://localhost:4000`. For production setup and deep-link routing, see
+[the web app guide](apps/web/README.md).
 
-`pnpm build:frontends` builds the shell and all remotes. For deployment, set the `VITE_*_REMOTE_URL` variables listed in [the shell environment example](apps/shell/.env.example) before building the shell. Each URL must point to the deployed `remoteEntry.js` and be reachable by the browser. For cross-origin remotes, allow the shell origin to fetch the entry and its assets. Configure the shell host to serve `index.html` for nested routes such as `/hr/employees`. Unset remote URLs default to the localhost entries shown in the example, including for local build previews.
-
-Install the Chromium test browser once, then run the shell smoke suite against production builds. HR API responses are mocked, so the suite runs without the API or PostgreSQL.
+Run the frontend tests with mocked API responses:
 
 ```sh
+pnpm --filter web test
 pnpm exec playwright install chromium
 pnpm test:frontend:smoke
 ```
@@ -129,7 +133,7 @@ Use the `frontend` pnpm catalog when adding an existing shared dependency to ano
 ## More documentation
 
 - [API setup and authentication](docs/auth-api-setup.md)
-- [HR frontend](apps/hr/README.md) and [HR module docs](docs/modules/hr/README.md)
-- [Facilities frontend](apps/facilities/README.md) and [Facilities module docs](docs/modules/facilities/README.md)
-- [Administration frontend](apps/admin/README.md)
+- [HR frontend](apps/web/src/modules/hr/README.md) and [HR module docs](docs/modules/hr/README.md)
+- [Facilities frontend](apps/web/src/modules/facilities/README.md) and [Facilities module docs](docs/modules/facilities/README.md)
+- [Administration frontend](apps/web/src/modules/admin/README.md)
 - [All module documentation](docs/README.md)

@@ -6,10 +6,9 @@ to see their own current assignments. Operators can post movements and manage
 storage. Removal proposals go through review and committee decision in the
 workflow inbox.
 
-Use Inventory [standalone](http://localhost:3008/inventory) or in the
-[faculty shell](http://localhost:3000/inventory). Both support English and Arabic.
+Open Inventory in the [faculty web app](http://localhost:3000/inventory). It supports English and Arabic.
 
 - [Implementation specification](IMPLEMENTATION-SPEC.md)
 - [API and permissions](API.md)
 - [Removal workflow diagrams](../workflows/inventory-removal.md)
-- [Local setup and demo walkthrough](../../../apps/inventory/README.md)
+- [Local setup and demo walkthrough](../../../apps/web/src/modules/inventory/README.md)
