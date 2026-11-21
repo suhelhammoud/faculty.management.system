@@ -2,8 +2,13 @@ import {
   FACILITIES_PERMISSIONS,
   HR_PERMISSIONS,
   PERMISSION_CATALOG,
+  PERMISSION,
   type PermissionKey,
 } from './permissions.js';
+
+const explicitlyAssignedPermissions = new Set<PermissionKey>(
+  Object.values(PERMISSION.studentAffairs),
+);
 
 export type DefaultRoleTemplate = {
   id: string;
@@ -16,7 +21,9 @@ export const ADMINISTRATOR_DEFAULT_ROLE = {
   id: 'administrator',
   name: 'Administrator',
   description: 'Full access to user administration and all application modules.',
-  permissions: PERMISSION_CATALOG.map(({ key }) => key),
+  permissions: PERMISSION_CATALOG.map(({ key }) => key).filter(
+    (key) => !explicitlyAssignedPermissions.has(key),
+  ),
 } as const satisfies DefaultRoleTemplate;
 
 export const HR_DEFAULT_ROLE = {

@@ -1,6 +1,6 @@
 # Local seed fixtures
 
-These committed fixtures contain synthetic demo users and HR, Facilities, and Inventory records. They are
+These committed fixtures contain synthetic demo users and HR, Facilities, Inventory, and Student Affairs records. They are
 loaded by `pnpm --filter @project/db seed:local` after the database migrations have been
 applied. No separate administrator bootstrap is needed.
 
@@ -8,17 +8,17 @@ The runner first synchronizes the permission catalog and provisions the
 Administrator, HR Administrator, and Facilities Administrator roles with their
 default grants. Reruns add missing default grants and preserve other grants.
 It creates a local administrator with username `admin` and the configured
-`SEED_USER_PASSWORD`, with all catalog permissions. Existing seeded administrator
+`SEED_USER_PASSWORD`, with the default Administrator role. Student Affairs permissions are assigned to the demo roles below. Existing seeded administrator
 credentials and account settings are preserved on reruns. If an existing account conflicts with a seeded username, user ID, email, or credential identity, seeding stops instead of modifying that account.
 The local administrator is enabled and approved and does not require a password
 change. Use the separate administrator bootstrap for deployments without demo data.
 
 User roles are declared in `fixtures/local/auth.ts`: `HR_DEFAULT_ROLE.id` grants the HR Administrator
 role and `FACILITIES_DEFAULT_ROLE.id` grants the Facilities Administrator role.
-Allowed fixture role IDs are derived from the shared default role templates. The
+Allowed fixture role IDs come from the shared default role templates or the module’s demo role list. The
 `facility_1` demo account has Facilities permissions for managing facilities, and
 does not receive HR permissions. Re-running the seed reconciles these two seeded
-roles for the original demo users. Inventory demo users reconcile their Inventory roles separately.
+roles for the original demo users. Inventory and Student Affairs demo users reconcile their module roles separately.
 
 HR staff categories and initial academic ranks follow the examples in the HR
 documentation. Positions and the grade scheme are labeled as demo data because
@@ -27,8 +27,7 @@ records.
 
 Fixture data is defined in typed TypeScript modules under `fixtures/local/`, separate from database operations. `types.ts` defines their shapes; each data export uses `satisfies` to check its structure. HR reference data and employees have separate files. Passwords stay in environment variables.
 
-Seed operations are grouped by module under `modules/hr/`, `modules/facilities/`, and
-`modules/inventory/`. Auth, account ownership, and permission setup live under
+Seed operations are grouped by module under `modules/`. Auth, account ownership, and permission setup live under
 `access/`. The `local.ts` and `permission-catalog.ts` command entry points load
 environment settings. The local runner in `run-local.ts` validates fixtures before
 opening a transaction, checks account ownership, and runs seeders after their
@@ -96,6 +95,20 @@ Use the configured `SEED_USER_PASSWORD` for each account. These roles are provis
 4. As `inventory_operator`, open **Transactions**, choose **Disposal**, and post a separate disposal transaction for the approved asset. The decision and disposal appear as separate ledger entries.
 
 See the [Inventory app guide](../../../../apps/web/src/modules/inventory/README.md) for the frontend setup.
+
+## Student Affairs demo
+
+The seed adds five synthetic students, one in each study year, and six annual records. `DEMO-STA-002` has a historical Year 1 record and a current Year 2 record.
+
+| Username          | Demo access                                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| `sta_admin`       | Manage Student Affairs and staff assignments. Changing a student's assigned year requires a live dean grant. |
+| `sta_dean`        | Issue and revoke promotion grants for the Student Affairs admin.                                             |
+| `sta_staff_one`   | Read the registry and write in Years 1 and 2.                                                                |
+| `sta_staff_two`   | Read the registry and write in Years 2 and 3.                                                                |
+| `sta_staff_three` | Read the registry and write in Years 4 and 5.                                                                |
+
+All five accounts use `SEED_USER_PASSWORD`. To try a promotion, sign in as `sta_dean` and issue a grant to `seed-sta_admin` with a future `expiresAt`. Promotion grants start empty so the demo also covers the denied path. Reruns preserve student edits and year changes, annual record edits, staff assignment changes, and any grants issued through the API. [Student Affairs API](../../../../docs/modules/student-affairs/README.md#staff-api)
 
 ## Seed tests
 

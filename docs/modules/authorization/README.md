@@ -51,7 +51,7 @@ For example, the local `elevation_demo` user can approve `staff_two` once before
 - `HR_PERMISSIONS` and `FACILITIES_PERMISSIONS` group module keys.
 - `DEFAULT_ROLE_TEMPLATES` defines the initial HR Administrator and Facilities Administrator roles and their grants.
 
-The bootstrap administrator receives all permissions present in the catalog at bootstrap time. The module role templates are also applied during that fresh bootstrap; no user is automatically assigned to either module role.
+The bootstrap administrator receives the catalog permissions available to the default Administrator role at bootstrap time. Student Affairs permissions require explicit assignment. Fresh bootstrap also creates the HR and Facilities role templates for later assignment.
 
 The catalog groups permissions by area.
 
@@ -65,6 +65,9 @@ The catalog groups permissions by area.
 | Facilities        | `facilities:read`, `facilities:write`                                                                                                                                                                                                     |
 | Inventory         | `inventory:read`, `inventory:configure`, `inventory:post-transactions`, `inventory:dispose`, `inventory:manage-assets`, `inventory:request-removal`, `inventory:removal-review`, `inventory:removal-decide`, `inventory:removal-withdraw` |
 | Workflows         | `workflow:monitor`                                                                                                                                                                                                                        |
+| Student Affairs   | `student-affairs:read`, `student-affairs:administer`, `student-affairs:grant-promotions`                                                                                                                                                  |
+
+Student Affairs applies year assignments to staff writes. The dean issues deadline-based promotion grants through the Student Affairs API. [Student Affairs permissions and grants](../student-affairs/README.md#permissions-and-dependencies)
 
 ## Catalog seed and deployment
 

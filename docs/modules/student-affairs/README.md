@@ -6,15 +6,71 @@ Manages student applications, enrollment, academic records, certificates, and st
 
 ## Users and workflows
 
-Student Affairs staff and students are implied by the subject. Application, enrollment, record, certificate, and status workflows are open. Authorized Student Affairs staff also perform the student account actions described in [identity and access](../../identity-and-access.md).
+The staff API handles the student registry, basic annual records, and study-year changes. Student account activation and recovery are proposed separately. [Identity and access](../../identity-and-access.md)
 
 ## Permissions and dependencies
 
-No module-specific permissions or data contracts are defined. Shared sign-in and access are described in [identity and access](../../identity-and-access.md). This module may provide student context to other modules, but any such sharing is undecided.
+| Role                             | Permission                                           | Access                                                                                                                                                   |
+| -------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Student Affairs staff            | `student-affairs:read`                               | Read every student and annual record. Create and edit records within assigned study years.                                                               |
+| Designated Student Affairs admin | `student-affairs:read`, `student-affairs:administer` | Write across all years, manage staff year assignments, and classify legacy students. Moving a student between assigned years requires a live dean grant. |
+| Dean                             | `student-affairs:grant-promotions`                   | List, issue, and revoke promotion grants.                                                                                                                |
+
+Staff can cover several years, and several staff can cover the same year. Profile writes follow the student’s current year. Annual record creation follows the student’s current year and the staff member’s assignment. Historical remarks follow the year on the annual record. The admin can backfill annual records and correct their recorded study year.
+
+## Staff API
+
+All paths are relative to `/api/student-affairs`. Requests require an active session. Writes require a trusted browser origin through the shared origin protection.
+
+| Method and path                                            | Behavior                                                                                                                                                                                                                                                                                                   |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /students`                                            | Search academic IDs or any component of a student’s name with `search`. Filter with `studyYear=1` through `5` or `studyYear=unassigned`. Returns `{ records, total, page, pageSize }` with IDs, names, and current study year. `page` defaults to 1 and `pageSize` to 20, with a maximum page size of 100. |
+| `POST /students`                                           | Create a student with `academicId`, `firstName`, `fatherName`, `lastName`, and `currentStudyYear`. Optional profile fields include contact, civil registry, and admission details.                                                                                                                         |
+| `GET /students/:studentId`                                 | Read the student’s profile and admission details.                                                                                                                                                                                                                                                          |
+| `PATCH /students/:studentId`                               | Edit supplied profile fields. Use `null` to clear optional fields.                                                                                                                                                                                                                                         |
+| `PUT /students/:studentId/current-study-year`              | Set `{ currentStudyYear }` to 1–5. The admin can classify a student with a missing year directly. Changes between assigned years require a live dean grant and preserve annual history.                                                                                                                    |
+| `GET /students/:studentId/academic-years`                  | List basic annual records.                                                                                                                                                                                                                                                                                 |
+| `POST /students/:studentId/academic-years`                 | Add `{ academicYear, year, remarks? }`. New academic periods use consecutive `YYYY-YYYY` years.                                                                                                                                                                                                            |
+| `PATCH /students/:studentId/academic-years/:academicYear`  | Update `remarks`. The admin can also correct `year`.                                                                                                                                                                                                                                                       |
+| `GET /staff-year-assignments`                              | List staff and assigned years for the admin.                                                                                                                                                                                                                                                               |
+| `PUT`, `DELETE /staff-year-assignments/:userId/:studyYear` | Grant or revoke one year. Repeating the request is safe.                                                                                                                                                                                                                                                   |
+| `GET /promotion-grants`                                    | List promotion grants for the dean, including expired and revoked grants.                                                                                                                                                                                                                                  |
+| `POST /promotion-grants`                                   | Issue a grant with `{ userId, expiresAt }` to the active Student Affairs admin. `expiresAt` is an ISO timestamp with a time zone.                                                                                                                                                                          |
+| `GET /promotion-grants/current`                            | Return `{ grant }` for the signed-in Student Affairs admin. An absent live grant is represented as `null`.                                                                                                                                                                                                 |
+| `DELETE /promotion-grants/:grantId`                        | Revoke a grant immediately. Repeating a revocation is safe.                                                                                                                                                                                                                                                |
+
+A promotion grant takes effect on issuance, covers the whole registry, and allows repeated moves until expiry or revocation. The dean can issue one live grant per admin at a time. The audit log records profile and annual writes, staff assignment changes, and grant issuance and revocation. Year changes record the prior and new year and the grant ID when applicable. The audit entries store identifiers and action metadata.
+
+Invalid requests return `400`, insufficient access returns `403`, missing records return `404`, and duplicate academic IDs, annual periods, or live grants return `409`. Dates use `YYYY-MM-DD`; scores use decimal strings. The recorded `adjustedScore` is read-only until its calculation is agreed. The annual API exposes only period, study year, remarks, and timestamps.
+
+## Deployment
+
+Apply the Drizzle migration and run `pnpm --filter @project/db seed:permissions`. Use shared Administration to grant `student-affairs:read` to staff, both read and administer to the designated admin, and `student-affairs:grant-promotions` to the dean. A platform administrator can manage those role assignments through existing Administration. The default platform Administrator role receives Student Affairs permissions only through explicit assignment. [Shared authorization](../authorization/README.md)
+
+## Local demo
+
+After applying migrations to a local database, set `SEED_USER_PASSWORD` in `packages/db/.env` and run `pnpm --filter @project/db seed:local`. The seed creates `DEMO-STA-001` through `DEMO-STA-005`, one synthetic student in each study year. It adds six annual records, including a Year 1 history row for `DEMO-STA-002`, whose current study year is 2. [Local seed setup](../../../packages/db/src/seed/README.md#student-affairs-demo)
+
+| Username          | Access                                                                                                                |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `sta_admin`       | Manage records across all five years and assign staff. Moving a student between assigned years requires a dean grant. |
+| `sta_dean`        | Issue and revoke promotion grants.                                                                                    |
+| `sta_staff_one`   | Read all students and write in Years 1 and 2.                                                                         |
+| `sta_staff_two`   | Read all students and write in Years 2 and 3.                                                                         |
+| `sta_staff_three` | Read all students and write in Years 4 and 5.                                                                         |
+
+All demo accounts use the configured seed password. With the API running, sign in separately as each actor and send requests to `/api/student-affairs` with that actor’s session. Use a trusted browser origin for writes.
+
+1. As `sta_staff_three`, search for `DEMO-STA-002` with `GET /students?search=DEMO-STA-002`. Save its `studentId`. Reading the profile succeeds, and editing it returns `403` because the student is in Year 2. Both `sta_staff_one` and `sta_staff_two` can edit that profile.
+2. As `sta_admin`, try `PUT /students/:studentId/current-study-year` with `{"currentStudyYear":3}`. A fresh seed starts with an empty grant list, so the request returns `403`.
+3. As `sta_dean`, submit `POST /promotion-grants` with `userId` set to `seed-sta_admin` and `expiresAt` set to a future ISO timestamp with a time zone. Save the grant ID. Retry the move as `sta_admin`. It returns `200`. The annual records still show their original study years.
+4. As `sta_dean`, call `DELETE /promotion-grants/:grantId`. A subsequent attempt by `sta_admin` to move the student to Year 4 returns `403`. `sta_staff_two` can now edit the profile in Year 3, and the Year 2 annual row stays editable by both staff assigned to Year 2.
+
+Rerunning the local seed preserves existing student and annual record edits, staff year assignment changes, and promotion grants, including revocations.
 
 ## Student data schema
 
-The supplied fields map to two Drizzle tables in `packages/db/src/schema/student-affairs/`, exported through the shared database schema. The schema is implemented in migration `packages/db/drizzle/0001_wandering_ultimates.sql`.
+The student and annual tables were created by `packages/db/drizzle/0000_brown_sandman.sql`. Migration `packages/db/drizzle/0004_student_affairs_access.sql` adds student names, current study year, staff assignments, and promotion grants.
 
 ### Core student record
 
@@ -28,6 +84,10 @@ The supplied source excerpt begins partway through row 5. The first entry below 
 | ------------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | `studentId`              | Generated internal identifier and primary key.                                                    | —                                                          |
 | `academicId`             | Required unique institutional student identifier.                                                 | —                                                          |
+| `firstName`              | Student’s given name. Required for new records.                                                   | الاسم                                                      |
+| `fatherName`             | Student’s father’s name. Required for new records.                                                | اسم الأب                                                   |
+| `lastName`               | Student’s family name. Required for new records.                                                  | اسم العائلة                                                |
+| `currentStudyYear`       | Current study year from 1 to 5. Legacy records may be unassigned.                                 | السنة الدراسية الحالية                                     |
 | `userId`                 | Optional unique reference to the student's shared sign-in account.                                | —                                                          |
 | `birthPlace`             | City or location where the student was born.                                                      | محل الولادة                                                |
 | `birthDate`              | Student's date of birth.                                                                          | تاريخ الولادة                                              |
@@ -77,8 +137,8 @@ The `student_academic_years` table references `students.studentId`. Its composit
 
 ## Open decisions
 
-- What application, enrollment, academic-record, certificate, and status workflows are in scope?
-- Which records can students view or update, and which staff actions need authorization?
+- What application, enrollment, certificate, and status workflows should follow the staff registry?
+- Which records can students view or update in a future self-service API?
 - What student identifiers and data may be shared with other modules, and under what rules?
 - What are the missing early fields from the original source excerpt?
 - Does `governorate` describe residence or origin, and what does `language` represent?

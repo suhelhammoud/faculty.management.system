@@ -1,4 +1,15 @@
-import { date, numeric, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import {
+  check,
+  date,
+  index,
+  numeric,
+  pgTable,
+  smallint,
+  text,
+  unique,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { user } from '../auth/users.js';
 import { timestamps } from './common.js';
 
@@ -7,6 +18,10 @@ export const students = pgTable(
   {
     studentId: uuid('student_id').defaultRandom().primaryKey(),
     academicId: text('academic_id').notNull(),
+    firstName: text('first_name'),
+    fatherName: text('father_name'),
+    lastName: text('last_name'),
+    currentStudyYear: smallint('current_study_year'),
     userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
     birthPlace: text('birth_place'),
     birthDate: date('birth_date', { mode: 'string' }),
@@ -37,5 +52,7 @@ export const students = pgTable(
   (table) => [
     unique('students_academic_id_unique').on(table.academicId),
     unique('students_user_id_unique').on(table.userId),
+    check('students_current_study_year_check', sql`${table.currentStudyYear} between 1 and 5`),
+    index('students_current_study_year_idx').on(table.currentStudyYear),
   ],
 );

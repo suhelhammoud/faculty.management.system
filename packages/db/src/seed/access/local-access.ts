@@ -6,7 +6,7 @@ import { eq, or } from 'drizzle-orm';
 import type { SeedTransaction } from '../types.js';
 import { account, rolePermissions, roles, user, userRoles } from '../../schema/auth/index.js';
 import { seedPermissionCatalog } from './permissions.js';
-import { inventoryDemoRoles } from '../fixtures/local/inventory-roles.js';
+import { moduleDemoAccess } from '../fixtures/local/auth.js';
 import type { AdministratorSeed } from '../fixtures/local/types.js';
 
 export async function seedLocalAccess(
@@ -37,13 +37,13 @@ export async function seedLocalAccess(
       .onConflictDoNothing();
     if (template.name === ADMINISTRATOR_DEFAULT_ROLE.name) administratorRoleId = role.id;
   }
-  for (const template of inventoryDemoRoles) {
+  for (const template of moduleDemoAccess.flatMap(({ roles }) => [...roles])) {
     const matches = await tx
       .select()
       .from(roles)
       .where(or(eq(roles.id, template.id), eq(roles.name, template.name)));
     if (matches.some((role) => role.id !== template.id || role.name !== template.name))
-      throw new Error(`Inventory seed role collision for ${template.name}`);
+      throw new Error(`Demo seed role collision for ${template.name}`);
     await tx
       .insert(roles)
       .values({

@@ -1,5 +1,6 @@
 import { HR_DEFAULT_ROLE, FACILITIES_DEFAULT_ROLE, PERMISSION } from '@project/authorization';
 import { inventoryDemoRoles } from './inventory-roles.js';
+import { studentAffairsDemoRoles, studentAffairsDemoUsers } from './student-affairs.js';
 import type { AuthSeedUser, AdministratorSeed, ElevatedGrantSeed } from './types.js';
 
 export const inventoryDemoUsers = [
@@ -26,6 +27,10 @@ export const inventoryDemoUsers = [
 ] satisfies AuthSeedUser[];
 
 export const inventoryOperatorUsername = inventoryDemoUsers[0].username;
+export const moduleDemoAccess = [
+  { users: inventoryDemoUsers, roles: inventoryDemoRoles },
+  { users: studentAffairsDemoUsers, roles: studentAffairsDemoRoles },
+] as const;
 const elevatedDemoUsername = 'elevation_demo';
 
 export const localUsers = [
@@ -55,6 +60,7 @@ export const localUsers = [
     roles: [],
   },
   ...inventoryDemoUsers,
+  ...studentAffairsDemoUsers,
   {
     username: elevatedDemoUsername,
     name: 'Demo Elevated Access',

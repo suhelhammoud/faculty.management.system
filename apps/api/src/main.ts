@@ -33,7 +33,14 @@ async function bootstrap() {
     }
     next();
   });
-  app.use(adminOriginProtection(origins, ['/api/admin', '/api/workflow', '/api/inventory']));
+  app.use(
+    adminOriginProtection(origins, [
+      '/api/admin',
+      '/api/workflow',
+      '/api/inventory',
+      '/api/student-affairs',
+    ]),
+  );
   app.useBodyParser('json');
   app.enableShutdownHooks();
   await app.listen(configService.get<number>('PORT', 3000));

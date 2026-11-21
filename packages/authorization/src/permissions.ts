@@ -30,6 +30,11 @@ export const PERMISSION = {
   workflow: {
     monitor: 'workflow:monitor',
   },
+  studentAffairs: {
+    read: 'student-affairs:read',
+    administer: 'student-affairs:administer',
+    grantPromotions: 'student-affairs:grant-promotions',
+  },
   inventory: {
     read: 'inventory:read',
     configure: 'inventory:configure',
@@ -60,6 +65,15 @@ export const PERMISSION_CATALOG = [
   { key: PERMISSION.hrReferenceData.write, description: 'Manage HR reference data' },
   { key: PERMISSION.facilities.read, description: 'View facilities records' },
   { key: PERMISSION.facilities.write, description: 'Manage facilities records' },
+  { key: PERMISSION.studentAffairs.read, description: 'Read Student Affairs records' },
+  {
+    key: PERMISSION.studentAffairs.administer,
+    description: 'Administer Student Affairs and use dean-issued promotion grants',
+  },
+  {
+    key: PERMISSION.studentAffairs.grantPromotions,
+    description: 'Issue and revoke Student Affairs promotion grants',
+  },
   {
     key: PERMISSION.workflow.monitor,
     description: 'View the workflow monitor within record scope',

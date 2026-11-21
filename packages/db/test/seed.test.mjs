@@ -18,6 +18,10 @@ import { hrEmployees } from '../dist/seed/fixtures/local/hr-employees.js';
 import { localInventory } from '../dist/seed/fixtures/local/inventory.js';
 import { inventoryDemoRoles } from '../dist/seed/fixtures/local/inventory-roles.js';
 import {
+  localStudentAffairs,
+  studentAffairsDemoRoles,
+} from '../dist/seed/fixtures/local/student-affairs.js';
+import {
   inventoryAssets,
   inventoryBalances,
   inventoryConsumables,
@@ -26,6 +30,10 @@ import {
   inventoryTransactions,
   inventoryTransactionLines,
   facilitiesRooms,
+  students,
+  studentAcademicYears,
+  studentAffairsPromotionGrants,
+  studentAffairsStaffYears,
   workflowTasks,
 } from '../dist/schema/index.js';
 import { localFacilities } from '../dist/seed/fixtures/local/facilities.js';
@@ -52,12 +60,25 @@ const fixtures = {
   employees: hrEmployees,
   facilities: localFacilities,
   inventory: localInventory,
+  studentAffairs: localStudentAffairs,
 };
 const clone = () => structuredClone(fixtures);
 
 test('fixture preflight rejects duplicates, missing references, and invalid capacities', () => {
   validateLocalFixtures(fixtures, password);
   const cases = [
+    [
+      (f) => (f.studentAffairs.assignments[0].username = 'staff_one'),
+      /Unknown Student Affairs demo staff/,
+    ],
+    [
+      (f) => f.studentAffairs.assignments[0].years.push(6),
+      /Invalid or duplicate Student Affairs year assignment/,
+    ],
+    [
+      (f) => (f.studentAffairs.students[0].annual[0].academicYear = '2026-2028'),
+      /Invalid or duplicate Student Affairs academic period/,
+    ],
     [(f) => f.users.push(f.users[0]), /Duplicate username/],
     [(f) => f.elevatedGrants.push(f.elevatedGrants[0]), /duplicate elevated grant key/],
     [
@@ -172,6 +193,7 @@ describe('local seed PostgreSQL integration', { skip: !process.env.SEED_TEST_DAT
       ADMINISTRATOR_DEFAULT_ROLE,
       ...DEFAULT_ROLE_TEMPLATES,
       ...inventoryDemoRoles,
+      ...studentAffairsDemoRoles,
     ]) {
       const [saved] = await db.select().from(roles).where(eq(roles.name, template.name));
       assert.equal(saved.description, template.description);
@@ -292,6 +314,67 @@ describe('local seed PostgreSQL integration', { skip: !process.env.SEED_TEST_DAT
         ({ roleId }) => roleId === inventoryDemoRoles[0].id,
       ),
     );
+  });
+  test('seeds Student Affairs demo data and preserves changes and year revocations on rerun', async () => {
+    const { db } = connection;
+    const counts = await seedLocalDatabase(db, fixtures, password);
+    assert.equal(counts.studentCount, 5);
+    assert.equal(counts.annualRecordCount, 6);
+    const registry = await db.select().from(students);
+    assert.deepEqual(
+      registry.map(({ currentStudyYear }) => currentStudyYear).sort(),
+      [1, 2, 3, 4, 5],
+    );
+    assert.equal((await db.select().from(studentAcademicYears)).length, 6);
+    assert.equal((await db.select().from(studentAffairsPromotionGrants)).length, 0);
+    const yearTwo = await db
+      .select()
+      .from(studentAffairsStaffYears)
+      .where(eq(studentAffairsStaffYears.studyYear, 2));
+    assert.deepEqual(yearTwo.map(({ userId }) => userId).sort(), [
+      'seed-sta_staff_one',
+      'seed-sta_staff_two',
+    ]);
+    const [deanRole] = await db
+      .select()
+      .from(userRoles)
+      .where(eq(userRoles.userId, 'seed-sta_dean'));
+    assert.equal(deanRole.roleId, 'student-affairs-demo-dean');
+
+    await db
+      .delete(studentAffairsStaffYears)
+      .where(
+        and(
+          eq(studentAffairsStaffYears.userId, 'seed-sta_staff_one'),
+          eq(studentAffairsStaffYears.studyYear, 2),
+        ),
+      );
+    await db
+      .update(students)
+      .set({ currentStudyYear: 2 })
+      .where(eq(students.academicId, 'DEMO-STA-001'));
+    await db
+      .update(studentAcademicYears)
+      .set({ remarks: 'Edited annual record' })
+      .where(eq(studentAcademicYears.academicYear, '2025-2026'));
+    await db.insert(studentAffairsPromotionGrants).values({
+      userId: 'seed-sta_admin',
+      issuedBy: 'seed-sta_dean',
+      issuedAt: new Date('2026-01-01'),
+      expiresAt: new Date('2026-01-02'),
+      revokedAt: new Date('2026-01-01T01:00:00Z'),
+      revokedBy: 'seed-sta_dean',
+    });
+    const before = await snapshot();
+    await seedLocalDatabase(db, fixtures, password);
+    const after = await snapshot();
+    for (const table of [
+      'students',
+      'student_academic_years',
+      'student_affairs_staff_years',
+      'student_affairs_promotion_grants',
+    ])
+      assert.deepEqual(after[table], before[table], table);
   });
   test('seeds direct grants and preserves usage, expiry, and revocation on rerun', async () => {
     const { db } = connection;

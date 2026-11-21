@@ -2,11 +2,25 @@ import type { DEFAULT_ROLE_TEMPLATES, PermissionKey } from '@project/authorizati
 
 import type { inventoryConditions } from '../../../schema/inventory/index.js';
 import type { inventoryDemoRoles } from './inventory-roles.js';
+import type { studentAffairsDemoRoles } from './student-affairs.js';
 
 export type SharedSeedRoleId = (typeof DEFAULT_ROLE_TEMPLATES)[number]['id'];
 export type InventoryDemoRoleId = (typeof inventoryDemoRoles)[number]['id'];
-export type SeedRoleId = SharedSeedRoleId | InventoryDemoRoleId;
+type StudentAffairsDemoRoleId = (typeof studentAffairsDemoRoles)[number]['id'];
+export type SeedRoleId = SharedSeedRoleId | InventoryDemoRoleId | StudentAffairsDemoRoleId;
 export type AuthSeedUser = { username: string; name: string; roles?: SeedRoleId[] };
+export type StudentAffairsSeed = {
+  assignments: { username: string; years: number[] }[];
+  students: {
+    studentId: string;
+    academicId: string;
+    firstName: string;
+    fatherName: string;
+    lastName: string;
+    currentStudyYear: number;
+    annual: { academicYear: string; year: number; remarks?: string }[];
+  }[];
+};
 export type ElevatedGrantSeed = {
   key: string;
   username: string;

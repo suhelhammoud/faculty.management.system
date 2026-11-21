@@ -1,8 +1,9 @@
 import { inventoryDemoRoles } from './fixtures/local/inventory-roles.js';
-import { inventoryDemoUsers, inventoryOperatorUsername } from './fixtures/local/auth.js';
+import { inventoryOperatorUsername, moduleDemoAccess } from './fixtures/local/auth.js';
 import { validateFacilities } from './modules/facilities/validation.js';
 import { validateHr } from './modules/hr/validation.js';
 import { validateInventory } from './modules/inventory/validation.js';
+import { validateStudentAffairs } from './modules/student-affairs/validation.js';
 import { DEFAULT_ROLE_TEMPLATES, ELEVATED_PERMISSION_SCOPES } from '@project/authorization';
 import type {
   AuthSeedUser,
@@ -12,6 +13,7 @@ import type {
   ElevatedGrantSeed,
   FacilitiesSeed,
   InventorySeed,
+  StudentAffairsSeed,
 } from './fixtures/local/types.js';
 
 export function validatePassword(password: string): void {
@@ -21,8 +23,6 @@ export function validatePassword(password: string): void {
 
 export function validateUsers(seedUsers: AuthSeedUser[]): void {
   const allowedRoleIds = new Set<string>(DEFAULT_ROLE_TEMPLATES.map(({ id }) => id));
-  const inventoryRoleIds = new Set<string>(inventoryDemoRoles.map(({ id }) => id));
-  const inventoryUsernames = new Set(inventoryDemoUsers.map(({ username }) => username));
   if (
     !seedUsers.length ||
     seedUsers.some(
@@ -32,7 +32,11 @@ export function validateUsers(seedUsers: AuthSeedUser[]): void {
         (assignedRoles ?? []).some(
           (role) =>
             !allowedRoleIds.has(role) &&
-            !(inventoryUsernames.has(username) && inventoryRoleIds.has(role)),
+            !moduleDemoAccess.some(
+              ({ users, roles }) =>
+                users.some((user) => user.username === username) &&
+                roles.some(({ id }) => id === role),
+            ),
         ),
     )
   ) {
@@ -51,6 +55,7 @@ export type LocalSeedFixtures = {
   employees: EmployeeSeed[];
   facilities: FacilitiesSeed;
   inventory: InventorySeed;
+  studentAffairs: StudentAffairsSeed;
 };
 
 function validateElevatedGrants(grants: ElevatedGrantSeed[], usernames: ReadonlySet<string>) {
@@ -114,4 +119,5 @@ export function validateLocalFixtures(fixtures: LocalSeedFixtures, password: str
   )
     throw new Error('Inventory seed requires its demo operator');
   validateInventory(fixtures.inventory, fixtures.facilities, fixtures.employees);
+  validateStudentAffairs(fixtures.studentAffairs, fixtures.users);
 }

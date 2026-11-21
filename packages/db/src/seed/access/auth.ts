@@ -1,7 +1,6 @@
 import { assertSeedAccounts, demoIdentity } from './ownership.js';
 import { validatePassword, validateUsers } from '../validation.js';
-import { inventoryDemoRoles } from '../fixtures/local/inventory-roles.js';
-import { inventoryDemoUsers } from '../fixtures/local/auth.js';
+import { moduleDemoAccess } from '../fixtures/local/auth.js';
 import { DEFAULT_ROLE_TEMPLATES } from '@project/authorization';
 import type { AuthSeedUser, SeedRoleId } from '../fixtures/local/types.js';
 import { hashPassword } from 'better-auth/crypto';
@@ -29,9 +28,12 @@ export async function seedAuth(
   }
 
   const sharedRoleIds = [...seedRoles.values()];
-  const inventoryRoleIds = inventoryDemoRoles.map(({ id }) => id);
-  for (const id of inventoryRoleIds) seedRoles.set(id, id);
-  const inventoryUsernames = new Set(inventoryDemoUsers.map(({ username }) => username));
+  const moduleRoleIds = new Map<string, SeedRoleId[]>();
+  for (const group of moduleDemoAccess) {
+    const ids = group.roles.map(({ id }) => id);
+    for (const id of ids) seedRoles.set(id, id);
+    for (const { username } of group.users) moduleRoleIds.set(username, ids);
+  }
 
   const passwordHash = await hashPassword(password);
   const userIds = new Map<string, string>();
@@ -77,9 +79,7 @@ export async function seedAuth(
         target: account.id,
         set: { password: passwordHash, updatedAt: new Date() },
       });
-    const seedRoleIds = inventoryUsernames.has(seedUser.username)
-      ? inventoryRoleIds
-      : sharedRoleIds;
+    const seedRoleIds = moduleRoleIds.get(seedUser.username) ?? sharedRoleIds;
     await tx
       .delete(userRoles)
       .where(and(eq(userRoles.userId, createdUser.id), inArray(userRoles.roleId, seedRoleIds)));

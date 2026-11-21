@@ -8,6 +8,7 @@ import { hrReferenceData } from './fixtures/local/hr-reference-data.js';
 import { hrEmployees } from './fixtures/local/hr-employees.js';
 import { localInventory } from './fixtures/local/inventory.js';
 import { localFacilities } from './fixtures/local/facilities.js';
+import { localStudentAffairs } from './fixtures/local/student-affairs.js';
 
 const dbPackageRoot = resolve(import.meta.dirname, '../..');
 
@@ -46,22 +47,34 @@ if (!isSafeLocalDatabase(databaseUrl)) {
 
 const { db, pool } = createDb(databaseUrl);
 try {
-  const { userCount, employeeCount, roomCount, assetCount, consumableCount, storageCount } =
-    await seedLocalDatabase(
-      db,
-      {
-        administrator: localAdministrator,
-        users: localUsers,
-        elevatedGrants: localElevatedGrants,
-        references: hrReferenceData,
-        employees: hrEmployees,
-        facilities: localFacilities,
-        inventory: localInventory,
-      },
-      password,
-    );
+  const {
+    userCount,
+    employeeCount,
+    roomCount,
+    assetCount,
+    consumableCount,
+    storageCount,
+    studentCount,
+    annualRecordCount,
+  } = await seedLocalDatabase(
+    db,
+    {
+      administrator: localAdministrator,
+      users: localUsers,
+      elevatedGrants: localElevatedGrants,
+      references: hrReferenceData,
+      employees: hrEmployees,
+      facilities: localFacilities,
+      inventory: localInventory,
+      studentAffairs: localStudentAffairs,
+    },
+    password,
+  );
   console.log(
     `Provisioned local administrator "${localAdministrator.username}" and seeded ${userCount} demo users, ${employeeCount} synthetic HR employees, and ${roomCount} Facilities rooms. Inventory fixtures cover ${assetCount} assets and ${consumableCount} consumable types across ${storageCount} storage rooms.`,
+  );
+  console.log(
+    `Student Affairs fixtures cover ${studentCount} students and ${annualRecordCount} annual records.`,
   );
 } finally {
   await pool.end();
