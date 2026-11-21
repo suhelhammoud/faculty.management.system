@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Build, test, and migrate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      HUSKY: '0'
+      DATABASE_URL: postgresql://faculty_ci:faculty_ci@127.0.0.1:5432/postgres
+      HR_TEST_DATABASE_NAME: ci_hr_test
+      ELEVATED_GRANTS_TEST_DATABASE_NAME: ci_elevated_grants_test
+      STUDENT_AFFAIRS_TEST_DATABASE_NAME: ci_student_affairs_test
+      WORKFLOWS_TEST_DATABASE_NAME: ci_workflows_test
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: faculty_ci
+          POSTGRES_PASSWORD: faculty_ci
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U faculty_ci -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.23.3'
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build API
+        run: pnpm --filter api build
+      - name: Run frontend tests
+        run: pnpm --filter web test
+      - name: Create PostgreSQL integration databases
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          for database in "$HR_TEST_DATABASE_NAME" "$ELEVATED_GRANTS_TEST_DATABASE_NAME" \
+            "$STUDENT_AFFAIRS_TEST_DATABASE_NAME" "$WORKFLOWS_TEST_DATABASE_NAME"; do
+            docker exec "$POSTGRES_CONTAINER" createdb -U faculty_ci "$database"
+          done
+      - name: Run API and PostgreSQL integration tests
+        run: pnpm --filter api test
+      - name: Run API smoke test
+        env:
+          BETTER_AUTH_SECRET: faculty-ci-only-test-signing-secret
+          BETTER_AUTH_URL: http://127.0.0.1:4000
+          TRUSTED_ORIGINS: http://127.0.0.1:3000
+        run: pnpm --filter api test:e2e
+      - name: Check fresh and upgrade migrations
+        env:
+          MIGRATION_TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: pnpm --filter @project/db test:migrations
+      - name: Run database seed tests
+        env:
+          SEED_TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: pnpm --filter @project/db test:seed
+      - name: Install Chromium for browser checks
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Build web app and run browser smoke tests
+        run: pnpm test:frontend:smoke

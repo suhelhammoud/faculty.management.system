@@ -5,7 +5,7 @@ import { Reflector } from '@nestjs/core';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { PERMISSION_CATALOG } from '@project/authorization';
 import { createDb } from '@project/db';
 import { eq, sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
@@ -44,7 +44,7 @@ describe.skipIf(!databaseName)('HR API integration (isolated PostgreSQL)', () =>
   beforeAll(async () => {
     if (!databaseName?.endsWith('_test'))
       throw new Error('HR_TEST_DATABASE_NAME must end in _test');
-    process.loadEnvFile('../../packages/db/.env.db');
+    if (!process.env.DATABASE_URL) process.loadEnvFile('../../packages/db/.env.db');
     const url = new URL(process.env.DATABASE_URL!);
     url.pathname = `/${databaseName}`;
     connection = createDb(url.toString());
@@ -57,11 +57,11 @@ describe.skipIf(!databaseName)('HR API integration (isolated PostgreSQL)', () =>
     await db.execute(
       sql.raw(`TRUNCATE ${names.rows.map((r) => `"${r.tablename}"`).join(', ')} CASCADE`),
     );
-    await db.insert(roles).values({ id: 'test-admin', name: 'Administrator' });
-    // Exercise permission migration on an installation with an existing admin role.
-    await db.execute(
-      sql.raw(readFileSync('../../packages/db/drizzle/0001_hr-admin-permissions.sql', 'utf8')),
-    );
+    await db.transaction(async (tx) => {
+      await tx.insert(permissions).values([...PERMISSION_CATALOG]);
+      await tx.insert(roles).values({ id: 'test-admin', name: 'Administrator' });
+      await provisionHrPermissions(tx, 'test-admin');
+    });
     await db.insert(user).values({
       id: actorId,
       name: 'HR test admin',
@@ -95,13 +95,13 @@ describe.skipIf(!databaseName)('HR API integration (isolated PostgreSQL)', () =>
     await connection?.pool.end();
   });
 
-  it('provisions migration and fresh-bootstrap permissions idempotently', async () => {
+  it('provisions HR permissions idempotently for existing and new roles', async () => {
     const { db } = connection;
-    expect(await db.select().from(permissions)).toHaveLength(5);
-    expect(await db.select().from(rolePermissions)).toHaveLength(10);
+    expect(await db.select().from(permissions)).toHaveLength(PERMISSION_CATALOG.length);
+    expect(await db.select().from(rolePermissions)).toHaveLength(2 * HR_PERMISSIONS.length);
     await db.transaction((tx) => provisionHrPermissions(tx, 'test-admin'));
     await db.transaction((tx) => provisionHrPermissions(tx, 'test-admin'));
-    expect(await db.select().from(rolePermissions)).toHaveLength(10);
+    expect(await db.select().from(rolePermissions)).toHaveLength(2 * HR_PERMISSIONS.length);
     const freshRole = randomUUID();
     await db.insert(roles).values({ id: freshRole, name: 'Fresh bootstrap role' });
     await db.transaction((tx) => provisionHrPermissions(tx, freshRole));

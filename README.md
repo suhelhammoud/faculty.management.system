@@ -131,6 +131,19 @@ pnpm test:frontend:smoke
 
 Use the `frontend` pnpm catalog when adding an existing shared dependency to another frontend. For new API-backed screens, use TanStack Query for fetching, caching, and mutations. Use Zustand for shared client state such as language preferences.
 
+## Continuous integration
+
+[GitHub Actions](.github/workflows/ci.yml) checks pull requests to `main` and
+pushes to `main`. It builds the API and web app, runs the existing test suites,
+and provisions disposable PostgreSQL databases for the integration, seed, and
+migration tests.
+
+To run the migration check locally, set `MIGRATION_TEST_DATABASE_URL` to a
+loopback PostgreSQL connection whose user can create databases, then run
+`pnpm --filter @project/db test:migrations`. The tests compare a fresh install
+with an upgrade from migration `0004`, verify that an existing asset survives
+the upgrade, and drop the two databases they create.
+
 ## More documentation
 
 - [API setup and authentication](docs/auth-api-setup.md)
