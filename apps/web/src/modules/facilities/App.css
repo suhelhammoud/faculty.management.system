@@ -1,55 +1,17 @@
-.faculty-facilities {
-  --fac-ink: #172320;
-  --fac-muted: #6b7773;
-  --fac-line: #dce4e0;
-  --fac-accent: #14785f;
-  --fac-accent-dark: #0f604c;
-  --fac-soft: #e8f3ee;
-  width: 100%;
-  min-height: 72vh;
-  padding: clamp(18px, 3vw, 32px);
-  color: var(--fac-ink);
-  background: #f8faf9;
-  border: 1px solid var(--fac-line);
-  border-radius: 16px;
-  text-align: start;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
 .faculty-facilities h1,
 .faculty-facilities h2,
 .faculty-facilities p {
   margin: 0;
 }
 
-.faculty-facilities h1 {
-  font-size: 25px;
-  line-height: 1.2;
-  letter-spacing: -0.4px;
-}
-
-.faculty-facilities h2 {
-  font-size: 21px;
-  line-height: 1.25;
-  letter-spacing: -0.25px;
-}
-
-.fac-header,
 .fac-brand,
 .fac-page-heading,
 .fac-modal-heading,
-.fac-actions,
-.fac-session {
+.fac-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-}
-
-.fac-header {
-  padding-bottom: 22px;
-  border-bottom: 1px solid var(--fac-line);
 }
 
 .fac-brand {
@@ -61,48 +23,18 @@
   width: 44px;
   height: 44px;
   place-items: center;
-  color: var(--fac-accent-dark);
-  background: var(--fac-soft);
-  border-radius: 13px;
+  color: var(--ui-primary-hover);
+  background: var(--ui-accent);
+  border-radius: var(--ui-surface-radius);
 }
 
 .fac-eyebrow {
   margin-bottom: 3px !important;
-  color: var(--fac-muted);
+  color: var(--ui-text-muted);
   font-size: 12px;
   font-weight: 650;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-}
-
-.fac-nav {
-  display: flex;
-  gap: 22px;
-  margin: 18px 0 26px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--fac-line);
-}
-
-.fac-nav a {
-  color: #52615c;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.fac-nav a:hover,
-.fac-nav a.active {
-  color: var(--fac-accent-dark);
-}
-
-.fac-nav a.active {
-  box-shadow: 0 2px var(--fac-accent);
-}
-
-.fac-session {
-  justify-content: flex-end;
-  margin: -12px 0 20px;
-  color: var(--fac-muted);
-  font-size: 13px;
 }
 
 .fac-stack {
@@ -116,21 +48,16 @@
 }
 
 .fac-muted {
-  color: var(--fac-muted);
+  color: var(--ui-text-muted);
 }
 
 .fac-card {
   min-width: 0;
-  padding: 20px;
-  background: #fff;
-  border: 1px solid var(--fac-line);
-  border-radius: 13px;
-  box-shadow: 0 8px 24px rgb(28 52 43 / 3%);
-}
-
-.fac-auth {
-  width: min(100%, 440px);
-  margin: 42px auto;
+  padding: var(--ui-space-3);
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-surface-radius);
+  box-shadow: var(--ui-shadow);
 }
 
 .fac-form {
@@ -143,84 +70,13 @@
   display: grid;
   gap: 6px;
   min-width: 0;
-  color: #46544f;
+  color: var(--ui-text-muted);
   font-size: 13px;
   font-weight: 600;
 }
 
-.fac-field input,
-.fac-field select,
-.fac-field textarea,
-.fac-filter-bar select,
-.fac-search input {
-  width: 100%;
-  min-height: 40px;
-  padding: 8px 11px;
-  color: var(--fac-ink);
-  background: #fff;
-  border: 1px solid #cfd9d4;
-  border-radius: 8px;
-  outline: none;
-}
-
 .fac-field textarea {
   resize: vertical;
-}
-
-.fac-field :is(input, select, textarea):focus,
-.fac-filter-bar select:focus,
-.fac-search input:focus {
-  border-color: var(--fac-accent);
-  box-shadow: 0 0 0 3px rgb(20 120 95 / 13%);
-}
-
-.fac-button,
-.fac-icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 8px 14px;
-  color: #fff;
-  background: var(--fac-accent);
-  border: 1px solid var(--fac-accent);
-  border-radius: 8px;
-  font-weight: 650;
-  text-decoration: none;
-  transition:
-    background 140ms ease,
-    border-color 140ms ease,
-    transform 140ms ease;
-}
-
-.fac-button:hover {
-  background: var(--fac-accent-dark);
-  border-color: var(--fac-accent-dark);
-}
-
-.fac-button:active {
-  transform: translateY(1px);
-}
-
-.fac-button--secondary,
-.fac-icon-button {
-  color: #34433d;
-  background: #fff;
-  border-color: #cfd9d4;
-}
-
-.fac-button--secondary:hover,
-.fac-icon-button:hover {
-  color: var(--fac-accent-dark);
-  background: #f4faf7;
-  border-color: #a9cbbd;
-}
-
-.fac-icon-button {
-  width: 36px;
-  min-height: 36px;
-  padding: 7px;
 }
 
 .fac-stats {
@@ -250,7 +106,7 @@
   grid-template-columns: minmax(180px, 1.5fr) repeat(4, minmax(125px, 1fr));
   gap: 10px;
   padding: 16px;
-  border-bottom: 1px solid var(--fac-line);
+  border-bottom: 1px solid var(--ui-border);
 }
 
 .fac-search {
@@ -259,30 +115,25 @@
   gap: 8px;
   min-width: 0;
   padding-inline-start: 10px;
-  border: 1px solid #cfd9d4;
-  border-radius: 8px;
+  border: 1px solid var(--ui-input-border);
+  border-radius: var(--ui-control-radius);
 }
 
 .fac-search:focus-within {
-  border-color: var(--fac-accent);
-  box-shadow: 0 0 0 3px rgb(20 120 95 / 13%);
+  border-color: var(--ui-primary);
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
 }
 
 .fac-search svg {
   flex: 0 0 auto;
-  color: var(--fac-muted);
+  color: var(--ui-text-muted);
 }
 
 .fac-search input {
   min-width: 0;
   border: 0;
-  box-shadow: none !important;
-}
-
-.fac-filter-bar select {
-  min-height: 42px;
-  padding-inline: 10px 28px;
-  font-size: 13px;
+  outline: none;
 }
 
 .fac-table-wrap {
@@ -298,14 +149,14 @@
 
 .fac-table th,
 .fac-table td {
-  padding: 13px 15px;
+  padding: var(--ui-space-2);
   text-align: start;
-  border-bottom: 1px solid #edf1ef;
+  border-bottom: 1px solid var(--ui-border);
 }
 
 .fac-table th {
-  color: #68756f;
-  background: #fbfcfb;
+  color: var(--ui-text-muted);
+  background: var(--ui-muted);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -313,11 +164,11 @@
 }
 
 .fac-table td {
-  color: #41504a;
+  color: var(--ui-text);
 }
 
 .fac-table td strong {
-  color: var(--fac-ink);
+  color: var(--ui-text);
 }
 
 .fac-table tbody tr:last-child td {
@@ -326,7 +177,7 @@
 
 .fac-empty {
   padding: 34px !important;
-  color: var(--fac-muted) !important;
+  color: var(--ui-text-muted) !important;
   text-align: center !important;
 }
 
@@ -339,17 +190,17 @@
 }
 
 .fac-status.is-active {
-  color: #136747;
-  background: #e6f5ed;
+  color: var(--ui-success);
+  background: var(--ui-success-surface);
 }
 
 .fac-status.is-inactive {
-  color: #7c4a25;
-  background: #f9eee1;
+  color: var(--ui-warning);
+  background: var(--ui-warning-surface);
 }
 
 .fac-error {
-  color: #a32828;
+  color: var(--ui-danger);
   font-size: 13px;
 }
 
@@ -360,7 +211,7 @@
   display: grid;
   place-items: center;
   padding: 18px;
-  background: rgb(17 31 26 / 45%);
+  background: var(--ui-overlay);
 }
 
 .fac-modal {
@@ -368,10 +219,10 @@
   max-height: min(90vh, 900px);
   padding: 22px;
   overflow-y: auto;
-  background: #fff;
-  border: 1px solid var(--fac-line);
-  border-radius: 14px;
-  box-shadow: 0 24px 80px rgb(7 26 18 / 24%);
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-surface-radius);
+  box-shadow: var(--ui-dialog-shadow);
 }
 
 .fac-modal-heading {
@@ -392,21 +243,21 @@
 .fac-tabs button {
   min-height: 38px;
   padding: 7px 13px;
-  color: #586760;
+  color: var(--ui-text-muted);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--ui-control-radius);
   font-weight: 600;
 }
 
 .fac-tabs button:hover {
-  background: #edf5f1;
+  background: var(--ui-muted);
 }
 
 .fac-tabs button.is-selected {
-  color: var(--fac-accent-dark);
-  background: var(--fac-soft);
-  border-color: #c6e2d5;
+  color: var(--ui-primary-hover);
+  background: var(--ui-accent);
+  border-color: var(--ui-border);
 }
 
 @media (max-width: 900px) {
@@ -419,11 +270,6 @@
 }
 
 @media (max-width: 640px) {
-  .faculty-facilities {
-    padding: 16px;
-    border-radius: 10px;
-  }
-  .fac-header,
   .fac-page-heading {
     align-items: flex-start;
   }

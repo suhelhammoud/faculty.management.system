@@ -6,14 +6,14 @@ tools across these domains.
 
 ## Architecture
 
-| Workspace location       | Responsibility                                                                 |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| `apps/web`               | React, Vite, and TypeScript frontend with one React Router and a shared layout |
-| `apps/api`               | NestJS HTTP API with domain modules, Better Auth sessions, and authorization   |
-| `packages/db`            | PostgreSQL schema, Drizzle migrations, and database access                     |
-| `packages/authorization` | Typed permission catalog and default role templates                            |
-| `packages/contracts`     | Shared TypeScript contracts for workflows                                      |
-| `packages/ui`            | Shared React form controls                                                     |
+| Workspace location       | Responsibility                                                                      |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| `apps/web`               | React, Vite, and TypeScript frontend with a module directory and one browser router |
+| `apps/api`               | NestJS HTTP API with domain modules, Better Auth sessions, and authorization        |
+| `packages/db`            | PostgreSQL schema, Drizzle migrations, and database access                          |
+| `packages/authorization` | Typed permission catalog and default role templates                                 |
+| `packages/contracts`     | Shared TypeScript contracts for workflows                                           |
+| `packages/ui`            | Shared React form controls                                                          |
 
 Each frontend feature has its own folder under `apps/web/src/modules`. The web
 app lazy-loads the domain and Administration entry points from a single build.
@@ -23,9 +23,10 @@ enforces access on protected endpoints. [Shared authorization](modules/authoriza
 
 ## Frontend routes
 
-The root route `/` redirects to `/attendance`. Existing module paths and deep
-links use the web app's origin. The standalone development ports were retired.
-Inventory selects its default view based on the signed-in user's capabilities.
+The root route `/` shows the faculty module directory. Each module opens on its
+own page and links back to the directory through **All modules**. Existing
+module paths and deep links use the web app's origin. Inventory selects its
+default view based on the signed-in user's capabilities.
 
 | Feature folder    | Entry route        | Example nested route                        |
 | ----------------- | ------------------ | ------------------------------------------- |

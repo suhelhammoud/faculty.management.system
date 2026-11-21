@@ -9,7 +9,7 @@ type ButtonStyles = {
   size: Record<'default' | 'xs' | 'sm' | 'lg' | 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg', string>;
 };
 
-export function createButton(mergeClasses: MergeClasses, base: string, variants: ButtonStyles) {
+export function createButton(mergeClasses: MergeClasses, base = '', variants?: ButtonStyles) {
   const buttonVariants = cva(base, {
     variants,
     defaultVariants: { variant: 'default', size: 'default' },

@@ -126,8 +126,7 @@ Authorized operators post inventory movements directly. Committee removal is the
 English is the default. The language switch is available on the sign-in screen and
 persists in the browser. Arabic uses right-to-left layout within Inventory,
 including dialogs. Asset tags and references retain their own text direction.
-The web app’s top-level navigation
-keeps its existing language.
+The **All modules** link keeps the web app's language and direction.
 
 | Route                               | What users can do                                                                                                                     |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |

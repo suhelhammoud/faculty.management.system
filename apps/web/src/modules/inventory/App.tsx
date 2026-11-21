@@ -3,6 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import { DirectionProvider } from '@radix-ui/react-direction';
 import { Navigate, NavLink, Route, Routes, useParams } from 'react-router';
+import { ModuleHeaderActions } from '../../components/ModuleDirectoryLink';
 import { createClient, useResource, workflow, type Capabilities } from './lib/api';
 import { i18n, useLanguage } from './lib/i18n';
 import { Auth } from './components/auth';
@@ -51,7 +52,7 @@ function Workspace() {
     <Resource query={query}>
       {(access) => (
         <>
-          <nav className="inv-actions inv-nav" aria-label={t('Inventory')}>
+          <nav className="module-navigation" aria-label={t('Inventory')}>
             <NavLink to="/inventory/my-items">{t('My Items')}</NavLink>
             {access.read && (
               <>
@@ -163,19 +164,24 @@ function Layout() {
   const dir = language === 'ar' ? 'rtl' : 'ltr';
   return (
     <DirectionProvider dir={dir}>
-      <section className="faculty-inventory" lang={language} dir={dir}>
-        <header className="inv-header">
-          <h1>{t('Inventory')}</h1>
-          <Button
-            type="button"
-            variant="outline"
-            lang={language === 'ar' ? 'en' : 'ar'}
-            onClick={() => change(language === 'ar' ? 'en' : 'ar')}
-          >
-            {language === 'ar' ? 'English' : 'العربية'}
-          </Button>
-        </header>
-        <Auth>
+      <section className="faculty-inventory module-surface" lang={language} dir={dir}>
+        <Auth
+          renderHeader={(sessionControls) => (
+            <header className="module-header">
+              <h1>{t('Inventory')}</h1>
+              <ModuleHeaderActions sessionControls={sessionControls}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  lang={language === 'ar' ? 'en' : 'ar'}
+                  onClick={() => change(language === 'ar' ? 'en' : 'ar')}
+                >
+                  {language === 'ar' ? 'English' : 'العربية'}
+                </Button>
+              </ModuleHeaderActions>
+            </header>
+          )}
+        >
           <Workspace />
         </Auth>
       </section>

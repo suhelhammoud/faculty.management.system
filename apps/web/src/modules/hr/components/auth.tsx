@@ -1,14 +1,25 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import {
+  ModuleSessionControls,
+  type RenderModuleHeader,
+} from '../../../components/ModuleDirectoryLink';
 import { api } from '../lib/api';
 import type { Session } from '../lib/types';
 import { Field, ErrorMessage, Loading } from './common';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
-export function AuthGate({ children }: { children: ReactNode }) {
+export function AuthGate({
+  children,
+  renderHeader,
+}: {
+  children: ReactNode;
+  renderHeader: RenderModuleHeader;
+}) {
   const { t } = useTranslation();
+  const signInFormId = useId();
   const client = useQueryClient();
   const previousUser = useRef<string | undefined>(undefined);
   const session = useQuery({
@@ -67,59 +78,83 @@ export function AuthGate({ children }: { children: ReactNode }) {
     setValues((previous) => ({ ...previous, [name]: value }));
     setValidation('');
   };
-  if (session.isPending) return <Loading />;
+  if (session.isPending)
+    return (
+      <>
+        {renderHeader(null)}
+        <Loading />
+      </>
+    );
   if (session.error)
-    return <ErrorMessage error={session.error} retry={() => void session.refetch()} />;
+    return (
+      <>
+        {renderHeader(null)}
+        <ErrorMessage error={session.error} retry={() => void session.refetch()} />
+      </>
+    );
   if (!current)
     return (
-      <Card className="hr-auth">
-        <CardHeader>
-          <CardTitle>{t('Sign in')}</CardTitle>
-          <p>{t('Use the account provided by your administrator.')}</p>
-        </CardHeader>
-        <CardContent>
-          {notice && <p role="status">{t(notice)}</p>}
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              login.mutate();
-            }}
-            className="hr-stack"
-          >
-            <fieldset disabled={login.isPending} className="hr-stack">
-              <div className="hr-form-fields">
-                <Field
-                  name="Username"
-                  value={values.username || ''}
-                  onChange={update('username')}
-                  required
-                  autoComplete="username"
-                />
-                <Field
-                  name="Password"
-                  type="password"
-                  value={values.Password || ''}
-                  onChange={update('Password')}
-                  required
-                  autoComplete="current-password"
-                />
-              </div>
-              <Button type="submit">{t(login.isPending ? 'Loading…' : 'Sign in')}</Button>
-            </fieldset>
-            <ErrorMessage error={login.error} />
-            <p className="hr-muted">{t('Forgot your password? Contact your administrator.')}</p>
-          </form>
-        </CardContent>
-      </Card>
+      <>
+        {renderHeader(
+          <Button type="submit" form={signInFormId} disabled={login.isPending}>
+            {t(login.isPending ? 'Loading…' : 'Sign in')}
+          </Button>,
+        )}
+        <Card className="module-auth">
+          <CardHeader>
+            <CardTitle>{t('Sign in')}</CardTitle>
+            <p>{t('Use the account provided by your administrator.')}</p>
+          </CardHeader>
+          <CardContent>
+            {notice && <p role="status">{t(notice)}</p>}
+            <form
+              id={signInFormId}
+              onSubmit={(event) => {
+                event.preventDefault();
+                login.mutate();
+              }}
+              className="hr-stack"
+            >
+              <fieldset disabled={login.isPending} className="hr-stack">
+                <div className="hr-form-fields">
+                  <Field
+                    name="Username"
+                    value={values.username || ''}
+                    onChange={update('username')}
+                    required
+                    autoComplete="username"
+                  />
+                  <Field
+                    name="Password"
+                    type="password"
+                    value={values.Password || ''}
+                    onChange={update('Password')}
+                    required
+                    autoComplete="current-password"
+                  />
+                </div>
+              </fieldset>
+              <ErrorMessage error={login.error} />
+              <p className="hr-muted">{t('Forgot your password? Contact your administrator.')}</p>
+            </form>
+          </CardContent>
+        </Card>
+      </>
     );
   return (
     <>
-      <div className="hr-session">
-        <span dir="auto">{current.username || current.name}</span>
-        <Button variant="outline" disabled={logout.isPending} onClick={() => logout.mutate()}>
-          {t('Sign out')}
-        </Button>
-      </div>
+      {renderHeader(
+        <ModuleSessionControls username={current.username || current.name}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={logout.isPending}
+            onClick={() => logout.mutate()}
+          >
+            {t('Sign out')}
+          </Button>
+        </ModuleSessionControls>,
+      )}
       <ErrorMessage error={logout.error} />
       {!current.enabled ? (
         <Card>
@@ -129,7 +164,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
           </CardContent>
         </Card>
       ) : current.mustChangePassword ? (
-        <Card className="hr-auth">
+        <Card className="module-auth">
           <CardHeader>
             <CardTitle>{t('Change password')}</CardTitle>
             <p>{t('Change your temporary password to continue.')}</p>

@@ -1,0 +1,201 @@
+@layer app-controls {
+  :where(button, input, select, textarea) {
+    font: inherit;
+  }
+
+  :where(
+    [data-slot='button'],
+    .fac-button,
+    .fac-icon-button,
+    .workflow-page button,
+    .module-state button
+  ) {
+    --ui-button-height: var(--ui-control-height);
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ui-space-1);
+    min-block-size: var(--ui-button-height);
+    padding: 0.375rem var(--ui-space-3);
+    color: var(--ui-on-primary);
+    background: var(--ui-primary);
+    border: 1px solid var(--ui-primary);
+    border-radius: var(--ui-control-radius);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  :where(
+      [data-slot='button'],
+      .fac-button,
+      .fac-icon-button,
+      .workflow-page button,
+      .module-state button
+    ):hover:not(:disabled) {
+    background: var(--ui-primary-hover);
+    border-color: var(--ui-primary-hover);
+  }
+
+  :where([data-slot='button'][data-variant='outline'], .fac-button--secondary, .fac-icon-button) {
+    color: var(--ui-primary);
+    background: var(--ui-surface);
+    border-color: var(--ui-input-border);
+  }
+
+  :where(
+    [data-slot='button'][data-variant='secondary'],
+    [data-slot='button'][data-variant='ghost'],
+    [data-slot='button'][data-variant='link']
+  ) {
+    color: var(--ui-primary);
+    background: transparent;
+    border-color: transparent;
+  }
+
+  :where([data-slot='button'][data-variant='secondary']) {
+    background: var(--ui-muted);
+  }
+
+  :where(
+      [data-slot='button']:is(
+        [data-variant='outline'],
+        [data-variant='secondary'],
+        [data-variant='ghost'],
+        [data-variant='link']
+      ),
+      .fac-button--secondary,
+      .fac-icon-button
+    ):hover:not(:disabled) {
+    background: var(--ui-accent);
+    border-color: var(--ui-border);
+  }
+
+  :where([data-slot='button'][data-variant='destructive']) {
+    background: var(--ui-danger);
+    border-color: var(--ui-danger);
+  }
+
+  :where([data-slot='button'][data-variant='destructive']):hover:not(:disabled) {
+    background: var(--ui-danger-hover);
+    border-color: var(--ui-danger-hover);
+  }
+
+  :where([data-slot='button']:is([data-size='sm'], [data-size='icon-sm'])) {
+    --ui-button-height: 2rem;
+    padding-inline: var(--ui-space-2);
+  }
+
+  :where([data-slot='button']:is([data-size='xs'], [data-size='icon-xs'])) {
+    --ui-button-height: 1.5rem;
+    padding-inline: var(--ui-space-1);
+    font-size: 0.75rem;
+  }
+
+  :where([data-slot='button']:is([data-size='lg'], [data-size='icon-lg'])) {
+    --ui-button-height: 2.75rem;
+  }
+
+  :where(.fac-icon-button, [data-slot='button'][data-size^='icon']) {
+    inline-size: var(--ui-button-height);
+    padding: 0;
+  }
+
+  :where([data-slot='button']) svg {
+    flex-shrink: 0;
+    pointer-events: none;
+  }
+
+  :where([data-slot='button']) svg:not([class*='size-']):not([width]) {
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+
+  :where(
+    [data-slot='input'],
+    [data-slot='native-select'],
+    [data-slot='textarea'],
+    .faculty-admin select,
+    .fac-field :is(input, select, textarea),
+    .fac-filter-bar select,
+    .fac-search input,
+    .workflow-page :is(input:not([type='radio'], [type='checkbox']), select, textarea)
+  ) {
+    box-sizing: border-box;
+    min-inline-size: 0;
+    min-block-size: var(--ui-control-height);
+    padding: 0.375rem var(--ui-space-2);
+    color: var(--ui-text);
+    background: var(--ui-surface);
+    border: 1px solid var(--ui-input-border);
+    border-radius: var(--ui-control-radius);
+    font-size: 0.875rem;
+  }
+
+  :where(
+    [data-slot='input'],
+    [data-slot='textarea'],
+    .faculty-admin select,
+    .fac-field :is(input, select, textarea),
+    .fac-filter-bar select
+  ) {
+    inline-size: 100%;
+  }
+
+  :where([data-slot='input'], [data-slot='textarea'])::placeholder {
+    color: var(--ui-text-muted);
+  }
+
+  :where([data-slot='native-select']) {
+    padding-inline-end: 2.25rem;
+  }
+
+  :where([data-slot='native-select'][data-size='sm']) {
+    min-block-size: 2rem;
+  }
+
+  :where([data-slot='textarea']) {
+    min-block-size: 4rem;
+    resize: vertical;
+  }
+
+  :where([aria-invalid='true']) {
+    border-color: var(--ui-danger);
+  }
+
+  :where(button, input, select, textarea):disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  :where(a, button, input, select, textarea):focus-visible {
+    outline: 2px solid var(--ui-focus);
+    outline-offset: 2px;
+  }
+
+  :where([data-slot='card']) {
+    background: var(--ui-surface);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-surface-radius);
+    box-shadow: var(--ui-shadow);
+  }
+
+  @media (max-width: 767px) {
+    :where(
+      [data-slot='input'],
+      [data-slot='native-select'],
+      [data-slot='textarea'],
+      .faculty-admin select,
+      .fac-field :is(input, select, textarea),
+      .fac-filter-bar select,
+      .fac-search input,
+      .workflow-page :is(input, select, textarea)
+    ) {
+      font-size: 1rem;
+    }
+  }
+}

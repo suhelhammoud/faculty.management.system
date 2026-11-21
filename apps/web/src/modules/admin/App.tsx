@@ -126,7 +126,11 @@ function ActionForm({
         <Button type="submit">{mutation.isPending ? 'Saving…' : title}</Button>
       </fieldset>
       {mutation.error && <p role="alert">{mutation.error.message}</p>}
-      {done && <p role="status">Saved successfully.</p>}
+      {done && (
+        <p role="status" className="module-success">
+          Saved successfully.
+        </p>
+      )}
     </form>
   );
 }
@@ -321,7 +325,7 @@ function Access() {
   const user = session.data?.user;
   if (!user)
     return (
-      <div className="mx-auto max-w-md pt-12">
+      <div className="module-auth">
         <h1>Faculty administration</h1>
         <p>Sign in with the account provided by your administrator.</p>
         <form
@@ -506,7 +510,7 @@ function Dashboard() {
   );
   return (
     <>
-      <nav aria-label="Administration" className="flex flex-wrap gap-2 mt-6">
+      <nav aria-label="Administration" className="module-navigation">
         {(['users', 'roles', 'acl', 'audit'] as const).map((t) => (
           <Button
             key={t}

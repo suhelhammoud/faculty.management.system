@@ -3,6 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import { DirectionProvider } from '@radix-ui/react-direction';
 import { NavLink, Navigate, Route, Routes } from 'react-router';
+import { ModuleHeaderActions } from '../../components/ModuleDirectoryLink';
 import { createHrClient } from './lib/api';
 import { i18n } from './lib/i18n';
 import { useUi } from './lib/store';
@@ -22,23 +23,32 @@ function HrApp() {
   }, [language]);
   return (
     <DirectionProvider dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <section className="faculty-hr" lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-        <header className="hr-header">
-          <div>
-            <p className="hr-eyebrow">{t('Employee records')}</p>
-            <h1>{t('Human resources')}</h1>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')}
-            aria-label={language === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
-          >
-            {language === 'en' ? 'العربية' : 'English'}
-          </Button>
-        </header>
-        <AuthGate>
-          <nav className="hr-nav" aria-label={t('Human resources')}>
+      <section
+        className="faculty-hr module-surface"
+        lang={language}
+        dir={language === 'ar' ? 'rtl' : 'ltr'}
+      >
+        <AuthGate
+          renderHeader={(sessionControls) => (
+            <header className="module-header">
+              <div>
+                <p className="hr-eyebrow">{t('Employee records')}</p>
+                <h1>{t('Human resources')}</h1>
+              </div>
+              <ModuleHeaderActions sessionControls={sessionControls}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')}
+                  aria-label={language === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
+                >
+                  {language === 'en' ? 'العربية' : 'English'}
+                </Button>
+              </ModuleHeaderActions>
+            </header>
+          )}
+        >
+          <nav className="module-navigation" aria-label={t('Human resources')}>
             <NavLink to="/hr/employees">{t('Employees')}</NavLink>
             <NavLink to="/hr/settings">{t('Settings')}</NavLink>
           </nav>

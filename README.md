@@ -95,8 +95,9 @@ Start the frontend in another terminal:
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The app opens on Attendance.
-Each feature lives in its own folder under `apps/web/src/modules`.
+Open [http://localhost:3000](http://localhost:3000) to choose a module. Each
+module opens on its own page and has an **All modules** link back to the
+directory. Feature code lives in `apps/web/src/modules`.
 
 | Feature         | Route               |
 | --------------- | ------------------- |

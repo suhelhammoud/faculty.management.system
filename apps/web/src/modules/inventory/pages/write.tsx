@@ -617,7 +617,11 @@ function StorageEditor() {
         </fieldset>
         <Button disabled={write.isPending || !room || !account}>{t('Save storage')}</Button>
         <ErrorMessage error={write.error} />
-        {write.isSuccess && <p role="status">{t('Saved')}</p>}
+        {write.isSuccess && (
+          <p role="status" className="module-success">
+            {t('Saved')}
+          </p>
+        )}
       </form>
     </section>
   );
@@ -667,7 +671,11 @@ function Catalog({ shared }: { shared?: boolean }) {
           {t(shared ? 'Create shared account' : 'Create consumable')}
         </Button>
         <ErrorMessage error={write.error} />
-        {write.isSuccess && <p role="status">{t('Saved')}</p>}
+        {write.isSuccess && (
+          <p role="status" className="module-success">
+            {t('Saved')}
+          </p>
+        )}
       </form>
     </section>
   );

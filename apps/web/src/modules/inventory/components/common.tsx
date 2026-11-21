@@ -46,7 +46,7 @@ export function ErrorMessage({ error, retry }: { error: unknown; retry?: () => v
               )[error.status] ?? message);
   }
   return (
-    <div role="alert" className="inv-alert">
+    <div role="alert">
       {t(message)}{' '}
       {retry && (
         <Button type="button" variant="outline" onClick={retry}>

@@ -1,104 +1,37 @@
 @layer inv-theme, inv-utilities;
 @import 'tailwindcss/theme.css' layer(inv-theme) prefix(inv);
 @import 'tailwindcss/utilities.css' layer(inv-utilities) prefix(inv) source(none);
+@import '../../utility-theme.css';
 @source "./";
-@theme inline {
-  --color-background: #fff;
-  --color-foreground: #17263a;
-  --color-card: #fff;
-  --color-card-foreground: #17263a;
-  --color-primary: #1d4858;
-  --color-primary-foreground: #fff;
-  --color-secondary: #eef2f5;
-  --color-secondary-foreground: #17263a;
-  --color-muted: #eef2f5;
-  --color-muted-foreground: #526176;
-  --color-accent: #e9f3f3;
-  --color-accent-foreground: #17263a;
-  --color-destructive: #b42318;
-  --color-border: #d4dce3;
-  --color-input: #bbc8d1;
-  --color-ring: #22718a;
+@layer inv-base {
+  .faculty-inventory *,
+  .faculty-inventory *::before,
+  .faculty-inventory *::after {
+    box-sizing: border-box;
+    border: 0 solid var(--ui-border);
+  }
 }
-.faculty-inventory {
-  box-sizing: border-box;
-  color: #17263a;
-  background: #f7f9fb;
-  color-scheme: light;
-  font:
-    15px/1.55 system-ui,
-    sans-serif;
-  letter-spacing: normal;
-  text-align: start;
-  padding: clamp(12px, 3vw, 28px);
-  border: 1px solid #dfe6eb;
-  border-radius: 12px;
-  min-width: 0;
-  min-height: 65vh;
-}
-.faculty-inventory *,
-.faculty-inventory *::before,
-.faculty-inventory *::after {
-  box-sizing: border-box;
-  border-color: #d4dce3;
-  border-style: solid;
-  border-width: 0;
-}
-.faculty-inventory :where(h1, h2, h3, p, dl, dd) {
+.faculty-inventory :where(dl, dd) {
   margin: 0;
   font-family: inherit;
   letter-spacing: normal;
   line-height: 1.4;
 }
-.faculty-inventory h1 {
-  font-size: 28px;
-}
 .faculty-inventory h2 {
-  font-size: 22px;
   margin-block-end: 12px;
-}
-.faculty-inventory h3 {
-  font-size: 17px;
-}
-.faculty-inventory a {
-  color: #155a72;
-  text-underline-offset: 3px;
-}
-.faculty-inventory a[aria-current='page'] {
-  font-weight: 700;
-  background: #e9f3f3;
-}
-.faculty-inventory :where(input, select, textarea, button) {
-  font: inherit;
 }
 .faculty-inventory :where(input:not([type='checkbox']), select, textarea) {
   width: 100%;
-}
-.faculty-inventory :where(button, select):not(:disabled) {
-  cursor: pointer;
 }
 .faculty-inventory fieldset {
   margin: 0;
   min-width: 0;
 }
-.faculty-inventory .inv-header,
 .faculty-inventory .inv-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
-}
-.faculty-inventory .inv-header {
-  justify-content: space-between;
-  margin-block-end: 16px;
-}
-.faculty-inventory .inv-nav {
-  padding-block: 8px;
-  border-block: 1px solid #dce4eb;
-}
-.faculty-inventory .inv-nav a {
-  padding: 6px 9px;
-  border-radius: 6px;
 }
 .faculty-inventory .inv-stack,
 .faculty-inventory .inv-field,
@@ -117,19 +50,16 @@
   align-items: start;
 }
 .faculty-inventory .inv-panel {
-  background: white;
-  padding: 14px;
-  border: 1px solid #dce4eb;
-  border-radius: 8px;
-}
-.faculty-inventory .inv-auth {
-  max-width: 420px;
+  background: var(--ui-surface);
+  padding: var(--ui-space-3);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-surface-radius);
 }
 .faculty-inventory .inv-table {
   overflow-x: auto;
-  border: 1px solid #dce4eb;
+  border: 1px solid var(--ui-border);
   border-radius: 8px;
-  background: white;
+  background: var(--ui-surface);
 }
 .faculty-inventory table {
   width: 100%;
@@ -137,26 +67,20 @@
 }
 .faculty-inventory th,
 .faculty-inventory td {
-  padding: 10px;
+  padding: var(--ui-space-2);
   text-align: start;
-  border-block-end: 1px solid #e2e8ef;
+  border-block-end: 1px solid var(--ui-border);
   vertical-align: top;
 }
 .faculty-inventory th {
   white-space: nowrap;
-  background: #eef2f5;
-}
-.faculty-inventory .inv-alert {
-  color: #9c2518;
-  background: #fff4f1;
-  padding: 9px;
-  border-radius: 6px;
+  background: var(--ui-muted);
 }
 .faculty-inventory .inv-dialog-overlay {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: #16213380;
+  background: var(--ui-overlay);
 }
 .faculty-inventory .inv-dialog {
   position: fixed;

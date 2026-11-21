@@ -1,0 +1,18 @@
+@theme inline {
+  --color-background: var(--ui-surface);
+  --color-foreground: var(--ui-text);
+  --color-card: var(--ui-surface);
+  --color-card-foreground: var(--ui-text);
+  --color-primary: var(--ui-primary);
+  --color-primary-foreground: var(--ui-on-primary);
+  --color-secondary: var(--ui-muted);
+  --color-secondary-foreground: var(--ui-text);
+  --color-muted: var(--ui-muted);
+  --color-muted-foreground: var(--ui-text-muted);
+  --color-accent: var(--ui-accent);
+  --color-accent-foreground: var(--ui-text);
+  --color-destructive: var(--ui-danger);
+  --color-border: var(--ui-border);
+  --color-input: var(--ui-input-border);
+  --color-ring: var(--ui-focus);
+}

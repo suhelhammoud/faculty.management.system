@@ -1,11 +1,22 @@
-import { useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  ModuleSessionControls,
+  type RenderModuleHeader,
+} from '../../../components/ModuleDirectoryLink';
 import { authApi, ApiError } from '../lib/api';
 import type { Session } from '../lib/types';
 import { useLanguage } from '../lib/language-context';
 
-export function AuthGate({ children }: { children: ReactNode }) {
+export function AuthGate({
+  children,
+  renderHeader,
+}: {
+  children: ReactNode;
+  renderHeader: RenderModuleHeader;
+}) {
   const { t } = useLanguage();
+  const signInFormId = useId();
   const client = useQueryClient();
   const previousIdentity = useRef<string | undefined>(undefined);
   const [username, setUsername] = useState('');
@@ -89,65 +100,88 @@ export function AuthGate({ children }: { children: ReactNode }) {
     );
   };
 
-  if (session.isPending) return <p role="status">{t('Loading…')}</p>;
+  if (session.isPending)
+    return (
+      <>
+        {renderHeader(null)}
+        <p role="status">{t('Loading…')}</p>
+      </>
+    );
   if (session.error) {
     return (
-      <div className="fac-card fac-stack" role="alert">
-        <p>{t(session.error.message)}</p>
-        <button className="fac-button fac-button--secondary" onClick={() => void session.refetch()}>
-          {t('Retry')}
-        </button>
-      </div>
+      <>
+        {renderHeader(null)}
+        <div className="fac-card fac-stack" role="alert">
+          <p>{t(session.error.message)}</p>
+          <button
+            className="fac-button fac-button--secondary"
+            onClick={() => void session.refetch()}
+          >
+            {t('Retry')}
+          </button>
+        </div>
+      </>
     );
   }
   const current = session.data?.user;
   if (!current) {
     return (
-      <div className="fac-auth fac-card">
-        <h2>{t('Sign in')}</h2>
-        <p className="fac-muted">{t('Use the account provided by your administrator.')}</p>
-        {notice && <p role="status">{t(notice)}</p>}
-        <form className="fac-form" onSubmit={handleSignIn}>
-          <label className="fac-field">
-            <span>{t('Username')}</span>
-            <input
-              autoComplete="username"
-              required
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-            />
-          </label>
-          <label className="fac-field">
-            <span>{t('Password')}</span>
-            <input
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </label>
-          <button className="fac-button" disabled={signIn.isPending}>
+      <>
+        {renderHeader(
+          <button
+            type="submit"
+            form={signInFormId}
+            className="fac-button"
+            disabled={signIn.isPending}
+          >
             {t(signIn.isPending ? 'Loading…' : 'Sign in')}
-          </button>
-          {failure(signIn.error)}
-        </form>
-      </div>
+          </button>,
+        )}
+        <div className="module-auth fac-card">
+          <h2>{t('Sign in')}</h2>
+          <p className="fac-muted">{t('Use the account provided by your administrator.')}</p>
+          {notice && <p role="status">{t(notice)}</p>}
+          <form id={signInFormId} className="fac-form" onSubmit={handleSignIn}>
+            <label className="fac-field">
+              <span>{t('Username')}</span>
+              <input
+                autoComplete="username"
+                required
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+              />
+            </label>
+            <label className="fac-field">
+              <span>{t('Password')}</span>
+              <input
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </label>
+            {failure(signIn.error)}
+          </form>
+        </div>
+      </>
     );
   }
 
   return (
     <>
-      <div className="fac-session">
-        <span dir="auto">{current.username || current.name}</span>
-        <button
-          className="fac-button fac-button--secondary"
-          disabled={signOut.isPending}
-          onClick={() => signOut.mutate()}
-        >
-          {t('Sign out')}
-        </button>
-      </div>
+      {renderHeader(
+        <ModuleSessionControls username={current.username || current.name}>
+          <button
+            type="button"
+            className="fac-button fac-button--secondary"
+            disabled={signOut.isPending}
+            onClick={() => signOut.mutate()}
+          >
+            {t('Sign out')}
+          </button>
+        </ModuleSessionControls>,
+      )}
       {failure(signOut.error)}
       {!current.enabled ? (
         <div className="fac-card fac-stack">
@@ -155,7 +189,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
           <p>{t('Contact your administrator.')}</p>
         </div>
       ) : current.mustChangePassword ? (
-        <form className="fac-auth fac-card fac-form" onSubmit={handleChangePassword}>
+        <form className="module-auth fac-card fac-form" onSubmit={handleChangePassword}>
           <h2>{t('Change password')}</h2>
           <p className="fac-muted">{t('Use 12–128 characters.')}</p>
           <label className="fac-field">

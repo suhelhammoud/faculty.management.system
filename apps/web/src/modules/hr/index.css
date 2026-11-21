@@ -1,84 +1,23 @@
 @layer hr-base, hr-theme, hr-components, hr-utilities;
 @import 'tailwindcss/theme.css' layer(hr-theme) prefix(hr);
 @import 'tailwindcss/utilities.css' layer(hr-utilities) prefix(hr) source(none);
+@import '../../utility-theme.css';
 @source "./";
-@theme inline {
-  --color-background: var(--hr-background);
-  --color-foreground: var(--hr-foreground);
-  --color-card: var(--hr-background);
-  --color-card-foreground: var(--hr-foreground);
-  --color-primary: #262626;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #f5f5f5;
-  --color-secondary-foreground: #262626;
-  --color-muted: #f5f5f5;
-  --color-muted-foreground: #737373;
-  --color-accent: #f5f5f5;
-  --color-accent-foreground: #171717;
-  --color-destructive: #b91c1c;
-  --color-border: #e5e5e5;
-  --color-input: #d4d4d4;
-  --color-ring: #737373;
-}
-.faculty-hr {
-  --hr-background: #fff;
-  --hr-foreground: #171717;
-  font:
-    14px/1.5 system-ui,
-    sans-serif;
-  color: #171717;
-  color-scheme: light;
-  text-align: start;
-  background: #fafafa;
-  padding: 24px;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  min-height: 70vh;
-  letter-spacing: normal;
-}
 @layer hr-base {
   .faculty-hr *,
   .faculty-hr *::before,
   .faculty-hr *::after {
     box-sizing: border-box;
-    border-color: #e5e5e5;
+    border-color: var(--ui-border);
     border-style: solid;
     border-width: 0;
   }
 }
-.faculty-hr :where(h1, h2, h3, p, dl, dd) {
+.faculty-hr :where(dl, dd) {
   margin: 0;
   color: inherit;
   letter-spacing: normal;
   line-height: 1.5;
-}
-.faculty-hr h1 {
-  font-size: 24px;
-  font-weight: 650;
-}
-.faculty-hr h2 {
-  font-size: 20px;
-  font-weight: 600;
-}
-.faculty-hr h3 {
-  font-size: 16px;
-  font-weight: 600;
-}
-.faculty-hr a {
-  color: #1d4ed8;
-  text-decoration: none;
-}
-.faculty-hr a:hover {
-  text-decoration: underline;
-}
-.faculty-hr :where(button, input, textarea, select) {
-  font: inherit;
-}
-.faculty-hr button {
-  cursor: pointer;
-}
-.faculty-hr button:disabled {
-  cursor: default;
 }
 .faculty-hr :where(input, textarea, select) {
   width: 100%;
@@ -95,16 +34,7 @@
   text-align: start;
 }
 .faculty-hr [data-slot='table-cell'] {
-  padding-block: 12px;
-}
-.faculty-hr [data-slot='button'] {
-  text-decoration: none;
-}
-.faculty-hr [data-slot='button'][data-variant='default'] {
-  color: #fff;
-}
-.faculty-hr [data-slot='button'][data-variant='outline'] {
-  color: #171717;
+  padding: var(--ui-space-2);
 }
 .faculty-hr [data-slot='dialog-content'] {
   max-height: 85vh;
@@ -117,42 +47,18 @@
   right: auto;
   left: 12px;
 }
-.hr-header,
-.hr-row,
-.hr-session {
+.hr-row {
   display: flex;
   gap: 16px;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
 }
-.hr-header {
-  margin-bottom: 20px;
-}
 .hr-eyebrow,
 .hr-muted,
 .faculty-hr dt {
   font-size: 13px;
-  color: #737373;
-}
-.hr-nav {
-  display: flex;
-  gap: 24px;
-  border-bottom: 1px solid #e5e5e5;
-  margin-block: 20px 24px;
-  padding-bottom: 12px;
-}
-.hr-nav a {
-  color: #525252;
-}
-.hr-nav a.active {
-  color: #171717;
-  font-weight: 650;
-}
-.hr-session {
-  justify-content: flex-end;
-  font-size: 13px;
-  margin-bottom: 16px;
+  color: var(--ui-text-muted);
 }
 .hr-stack {
   display: grid;
@@ -193,15 +99,8 @@
 }
 
 .hr-field-error {
-  color: #b91c1c;
+  color: var(--ui-danger);
   font-size: 13px;
-}
-.hr-success {
-  color: #166534;
-}
-.hr-auth {
-  max-width: 440px;
-  margin: 40px auto;
 }
 .hr-check,
 .hr-person-heading {
@@ -226,9 +125,6 @@
   white-space: pre-wrap;
 }
 @media (max-width: 640px) {
-  .faculty-hr {
-    padding: 16px;
-  }
   .hr-detail-grid {
     grid-template-columns: minmax(0, 1fr);
   }

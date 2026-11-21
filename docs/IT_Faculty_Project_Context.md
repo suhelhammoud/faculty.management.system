@@ -65,9 +65,11 @@ faculty.management.system/
 
 ## 5. Frontend development and hosting
 
-Run `pnpm dev` and open `http://localhost:3000`. Run `pnpm dev:api` for features
-that need the API. The web app takes one `VITE_API_URL` and builds with
-`pnpm build:web`. Module paths are preserved on the web origin. See the
+Run `pnpm dev` and open the module directory at `http://localhost:3000`. Each
+module opens on its own page with an **All modules** link back to the directory.
+Run `pnpm dev:api` for features that need the API. The web app takes one
+`VITE_API_URL` and builds with `pnpm build:web`. Module paths are preserved on the
+web origin. See the
 [web app guide](../apps/web/README.md) for deployment and nested-route hosting.
 
 ## 6. Backend and database

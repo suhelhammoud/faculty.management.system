@@ -7,8 +7,15 @@ accounts, and module routes.
 
 The app uses one React Router and lazy-loads feature routes from `src/modules/`.
 Each feature keeps its routes, components, styles, and tests in its own folder.
+The directory at `/` lists every module. Module routes such as `/inventory`
+and `/hr` open on their own pages, with an **All modules** link to the directory.
 Copy `.env.example` to `.env` in this folder if you need to change the public
 `VITE_API_URL`. The local default is `http://localhost:4000`.
+
+Use the shared colors, spacing, and typography in `src/theme.css` when styling
+a feature. `src/utility-theme.css` maps those colors to Tailwind utilities.
+Use the `@project/ui` form primitives and the shared module header and navigation
+styles for new screens. Verify controls at phone widths in both English and Arabic.
 
 ## Build and host
 

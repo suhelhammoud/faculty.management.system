@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router';
+import { Link, NavLink, Navigate, useNavigate, useParams, useSearchParams } from 'react-router';
 import type {
   WorkflowActionResult,
   WorkflowInstance,
@@ -54,12 +54,12 @@ function Resource<T>({
 function Frame({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="workflow-page">
-      <nav aria-label="Workflow pages">
-        <Link to="/workflow/tasks">Task inbox</Link>
-        <Link to="/workflow/monitor">Monitor</Link>
-        <Link to={`/${removalPath}/new`}>Propose asset removal</Link>
+      <h1>{title}</h1>
+      <nav className="module-navigation" aria-label="Workflow pages">
+        <NavLink to="/workflow/tasks">Task inbox</NavLink>
+        <NavLink to="/workflow/monitor">Monitor</NavLink>
+        <NavLink to={`/${removalPath}/new`}>Propose asset removal</NavLink>
       </nav>
-      <h2>{title}</h2>
       {children}
     </section>
   );

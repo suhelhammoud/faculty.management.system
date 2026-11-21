@@ -38,7 +38,7 @@ export function Loading() {
 export function Success({ show }: { show: boolean }) {
   const { t } = useTranslation();
   return show ? (
-    <p role="status" className="hr-success">
+    <p role="status" className="module-success">
       {t('Saved successfully.')}
     </p>
   ) : null;
