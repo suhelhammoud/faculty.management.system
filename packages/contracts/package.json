@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./student-affairs": {
+      "types": "./student-affairs.d.ts"
+    },
     "./workflow": {
       "types": "./workflow.d.ts"
     }

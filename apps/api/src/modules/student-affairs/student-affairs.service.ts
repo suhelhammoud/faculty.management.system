@@ -8,6 +8,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PERMISSION } from '@project/authorization';
+import type {
+  PromotionGrantRecipient,
+  StaffYearAssignments,
+  StudentAffairsCapabilities,
+  StudentList,
+} from '@project/contracts/student-affairs';
 import type { Database } from '@project/db';
 import {
   auditLog,
@@ -30,6 +36,7 @@ import {
   gt,
   ilike,
   isNull,
+  ne,
   or,
   sql,
 } from 'drizzle-orm';
@@ -87,7 +94,51 @@ export class StudentAffairsService {
     @Inject(AuthorizationService) private readonly auth: AuthorizationService,
   ) {}
 
-  async list({ search, studyYear, page, pageSize }: StudentQuery) {
+  async capabilities(actor: string): Promise<StudentAffairsCapabilities> {
+    const [read, administer, grantPromotions] = await Promise.all([
+      this.auth.can(actor, permissions.read),
+      this.auth.can(actor, permissions.administer),
+      this.auth.can(actor, permissions.grantPromotions),
+    ]);
+    const assignments = read
+      ? await this.db
+          .select({ year: staffYears.studyYear })
+          .from(staffYears)
+          .where(eq(staffYears.userId, actor))
+          .orderBy(asc(staffYears.studyYear))
+      : [];
+    return {
+      read,
+      administer,
+      grantPromotions,
+      assignedStudyYears: assignments.map(({ year }) => year),
+    };
+  }
+
+  promotionRecipients(actor: string): Promise<PromotionGrantRecipient[]> {
+    return this.db
+      .selectDistinct({ userId: user.id, name: user.name })
+      .from(user)
+      .innerJoin(userRoles, eq(userRoles.userId, user.id))
+      .innerJoin(
+        rolePermissions,
+        and(
+          eq(rolePermissions.roleId, userRoles.roleId),
+          eq(rolePermissions.permission, permissions.administer),
+        ),
+      )
+      .where(
+        and(
+          ne(user.id, actor),
+          eq(user.approved, true),
+          eq(user.enabled, true),
+          eq(user.mustChangePassword, false),
+        ),
+      )
+      .orderBy(asc(user.name), asc(user.id));
+  }
+
+  async list({ search, studyYear, page, pageSize }: StudentQuery): Promise<StudentList> {
     const matchesName = search?.split(/\s+/).map((token) => {
       const pattern = `%${literalSearch(token)}%`;
       return or(
@@ -272,7 +323,7 @@ export class StudentAffairsService {
     });
   }
 
-  async listStaff() {
+  async listStaff(): Promise<StaffYearAssignments[]> {
     const [members, assignments] = await Promise.all([
       this.db
         .selectDistinct({ userId: user.id, name: user.name })

@@ -1,0 +1,111 @@
+.faculty-student-affairs {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.faculty-student-affairs :is(h2, h3, p, dl, dd) {
+  margin: 0;
+}
+
+.faculty-student-affairs :is(.sta-stack, .sta-form-sections) {
+  display: grid;
+  gap: var(--ui-space-3);
+  min-inline-size: 0;
+}
+
+.faculty-student-affairs .sta-form-sections {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.faculty-student-affairs .sta-panel {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-surface-radius);
+  padding: var(--ui-inset);
+}
+
+.faculty-student-affairs .sta-panel > h3 {
+  margin-block-end: var(--ui-space-2);
+}
+
+.faculty-student-affairs :is(.sta-heading, .sta-actions) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+}
+
+.faculty-student-affairs .sta-heading {
+  justify-content: space-between;
+}
+
+.faculty-student-affairs .sta-filters {
+  align-items: end;
+}
+
+.faculty-student-affairs :is(.sta-fields, .sta-field) {
+  display: grid;
+  gap: var(--ui-space-2);
+  min-inline-size: 0;
+}
+
+.faculty-student-affairs .sta-fields {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: var(--ui-space-3);
+}
+
+.faculty-student-affairs .sta-field > span:first-child,
+.faculty-student-affairs dt {
+  color: var(--ui-text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.faculty-student-affairs dd {
+  white-space: pre-wrap;
+}
+
+.faculty-student-affairs .sta-table {
+  overflow-x: auto;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-surface-radius);
+  background: var(--ui-surface);
+}
+
+.faculty-student-affairs table {
+  border-collapse: collapse;
+  inline-size: 100%;
+}
+
+.faculty-student-affairs :is(th, td) {
+  padding: var(--ui-space-2) var(--ui-space-3);
+  text-align: start;
+  border-block-end: 1px solid var(--ui-border);
+}
+
+.faculty-student-affairs thead {
+  background: var(--ui-muted);
+}
+
+.faculty-student-affairs .sta-muted {
+  color: var(--ui-text-muted);
+}
+
+.faculty-student-affairs .sta-active {
+  color: var(--ui-success);
+}
+
+.faculty-student-affairs .sta-error {
+  color: var(--ui-danger);
+  background: var(--ui-danger-surface);
+  padding: var(--ui-space-2);
+  border-radius: var(--ui-control-radius);
+}
+
+@media (max-width: 540px) {
+  .faculty-student-affairs .sta-filters .sta-field {
+    flex: 1 1 100%;
+  }
+}

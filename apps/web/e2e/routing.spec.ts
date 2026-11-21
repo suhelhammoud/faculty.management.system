@@ -336,3 +336,37 @@ test('preserves the shared Workflow and fallback routes', async ({ page }) => {
   await allModulesLink(page).click();
   await expect(moduleLink(page, 'Workflows')).toBeVisible();
 });
+
+test('opens a Student Affairs profile directly on a phone and switches to Arabic RTL', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockSession(page);
+  await page.route('**/api/student-affairs/capabilities', (route) =>
+    route.fulfill({
+      json: { read: true, administer: false, grantPromotions: false, assignedStudyYears: [1] },
+    }),
+  );
+  await page.route('**/api/student-affairs/students/demo-student', (route) =>
+    route.fulfill({
+      json: {
+        studentId: 'demo-student',
+        academicId: 'DEMO-STA-002',
+        firstName: 'ليلى',
+        fatherName: 'خالد',
+        lastName: 'أحمد',
+        currentStudyYear: 2,
+      },
+    }),
+  );
+  await page.goto('/student-affairs/students/demo-student');
+  await expect(page.getByRole('heading', { name: 'ليلى خالد أحمد' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Edit profile' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'العربية' }).click();
+  await expect(page.getByRole('heading', { name: 'شؤون الطلاب' })).toBeVisible();
+  await expect(page.locator('.faculty-student-affairs')).toHaveAttribute('dir', 'rtl');
+  await expect(page.getByRole('link', { name: 'السجلات السنوية' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.reload();
+  await expect(page.locator('.faculty-student-affairs')).toHaveAttribute('dir', 'rtl');
+});

@@ -14,7 +14,7 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { PERMISSION } from '@project/authorization';
-import { ActorId, RequirePermission } from '../../auth/auth.guard.js';
+import { ActorId, RequirePermission, RequireSession } from '../../auth/auth.guard.js';
 import {
   academicYearParam,
   annualCreate,
@@ -42,26 +42,35 @@ const permission = PERMISSION.studentAffairs;
 
 @Controller('api/student-affairs')
 @UsePipes(new StandardSchemaValidationPipe())
-@RequirePermission(permission.read)
 export class StudentAffairsController {
   constructor(@Inject(StudentAffairsService) private readonly affairs: StudentAffairsService) {}
 
+  @Get('capabilities')
+  @RequireSession()
+  capabilities(@ActorId() actor: string) {
+    return this.affairs.capabilities(actor);
+  }
+
   @Get('students')
+  @RequirePermission(permission.read)
   list(@Query({ schema: studentQuery }) query: StudentQuery) {
     return this.affairs.list(query);
   }
 
   @Post('students')
+  @RequirePermission(permission.read)
   create(@ActorId() actor: string, @Body({ schema: studentCreate }) body: StudentCreate) {
     return this.affairs.create(actor, body);
   }
 
   @Get('students/:studentId')
+  @RequirePermission(permission.read)
   get(@Param('studentId', { schema: uuid }) id: string) {
     return this.affairs.get(id);
   }
 
   @Patch('students/:studentId')
+  @RequirePermission(permission.read)
   patch(
     @ActorId() actor: string,
     @Param('studentId', { schema: uuid }) id: string,
@@ -81,11 +90,13 @@ export class StudentAffairsController {
   }
 
   @Get('students/:studentId/academic-years')
+  @RequirePermission(permission.read)
   listAnnual(@Param('studentId', { schema: uuid }) id: string) {
     return this.affairs.listAnnual(id);
   }
 
   @Post('students/:studentId/academic-years')
+  @RequirePermission(permission.read)
   createAnnual(
     @ActorId() actor: string,
     @Param('studentId', { schema: uuid }) id: string,
@@ -95,6 +106,7 @@ export class StudentAffairsController {
   }
 
   @Patch('students/:studentId/academic-years/:academicYear')
+  @RequirePermission(permission.read)
   patchAnnual(
     @ActorId() actor: string,
     @Param('studentId', { schema: uuid }) id: string,
@@ -136,6 +148,12 @@ export class StudentAffairsController {
   @RequirePermission(permission.grantPromotions)
   listGrants() {
     return this.affairs.listGrants();
+  }
+
+  @Get('promotion-grants/recipients')
+  @RequirePermission(permission.grantPromotions)
+  recipients(@ActorId() actor: string) {
+    return this.affairs.promotionRecipients(actor);
   }
 
   @Get('promotion-grants/current')

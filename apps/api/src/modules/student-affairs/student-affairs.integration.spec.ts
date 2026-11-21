@@ -160,6 +160,43 @@ describe.skipIf(!databaseName)('Student Affairs HTTP API', () => {
     await connection?.pool.end();
   });
 
+  it('returns only the caller’s capabilities and limits recipient lookup to the dean', async () => {
+    const capabilities = `${base}/capabilities`;
+    const recipients = `${grantPath}/recipients`;
+    await client().get(capabilities).expect(401);
+    await client()
+      .get(capabilities)
+      .set(headers('first'))
+      .expect(200, {
+        read: true,
+        administer: false,
+        grantPromotions: false,
+        assignedStudyYears: [1],
+      });
+    await client().get(capabilities).set(headers('dean')).expect(200, {
+      read: false,
+      administer: false,
+      grantPromotions: true,
+      assignedStudyYears: [],
+    });
+    await client().get(registry).set(headers('dean')).expect(403);
+    await client().get(recipients).set(headers('first')).expect(403);
+    const fixtureAccounts = new Set<string>(Object.values(actors));
+    const candidates = async () => {
+      const response = await client().get(recipients).set(headers('dean')).expect(200);
+      return (response.body as { userId: string; name: string }[]).filter(({ userId }) =>
+        fixtureAccounts.has(userId),
+      );
+    };
+    expect(await candidates()).toEqual([{ userId: actors.admin, name: 'admin' }]);
+    await connection.db.update(user).set({ enabled: false }).where(eq(user.id, actors.admin));
+    try {
+      expect(await candidates()).toEqual([]);
+    } finally {
+      await connection.db.update(user).set({ enabled: true }).where(eq(user.id, actors.admin));
+    }
+  });
+
   it('supports private cross-year reads, Arabic name search, and overlapping assignments', async () => {
     const values = profile();
     const { body } = await client().post(registry).set(headers('first')).send(values).expect(201);

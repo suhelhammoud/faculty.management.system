@@ -6,7 +6,7 @@ Manages student applications, enrollment, academic records, certificates, and st
 
 ## Users and workflows
 
-The staff API handles the student registry, basic annual records, and study-year changes. Student account activation and recovery are proposed separately. [Identity and access](../../identity-and-access.md)
+The Student Affairs workspace is available at `/student-affairs` in English and Arabic. It supports the student registry, annual records, staff assignments, and dean-issued promotion grants. Student account activation and recovery are proposed separately. [Identity and access](../../identity-and-access.md)
 
 ## Permissions and dependencies
 
@@ -24,6 +24,7 @@ All paths are relative to `/api/student-affairs`. Requests require an active ses
 
 | Method and path                                            | Behavior                                                                                                                                                                                                                                                                                                   |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /capabilities`                                        | Return the caller’s registry, administration, and dean permissions and assigned study years. Requires an active session.                                                                                                                                                                                   |
 | `GET /students`                                            | Search academic IDs or any component of a student’s name with `search`. Filter with `studyYear=1` through `5` or `studyYear=unassigned`. Returns `{ records, total, page, pageSize }` with IDs, names, and current study year. `page` defaults to 1 and `pageSize` to 20, with a maximum page size of 100. |
 | `POST /students`                                           | Create a student with `academicId`, `firstName`, `fatherName`, `lastName`, and `currentStudyYear`. Optional profile fields include contact, civil registry, and admission details.                                                                                                                         |
 | `GET /students/:studentId`                                 | Read the student’s profile and admission details.                                                                                                                                                                                                                                                          |
@@ -36,6 +37,7 @@ All paths are relative to `/api/student-affairs`. Requests require an active ses
 | `PUT`, `DELETE /staff-year-assignments/:userId/:studyYear` | Grant or revoke one year. Repeating the request is safe.                                                                                                                                                                                                                                                   |
 | `GET /promotion-grants`                                    | List promotion grants for the dean, including expired and revoked grants.                                                                                                                                                                                                                                  |
 | `POST /promotion-grants`                                   | Issue a grant with `{ userId, expiresAt }` to the active Student Affairs admin. `expiresAt` is an ISO timestamp with a time zone.                                                                                                                                                                          |
+| `GET /promotion-grants/recipients`                         | List eligible admin names and account IDs. Requires the dean permission.                                                                                                                                                                                                                                   |
 | `GET /promotion-grants/current`                            | Return `{ grant }` for the signed-in Student Affairs admin. An absent live grant is represented as `null`.                                                                                                                                                                                                 |
 | `DELETE /promotion-grants/:grantId`                        | Revoke a grant immediately. Repeating a revocation is safe.                                                                                                                                                                                                                                                |
 
@@ -59,12 +61,13 @@ After applying migrations to a local database, set `SEED_USER_PASSWORD` in `pack
 | `sta_staff_two`   | Read all students and write in Years 2 and 3.                                                                         |
 | `sta_staff_three` | Read all students and write in Years 4 and 5.                                                                         |
 
-All demo accounts use the configured seed password. With the API running, sign in separately as each actor and send requests to `/api/student-affairs` with that actor’s session. Use a trusted browser origin for writes.
+All demo accounts use the configured seed password. Start the API and web app, then open `/student-affairs`. Use separate browser sessions or sign out between roles.
 
-1. As `sta_staff_three`, search for `DEMO-STA-002` with `GET /students?search=DEMO-STA-002`. Save its `studentId`. Reading the profile succeeds, and editing it returns `403` because the student is in Year 2. Both `sta_staff_one` and `sta_staff_two` can edit that profile.
-2. As `sta_admin`, try `PUT /students/:studentId/current-study-year` with `{"currentStudyYear":3}`. A fresh seed starts with an empty grant list, so the request returns `403`.
-3. As `sta_dean`, submit `POST /promotion-grants` with `userId` set to `seed-sta_admin` and `expiresAt` set to a future ISO timestamp with a time zone. Save the grant ID. Retry the move as `sta_admin`. It returns `200`. The annual records still show their original study years.
-4. As `sta_dean`, call `DELETE /promotion-grants/:grantId`. A subsequent attempt by `sta_admin` to move the student to Year 4 returns `403`. `sta_staff_two` can now edit the profile in Year 3, and the Year 2 annual row stays editable by both staff assigned to Year 2.
+1. Sign in as `sta_staff_three`. Search for `DEMO-STA-002` and open its profile and **Annual records**. The profile is readable and its current Year 2 is outside this staff member’s edit scope.
+2. Sign in as `sta_admin`. Open **Staff assignments** to see that two staff share Year 2. On the student profile, **Change study year** shows the grant status. A fresh seed starts with no active grant.
+3. Sign in as `sta_dean`. In **Promotion grants**, choose the Student Affairs admin and a future expiry. Review the displayed deadline and confirm the grant.
+4. Return to `sta_admin`, choose Year 3 on the student profile, and confirm the move. The annual records retain their original years. `sta_staff_two` can now edit the profile, and both Year 2 staff can still edit remarks on the Year 2 annual row.
+5. As `sta_dean`, revoke the grant and confirm. The admin can use **Refresh grant status** to check immediately. Moves between assigned years are unavailable until the dean issues another grant.
 
 Rerunning the local seed preserves existing student and annual record edits, staff year assignment changes, and promotion grants, including revocations.
 

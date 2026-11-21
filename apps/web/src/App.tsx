@@ -39,6 +39,7 @@ const modules: Record<
   'student-affairs': {
     title: 'Student Affairs',
     Component: StudentAffairsApp,
+    directoryLinkInHeader: true,
   },
   facilities: { title: 'Facilities', Component: FacilitiesApp, directoryLinkInHeader: true },
 };
