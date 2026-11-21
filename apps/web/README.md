@@ -14,8 +14,9 @@ Copy `.env.example` to `.env` in this folder if you need to change the public
 
 Use the shared colors, spacing, and typography in `src/theme.css` when styling
 a feature. `src/utility-theme.css` maps those colors to Tailwind utilities.
-Use the `@project/ui` form primitives and the shared module header and navigation
-styles for new screens. Verify controls at phone widths in both English and Arabic.
+Use the form primitives in `src/components/ui` and the shared module header and
+navigation styles for new screens. Verify controls at phone widths in both English
+and Arabic.
 
 ## Build and host
 

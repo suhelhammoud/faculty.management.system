@@ -1,4 +1,4 @@
-import { formatDate } from '@project/ui/date-input';
+import { formatDate } from '@/components/ui/date-input';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';

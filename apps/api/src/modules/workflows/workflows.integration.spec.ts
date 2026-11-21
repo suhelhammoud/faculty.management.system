@@ -123,6 +123,7 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       { roleId: actorRoles.manager, permission: permissionGrants.read },
       { roleId: actorRoles.manager, permission: permissionGrants.configure },
       { roleId: actorRoles.manager, permission: permissionGrants.postTransactions },
+      { roleId: actorRoles.manager, permission: permissionGrants.withdrawRemoval },
       { roleId: actorRoles.reviewer, permission: permissionGrants.dispose },
     ]);
     await db.insert(hrEmployees).values(
@@ -187,6 +188,14 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
   function action(taskId: string, actorId: string, payload: object, key = randomUUID()) {
     return client()
       .post(`${taskApi}/${taskId}/actions`)
+      .set(headers(actorId))
+      .set('Idempotency-Key', key)
+      .send(payload);
+  }
+
+  function withdraw(instanceId: string, actorId: string, payload: object, key = randomUUID()) {
+    return client()
+      .post(`/api/workflow/instances/${instanceId}/withdraw`)
       .set(headers(actorId))
       .set('Idempotency-Key', key)
       .send(payload);
@@ -469,6 +478,89 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
     expect(await inbox(actors.reviewer)).toContainEqual(
       expect.objectContaining({ id: next.taskId, step: 'review' }),
     );
+  });
+
+  it('lets the requester withdraw during review or revision and preserves the history on retry', async () => {
+    const ids = [await asset()];
+    const review = await start(ids);
+    const detail = (actorId: string) =>
+      client().get(`/api/workflow/instances/${review.instanceId}`).set(headers(actorId));
+    expect((await detail(actors.requester).expect(200)).body.canWithdraw).toBe(true);
+    expect((await detail(actors.reviewer).expect(200)).body.canWithdraw).toBe(false);
+    await withdraw(review.instanceId, actors.reviewer, {}).expect(403);
+    await withdraw(review.instanceId, actors.outsider, {}).expect(404);
+
+    const revision = started(
+      (
+        await action(review.taskId, actors.reviewer, {
+          action: 'return',
+          comment: 'Revise',
+        }).expect(200)
+      ).body,
+    );
+    expect((await detail(actors.requester).expect(200)).body.canWithdraw).toBe(true);
+    const key = randomUUID();
+    const payload = { comment: 'Proposal withdrawn' };
+    const result = { instanceId: review.instanceId, status: 'cancelled', taskId: null };
+    await withdraw(review.instanceId, actors.requester, payload, key).expect(200, result);
+    await withdraw(review.instanceId, actors.requester, payload, key).expect(200, result);
+    await withdraw(review.instanceId, actors.requester, { comment: 'Changed' }, key).expect(409);
+    await withdraw(review.instanceId, actors.requester, {}).expect(409);
+    await action(revision.taskId, actors.requester, {
+      action: 'resubmit',
+      input: bodyFor(ids),
+    }).expect(409);
+
+    const { body } = await detail(actors.requester).expect(200);
+    expect(body).toMatchObject({
+      status: 'cancelled',
+      currentStep: null,
+      currentTaskId: null,
+      canWithdraw: false,
+      history: [
+        { action: 'started' },
+        { action: 'return' },
+        { action: 'withdraw', taskId: revision.taskId, actorId: actors.requester, ...payload },
+      ],
+    });
+    const closed = await client()
+      .get(`${taskApi}/${revision.taskId}`)
+      .set(headers(actors.requester))
+      .expect(200);
+    expect(closed.body).toMatchObject({ status: 'cancelled', actions: [] });
+    const withdrawal = await start(ids);
+    await withdraw(withdrawal.instanceId, actors.requester, {}).expect(200);
+  });
+
+  it('requires permission and confirmation at committee and serializes withdrawal with a decision', async () => {
+    const ids = [await asset()];
+    const review = await start(ids);
+    const committee = started(
+      (await action(review.taskId, actors.reviewer, { action: 'forward' }).expect(200)).body,
+    );
+    const payload = { input: { committeeUndecided: true } };
+    await withdraw(review.instanceId, actors.requester, payload).expect(403);
+    await withdraw(review.instanceId, actors.reviewer, payload).expect(403);
+    await withdraw(review.instanceId, actors.manager, {}).expect(400);
+    const [decision, withdrawal] = await Promise.all([
+      action(committee.taskId, actors.reviewer, decisions(ids)),
+      withdraw(review.instanceId, actors.manager, payload),
+    ]);
+    expect([decision.status, withdrawal.status].sort()).toEqual([200, 409]);
+    const { body } = await client()
+      .get(`/api/workflow/instances/${review.instanceId}`)
+      .set(headers(actors.requester))
+      .expect(200);
+    expect(body.status).toBe(decision.status === 200 ? 'completed' : 'cancelled');
+    expect(body.history.map(({ action }: { action: string }) => action)).toEqual([
+      'started',
+      'forward',
+      decision.status === 200 ? 'record-decision' : 'withdraw',
+    ]);
+
+    const next = await start([await asset()]);
+    await action(next.taskId, actors.reviewer, { action: 'forward' }).expect(200);
+    await withdraw(next.instanceId, actors.manager, payload).expect(200);
   });
 
   it('posts mixed receipts, retains custody across relocation, and serializes stock deductions', async () => {

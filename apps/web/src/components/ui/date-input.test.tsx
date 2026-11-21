@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { DateInput, formatDate, parseDate } from '@project/ui/date-input';
+import { DateInput, formatDate, parseDate } from './date-input';
 
 describe('shared date controls', () => {
   it('formats ISO dates without shifting the day and rejects impossible dates', () => {

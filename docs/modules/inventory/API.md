@@ -16,6 +16,9 @@ Write requests use the existing authenticated session and trusted browser origin
 | `inventory:dispose`                                                                 | Post physical disposal for approved assets                                  |
 | `inventory:manage-assets`                                                           | Legacy asset registration and employee custody endpoints                    |
 | `inventory:request-removal`, `inventory:removal-review`, `inventory:removal-decide` | Submit proposals, review them, and record committee decisions, respectively |
+| `inventory:removal-withdraw`                                                        | Withdraw a proposal awaiting a committee decision                           |
+
+Removal withdrawal uses the shared workflow API. The original requester can withdraw during review or revision. Grant `inventory:removal-withdraw` to the staff roles authorized to withdraw a proposal during the committee step. [Withdrawal endpoint and request body](../workflows/inventory-removal.md#withdraw-a-request)
 
 All paths below are relative to `/api/inventory`.
 

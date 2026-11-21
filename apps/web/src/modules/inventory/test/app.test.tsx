@@ -144,6 +144,45 @@ describe('Inventory workspace', () => {
     expect(screen.getByRole('button', { name: 'Resubmit proposal' })).toBeEnabled();
   });
 
+  it('confirms committee withdrawal and refreshes the workflow history', async () => {
+    let withdrawn = false;
+    const submit = vi.fn(() => {
+      withdrawn = true;
+      return response({ instanceId: 'instance', status: 'cancelled', taskId: null });
+    });
+    mount('/inventory/workflow/instances/instance', {
+      '/api/workflow/instances/instance': () =>
+        response({
+          ...instance,
+          status: withdrawn ? 'cancelled' : 'running',
+          currentStep: withdrawn ? null : 'committee-decision',
+          currentTaskId: withdrawn ? null : 'task',
+          canWithdraw: !withdrawn,
+          history: withdrawn
+            ? [{ id: 'event', action: 'withdraw', actorId: 'staff-one', occurredAt: '2026-11-18' }]
+            : [],
+        }),
+      '/api/workflow/instances/instance/withdraw': submit,
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Withdraw request' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm withdrawal' }));
+    expect(submit).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('checkbox', { name: /committee has not made a decision/ }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Comment' }), {
+      target: { value: '  Duplicate request  ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm withdrawal' }));
+    expect(await screen.findByText('Withdrawn')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Withdraw request' })).not.toBeInTheDocument();
+    expect(submit).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ comment: 'Duplicate request', input: { committeeUndecided: true } }),
+        headers: expect.objectContaining({ 'Idempotency-Key': expect.any(String) }),
+      }),
+    );
+  });
+
   it('preserves the return action after a stale committee decision in Arabic', async () => {
     useLanguage.getState().change('ar');
     const submit = vi

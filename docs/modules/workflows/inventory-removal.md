@@ -1,6 +1,6 @@
 # Inventory removal workflow
 
-This document describes the asset removal workflow implemented by the Inventory module. It covers proposal submission, review and revision, and recording the committee decision.
+This document describes proposal submission, review, revision, withdrawal, and committee decisions for Inventory asset removal.
 
 ## Inbox and pages
 
@@ -83,6 +83,19 @@ sequenceDiagram
     WF->>DB: Commit
     WF-->>Requester: Updated workflow
 ```
+
+## Withdraw a request
+
+Open **Workflow history** from the proposal or task, choose **Withdraw request**, and confirm. You can add a comment for the audit history.
+
+| Current step       | Who can withdraw                                                                                                                       |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Review or revision | The original requester, including after a committee return.                                                                            |
+| Committee decision | A staff member with `inventory:removal-withdraw` and access to the request who confirms that the committee has yet to make a decision. |
+
+Withdrawal is available on eligible running requests, including proposals submitted before the feature was added. It cancels the pending task and ends the instance as **Cancelled**. The history retains the proposal's prior actions and records who withdrew it, when, and any comment they entered. The proposal revisions and asset custody are preserved.
+
+Clients use `GET /api/workflow/instances/:instanceId` to read `canWithdraw` and `POST /api/workflow/instances/:instanceId/withdraw` to submit. Send `{}` during review or revision when there is no comment. At the committee step, include `{"input": {"committeeUndecided": true}}` after the staff member verifies the committee's status. [Shared workflow API](IMPLEMENTATION-PLAN.md#api-and-transaction-behavior)
 
 ## Record committee decision
 

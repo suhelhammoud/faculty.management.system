@@ -14,6 +14,7 @@ export const inventoryRemoval = {
       title: 'Review request',
       instructions: 'Review the proposed assets and the reasons for removal.',
       eligible: { permission: PERMISSION.inventory.reviewRemoval },
+      withdraw: { requester: true },
       actions: {
         forward: { next: 'committee-decision' },
         return: { next: 'revise' },
@@ -24,12 +25,14 @@ export const inventoryRemoval = {
       title: 'Revise request',
       instructions: 'Address the review comments and resubmit the proposal.',
       eligible: { requester: true },
+      withdraw: { requester: true },
       actions: { resubmit: { next: 'review' } },
     },
     'committee-decision': {
       title: 'Record committee decision',
       instructions: 'Record an outcome and reason for each proposed asset.',
       eligible: { permission: PERMISSION.inventory.decideRemoval },
+      withdraw: { permission: PERMISSION.inventory.withdrawRemoval },
       actions: {
         'record-decision': { finish: 'completed' },
         return: { next: 'revise' },

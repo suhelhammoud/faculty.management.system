@@ -13,10 +13,10 @@ tools across these domains.
 | `packages/db`            | PostgreSQL schema, Drizzle migrations, and database access                          |
 | `packages/authorization` | Typed permission catalog and default role templates                                 |
 | `packages/contracts`     | Shared TypeScript contracts for workflows                                           |
-| `packages/ui`            | Shared React form controls                                                          |
 
-Each frontend feature has its own folder under `apps/web/src/modules`. The web
-app lazy-loads the domain and Administration entry points from a single build.
+Each frontend feature has its own folder under `apps/web/src/modules`. Shared
+React form controls live in `apps/web/src/components/ui`. The web app lazy-loads
+the domain and Administration entry points from a single build.
 A shared browser router handles navigation and delegates nested routes to the
 feature that owns them. Feature screens reuse the same API session, and NestJS
 enforces access on protected endpoints. [Shared authorization](modules/authorization/README.md)

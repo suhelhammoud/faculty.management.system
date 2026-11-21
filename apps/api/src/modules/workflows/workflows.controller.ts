@@ -24,6 +24,7 @@ const act = z.strictObject({
   comment: z.string().trim().max(4000).optional(),
   input: z.unknown().optional(),
 });
+const withdraw = act.omit({ action: true });
 const monitorQuery = z.object({
   status: z.enum(['running', 'completed', 'rejected', 'cancelled']).optional(),
   step: z.string().min(1).max(100).optional(),
@@ -57,6 +58,22 @@ export class WorkflowsController {
   @Get('instances/:id')
   instance(@ActorId() actorId: string, @Param('id', { schema: uuid }) id: string) {
     return this.workflows.instance(id, actorId);
+  }
+
+  @Post('instances/:id/withdraw')
+  @HttpCode(200)
+  withdraw(
+    @ActorId() actorId: string,
+    @Param('id', { schema: uuid }) instanceId: string,
+    @Headers('idempotency-key') key: string | undefined,
+    @Body({ schema: withdraw }) body: z.infer<typeof withdraw>,
+  ) {
+    return this.workflows.withdraw({
+      ...body,
+      actorId,
+      instanceId,
+      idempotencyKey: parseIdempotencyKey(key),
+    });
   }
 
   @Post('tasks/:id/actions')

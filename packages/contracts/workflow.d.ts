@@ -45,6 +45,7 @@ export interface WorkflowHistoryEvent {
 
 export interface WorkflowInstanceDetail extends WorkflowInstance {
   currentTaskId: string | null;
+  canWithdraw: boolean;
   history: WorkflowHistoryEvent[];
 }
 

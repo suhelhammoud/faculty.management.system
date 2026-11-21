@@ -55,16 +55,16 @@ The bootstrap administrator receives all permissions present in the catalog at b
 
 The catalog groups permissions by area.
 
-| Area              | Permission keys                                                                                                                                                                                             |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Accounts          | `users:read`, `users:create`, `users:approve`, `users:reset-password`, `users:assign-roles`                                                                                                                 |
-| Roles             | `roles:read`, `roles:create`, `roles:update`                                                                                                                                                                |
-| Audit             | `audit:read`                                                                                                                                                                                                |
-| HR employees      | `hr-employees:read`, `hr-employees:create`, `hr-employees:update`                                                                                                                                           |
-| HR reference data | `hr-reference-data:read`, `hr-reference-data:write`                                                                                                                                                         |
-| Facilities        | `facilities:read`, `facilities:write`                                                                                                                                                                       |
-| Inventory         | `inventory:read`, `inventory:configure`, `inventory:post-transactions`, `inventory:dispose`, `inventory:manage-assets`, `inventory:request-removal`, `inventory:removal-review`, `inventory:removal-decide` |
-| Workflows         | `workflow:monitor`                                                                                                                                                                                          |
+| Area              | Permission keys                                                                                                                                                                                                                           |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Accounts          | `users:read`, `users:create`, `users:approve`, `users:reset-password`, `users:assign-roles`                                                                                                                                               |
+| Roles             | `roles:read`, `roles:create`, `roles:update`                                                                                                                                                                                              |
+| Audit             | `audit:read`                                                                                                                                                                                                                              |
+| HR employees      | `hr-employees:read`, `hr-employees:create`, `hr-employees:update`                                                                                                                                                                         |
+| HR reference data | `hr-reference-data:read`, `hr-reference-data:write`                                                                                                                                                                                       |
+| Facilities        | `facilities:read`, `facilities:write`                                                                                                                                                                                                     |
+| Inventory         | `inventory:read`, `inventory:configure`, `inventory:post-transactions`, `inventory:dispose`, `inventory:manage-assets`, `inventory:request-removal`, `inventory:removal-review`, `inventory:removal-decide`, `inventory:removal-withdraw` |
+| Workflows         | `workflow:monitor`                                                                                                                                                                                                                        |
 
 ## Catalog seed and deployment
 

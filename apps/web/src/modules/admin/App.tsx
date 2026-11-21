@@ -1,4 +1,4 @@
-import { DateInput, parseDate, formatDate } from '@project/ui/date-input';
+import { DateInput, parseDate, formatDate } from '@/components/ui/date-input';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import {
   QueryClient,

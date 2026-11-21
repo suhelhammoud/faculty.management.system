@@ -128,6 +128,9 @@ export function InstancePage() {
                 <Link to={`${workflow}/tasks/${item.currentTaskId}`}>{t('Current task')}</Link>
               )}
             </div>
+            {item.canWithdraw && item.currentTaskId && (
+              <WithdrawRequest key={item.currentTaskId} instance={item} />
+            )}
             <Grid
               columns={['Action', 'Recorded at', 'Actor ID', 'Comment']}
               rows={item.history.map((event) => ({
@@ -146,6 +149,64 @@ export function InstancePage() {
         )
       }
     </Resource>
+  );
+}
+
+function WithdrawRequest({ instance }: { instance: WorkflowInstanceDetail }) {
+  const { t } = useTranslation();
+  const write = useWrite<WorkflowActionResult>(`workflow/instances/${instance.id}/withdraw`);
+  const [confirming, setConfirming] = useState(false);
+  const committee = instance.currentStep === 'committee-decision';
+  if (!confirming) {
+    return (
+      <div className="inv-actions">
+        <Button type="button" variant="outline" onClick={() => setConfirming(true)}>
+          {t('Withdraw request')}
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <form
+      className="inv-panel inv-stack"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        const comment = String(data.get('comment') ?? '').trim() || undefined;
+        const input = committee
+          ? { committeeUndecided: data.has('committeeUndecided') }
+          : undefined;
+        write.mutate({ comment, input });
+      }}
+    >
+      <p>{t('Withdrawal closes the current task and ends the request.')}</p>
+      {committee && (
+        <label>
+          <input type="checkbox" name="committeeUndecided" required />{' '}
+          {t('I confirm the committee has not made a decision.')}
+        </label>
+      )}
+      <Field label="Comment">
+        <Textarea name="comment" maxLength={4000} disabled={write.isPending} />
+      </Field>
+      <ErrorMessage error={write.error} />
+      <div className="inv-actions">
+        <Button type="submit" disabled={write.isPending}>
+          {t('Confirm withdrawal')}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={write.isPending}
+          onClick={() => {
+            write.reset();
+            setConfirming(false);
+          }}
+        >
+          {t('Keep request open')}
+        </Button>
+      </div>
+    </form>
   );
 }
 

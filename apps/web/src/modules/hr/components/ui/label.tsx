@@ -1,4 +1,4 @@
-import { createLabel } from '@project/ui/form-primitives';
+import { createLabel } from '@/components/ui/form-primitives';
 import { cn } from '@/modules/hr/lib/utils';
 
 export const Label = createLabel(

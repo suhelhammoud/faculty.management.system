@@ -4,7 +4,7 @@
 
 Build a reusable Workflows module inside the shared NestJS API. Inventory, Student Affairs, Exams, HR, and future modules can use it to route work through a sequence of people. Inventory removal is the first worked example. The other examples show how the same contract applies to different records and access rules.
 
-Start with versioned TypeScript definitions, one active task at a time, permission-based queues, a common task inbox, and a read-only monitor. Support assignment to a specific person when a process requires it. Add parallel approvals, timers, notifications, claiming, reassignment, and a workflow editor when a confirmed process needs them.
+Start with versioned TypeScript definitions, one active task at a time, permission-based queues, a common task inbox, opt-in withdrawal, and a read-only monitor. Support assignment to a specific person when a process requires it. Add parallel approvals, timers, notifications, claiming, reassignment, and a workflow editor when a confirmed process needs them.
 
 ## NestJS module structure
 
@@ -29,13 +29,15 @@ Enforce at most one pending task per instance with a PostgreSQL partial unique i
 
 ## TypeScript definitions
 
-Each definition declares a namespaced key, version, initial step, and steps with instructions, eligibility, and action transitions. A transition identifies a next step or a terminal workflow status. The Inventory definition uses typed step permissions from the shared catalog. [Inventory definition](../../../apps/api/src/modules/inventory/inventory-removal.definition.ts)
+Each definition declares a namespaced key, version, initial step, and steps with instructions, eligibility, and action transitions. A transition identifies a next step or a terminal workflow status. A step can opt in to instance withdrawal by declaring `withdraw` eligibility for the requester or a scoped permission. The Inventory definition uses typed step permissions from the shared catalog. [Inventory definition](../../../apps/api/src/modules/inventory/inventory-removal.definition.ts)
 
 ```ts
 import { PERMISSION, type PermissionKey } from '@project/authorization';
 
 type Transition<Step extends string> =
   { next: Step } | { finish: 'completed' | 'rejected' | 'cancelled' };
+
+type WorkflowEligibility = { permission: PermissionKey } | { requester: true };
 
 type WorkflowDefinition<Step extends string> = {
   key: `${string}.${string}`;
@@ -48,7 +50,8 @@ type WorkflowDefinition<Step extends string> = {
     {
       title: string;
       instructions: string;
-      eligible: { permission: PermissionKey } | { requester: true };
+      eligible: WorkflowEligibility;
+      withdraw?: WorkflowEligibility;
       actions: Record<string, Transition<Step>>;
     }
   >;
@@ -67,6 +70,7 @@ export const inventoryRemovalV1 = {
       title: 'Review request',
       instructions: 'Review the proposed assets and the reasons for removal.',
       eligible: { permission: PERMISSION.inventory.reviewRemoval },
+      withdraw: { requester: true },
       actions: {
         forward: { next: 'committee-decision' },
         return: { next: 'revise' },
@@ -77,6 +81,7 @@ export const inventoryRemovalV1 = {
       title: 'Revise request',
       instructions: 'Address the review comments and resubmit the proposal.',
       eligible: { requester: true },
+      withdraw: { requester: true },
       actions: {
         resubmit: { next: 'review' },
       },
@@ -85,6 +90,7 @@ export const inventoryRemovalV1 = {
       title: 'Record committee decision',
       instructions: 'Record an outcome and reason for each proposed asset.',
       eligible: { permission: PERMISSION.inventory.decideRemoval },
+      withdraw: { permission: PERMISSION.inventory.withdrawRemoval },
       actions: {
         'record-decision': { finish: 'completed' },
         return: { next: 'revise' },
@@ -106,20 +112,25 @@ The workflow service resolves the actor from the signed-in session and evaluates
 
 Apply module record scope and the relevant visibility rules to the inbox, direct links, instance history, and monitor. Viewing a request or its history and acting on its current task have separate authorization rules. Apply history and comment visibility before returning those fields. Recheck current step eligibility and record access on action submission even when the task appeared in the user's inbox.
 
+Withdrawal requires record access and the active step's `withdraw` eligibility. The pending task's assignee and action permissions continue to govern its task actions. The module's action handler can validate withdrawal input within the transaction.
+
 ## API and transaction behavior
 
 Keep the `/workflow/` segment in workflow URLs. Use these shared endpoints:
 
 - `GET /api/workflow/tasks` lists pending tasks the signed-in user can act on.
 - `GET /api/workflow/tasks/:taskId` loads a task by ID for the review page and exposes the actions currently available to the caller.
-- `GET /api/workflow/instances/:instanceId` returns the current instance and the history the caller may view.
+- `GET /api/workflow/instances/:instanceId` returns the current instance, the history the caller may view, and `canWithdraw` for the signed-in caller.
 - `POST /api/workflow/tasks/:taskId/actions` is the single endpoint for submitting a task action. It accepts an action key, an optional comment, and any input validated by the owning module.
+- `POST /api/workflow/instances/:instanceId/withdraw` accepts a JSON object with an optional `comment` and optional module-validated `input`. On success it returns HTTP `200` with the instance ID, `status: 'cancelled'`, and `taskId: null`.
 
 Module endpoints start workflows and serve domain details. For example, Inventory creates a proposal and starts its workflow via `POST /api/inventory/workflow/removal-requests`. The proposal and its item details are available via `GET /api/inventory/workflow/removal-requests/:requestId`.
 
 Create the domain request, workflow instance, initial task, and start event in one PostgreSQL transaction. On each action, serialize work for the instance by locking its row before its task row. Recheck the active task, action, and actor once inside the transaction. Pass the same transaction to the module handler, then persist the task outcome, event, and next task or terminal status together with any domain changes.
 
-Accept an idempotency key for starts and action submissions. Scope it to the authenticated actor, operation, and target when present. Persist a successful result with the write and return it for an identical retry subject to current read authorization. Check for a replay before applying the pending-task requirement. Return a conflict if a key is reused with different input or a competing submission uses a different key against a completed task.
+Withdrawal uses the same instance lock as task actions. Under the lock, the service rechecks record access and withdrawal eligibility, calls the module handler, cancels the pending task, clears the current step, and marks the instance `cancelled`. It appends one `withdraw` event with the actor, cancelled task ID, timestamp, and optional comment. A competing terminal action that reaches the instance after it has ended receives HTTP `409`.
+
+Accept an idempotency key for starts, task actions, and withdrawal. Scope it to the authenticated actor, operation, and target when present. Persist a successful result with the write and return it for an identical retry subject to current read authorization. Check for a replay before applying the pending-task requirement. Return a conflict if a key is reused with different input or a competing submission uses a different key against a completed task.
 
 The module records the version of the data being reviewed and checks for relevant changes before applying a decision. On a stale-record conflict, roll back the submission and leave its task pending so the actor can use the recovery action defined for that step. A return opens a new revision task and preserves the prior submission and history. Resubmission sends a new revision through review.
 
@@ -129,12 +140,12 @@ The API, shared Workflows pages, and Inventory use type imports from `@project/c
 The [contract declarations](../../../packages/contracts/workflow.d.ts) describe JSON
 responses and have no runtime dependencies.
 
-| Response                            | Shared type                         |
-| ----------------------------------- | ----------------------------------- |
-| Task inbox and task detail          | `WorkflowTask[]` and `WorkflowTask` |
-| Instance monitor                    | `WorkflowInstance[]`                |
-| Instance detail and visible history | `WorkflowInstanceDetail`            |
-| Start or submit an action           | `WorkflowActionResult`              |
+| Response                             | Shared type                         |
+| ------------------------------------ | ----------------------------------- |
+| Task inbox and task detail           | `WorkflowTask[]` and `WorkflowTask` |
+| Instance monitor                     | `WorkflowInstance[]`                |
+| Instance detail and visible history  | `WorkflowInstanceDetail`            |
+| Start, submit an action, or withdraw | `WorkflowActionResult`              |
 
 The API explicitly maps records to these types and serializes timestamps as ISO
 strings. Instances include the pinned definition key and version. Task status
@@ -144,7 +155,8 @@ comment are represented as `null`.
 
 Step and action keys remain strings so different modules can use their own keys.
 The UI uses the task's `actions` list to display the actions available to the
-current user. The API still applies record access and action authorization.
+current user. Inventory history uses `canWithdraw` to show **Withdraw request**.
+The API still applies record access and action authorization.
 Engine definitions, registration hooks, and Drizzle records stay in the backend.
 Inventory owns its removal proposal and committee decision types.
 
@@ -176,6 +188,8 @@ An Inventory requester submits proposed assets and removal reasons. The implemen
 
 The committee action accepts approved-for-waste, rejected, and deferred item outcomes in the same request. Before applying approved results, Inventory locks the affected assets and verifies each approved asset’s status, revision, and custody against the reviewed proposal. Approved items become decommissioned and their active custody ends. Rejected and deferred items retain their status and custody. A deferred item is a recorded committee outcome. The workflow completes when the committee decision is recorded. Record any later physical disposal as a separate Inventory transaction. One authorized recorder submits each committee decision. [Inventory implementation specification](../inventory/IMPLEMENTATION-SPEC.md#initial-transaction-workflows)
 
+The original requester can withdraw during review or revision. During the committee step, a staff member with `inventory:removal-withdraw` must confirm that the committee has yet to make a decision. The policy also applies to running Inventory removal instances created before withdrawal was added. [Inventory withdrawal](inventory-removal.md#withdraw-a-request)
+
 ### Exams results approval
 
 An exam result batch moves from verification within the authorized course or session scope to director approval. A return opens a revision task and the revised batch goes through verification again. Exams owns the reviewed mark version, applies any separation-of-duties rule, and records approval before publication. Publishing or exporting results is a separately authorized Exams action. The exact roles, approval scope, and lock point need institutional confirmation. [Exams module specification](../exams/README.md#core-workflow)
@@ -189,6 +203,7 @@ A staff member could open a certificate request on behalf of a student. The requ
 - A mixed Inventory decision writes one outcome per item. Only approved-for-waste items change status and custody.
 - A returned proposal retains its original revision, review comments, and actors. Resubmission opens a new review task on the new revision.
 - Two reviewers submitting the same task concurrently cause one transition. Retrying the winning request with the same idempotency key returns the existing result with no additional task, event, or domain change.
+- An eligible withdrawal cancels the pending task and writes one audit event. An identical retry returns the original result. Withdrawal and a competing committee decision can produce only one terminal outcome.
 - An asset handover during review produces a conflict on a stale decision. The workflow and asset writes roll back together, and the reviewer can still return the proposal.
 - An out-of-scope user cannot discover the task in the inbox, open its history by direct link, or act on it. A user who loses the step permission after opening the task cannot submit a decision.
 - An instance started under an older definition version can still advance using its matching handlers after a new version becomes active.
@@ -204,13 +219,14 @@ pnpm --filter @project/db seed:permissions
 
 Use shared Administration to grant the permissions appropriate to each existing role.
 
-| Permission                  | Use                                                                             |
-| --------------------------- | ------------------------------------------------------------------------------- |
-| `inventory:manage-assets`   | Register assets and manage their HR employee custody through the Inventory API. |
-| `inventory:request-removal` | Create a removal proposal.                                                      |
-| `inventory:removal-review`  | Review a proposal and forward, return, or reject it.                            |
-| `inventory:removal-decide`  | Record the committee's decision or return a proposal for revision.              |
-| `workflow:monitor`          | Open the shared read-only monitor for records within the user's access scope.   |
+| Permission                   | Use                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------------- |
+| `inventory:manage-assets`    | Register assets and manage their HR employee custody through the Inventory API. |
+| `inventory:request-removal`  | Create a removal proposal.                                                      |
+| `inventory:removal-review`   | Review a proposal and forward, return, or reject it.                            |
+| `inventory:removal-decide`   | Record the committee's decision or return a proposal for revision.              |
+| `inventory:removal-withdraw` | Withdraw a request awaiting a committee decision.                               |
+| `workflow:monitor`           | Open the shared read-only monitor for records within the user's access scope.   |
 
 Set the web app’s `VITE_API_URL` when using a custom API origin. Include the
 web origin in the API's `TRUSTED_ORIGINS`. Start from **Propose asset removal**

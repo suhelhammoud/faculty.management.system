@@ -21,6 +21,7 @@ import { AuthorizationService } from '../../auth/authorization.service.js';
 import { DATABASE } from '../../database/database.constants.js';
 import type {
   WorkflowAccess,
+  WorkflowEligibility,
   WorkflowInstance,
   WorkflowReader,
   WorkflowRegistration,
@@ -58,6 +59,8 @@ interface ActCommand {
   comment?: string;
   input?: unknown;
 }
+
+type WithdrawCommand = Omit<ActCommand, 'taskId' | 'action'> & { instanceId: string };
 
 interface Idempotency {
   actorId: string;
@@ -128,11 +131,8 @@ export class WorkflowsService {
         .from(workflowTasks)
         .where(eq(workflowTasks.id, command.taskId));
       if (!target) throw new NotFoundException();
-      const [instance] = await tx
-        .select()
-        .from(workflowInstances)
-        .where(eq(workflowInstances.id, target.instanceId))
-        .for('update');
+      const instance = await this.findInstance(tx, target.instanceId, true);
+      if (!instance) throw new NotFoundException();
       const [task] = await tx
         .select()
         .from(workflowTasks)
@@ -211,6 +211,64 @@ export class WorkflowsService {
     });
   }
 
+  async withdraw(command: WithdrawCommand): Promise<WorkflowActionResult> {
+    return this.db.transaction(async (tx) => {
+      const { instanceId, actorId, idempotencyKey, comment, input } = command;
+      const instance = await this.findInstance(tx, instanceId, true);
+      if (!instance) throw new NotFoundException();
+      const context = this.access(tx, actorId, instance);
+      const registration = await this.visible(context);
+      if (!registration) throw new NotFoundException();
+      if (!(await this.authorization.isActive(actorId, tx))) throw new ForbiddenException();
+
+      const retry = {
+        actorId,
+        scope: `withdraw:${instanceId}`,
+        key: idempotencyKey,
+        hash: fingerprint({ comment, input }),
+      };
+      const replay = await this.replay(tx, retry);
+      if (replay) return replay;
+      if (instance.status !== 'running') {
+        throw new ConflictException('This workflow is no longer running');
+      }
+      if (!(await this.canWithdraw(context, registration))) {
+        throw new ForbiddenException('Withdrawal is unavailable');
+      }
+
+      const [task] = await tx
+        .select()
+        .from(workflowTasks)
+        .where(and(eq(workflowTasks.instanceId, instanceId), eq(workflowTasks.status, 'pending')))
+        .for('update');
+      if (!task || task.step !== instance.currentStep) {
+        throw new ConflictException('This workflow has no pending task');
+      }
+      const effect = await registration.apply({
+        ...context,
+        db: tx,
+        task,
+        transition: { finish: 'cancelled' },
+        action: 'withdraw',
+        comment,
+        input,
+      });
+
+      const now = new Date();
+      await tx
+        .update(workflowTasks)
+        .set({ status: 'cancelled', completedAt: now })
+        .where(eq(workflowTasks.id, task.id));
+      await tx
+        .update(workflowInstances)
+        .set({ status: 'cancelled', currentStep: null, completedAt: now, lastActivityAt: now })
+        .where(eq(workflowInstances.id, instanceId));
+      const result = { instanceId, taskId: null, status: 'cancelled' } as const;
+      await this.record(tx, result, task.id, 'withdraw', retry, comment, effect?.domainReference);
+      return result;
+    });
+  }
+
   async inbox(actorId: string): Promise<WorkflowTaskResponse[]> {
     const rows = await this.db
       .select({ task: workflowTasks, instance: workflowInstances })
@@ -280,6 +338,7 @@ export class WorkflowsService {
     return {
       ...this.instanceView(row, registration),
       currentTaskId: currentTask?.id ?? null,
+      canWithdraw: !!currentTask && (await this.canWithdraw(context, registration)),
       history,
     };
   }
@@ -339,23 +398,35 @@ export class WorkflowsService {
       return [];
     if (task.assignedUserId && task.assignedUserId !== context.actorId) return [];
     const { eligible, actions } = registration.definition.steps[task.step];
-    const { actorId, db, subject } = context;
-    const eligibleActor =
-      'permission' in eligible
-        ? await this.authorization.can(
-            actorId,
-            eligible.permission,
-            { type: `${subject.module}.${subject.type}`, id: subject.id },
-            db,
-          )
-        : actorId === (await registration.requester(context));
-    if (!eligibleActor) return [];
+    if (!(await this.isEligible(context, registration, eligible))) return [];
     const available: string[] = [];
     for (const action of Object.keys(actions)) {
       if (!registration.canAct || (await registration.canAct({ ...context, task, action })))
         available.push(action);
     }
     return available;
+  }
+
+  private async canWithdraw(context: WorkflowAccess, registration: WorkflowRegistration) {
+    const { status, currentStep } = context.instance;
+    if (status !== 'running' || !currentStep) return false;
+    const eligible = registration.definition.steps[currentStep]?.withdraw;
+    return eligible ? this.isEligible(context, registration, eligible) : false;
+  }
+
+  private async isEligible(
+    context: WorkflowAccess,
+    registration: WorkflowRegistration,
+    eligible: WorkflowEligibility,
+  ) {
+    const { actorId, db, subject } = context;
+    if ('requester' in eligible) return actorId === (await registration.requester(context));
+    return this.authorization.can(
+      actorId,
+      eligible.permission,
+      { type: `${subject.module}.${subject.type}`, id: subject.id },
+      db,
+    );
   }
 
   private async openTask(
@@ -378,11 +449,9 @@ export class WorkflowsService {
     return task;
   }
 
-  private async findInstance(db: WorkflowReader, id: string) {
-    const [instance] = await db
-      .select()
-      .from(workflowInstances)
-      .where(eq(workflowInstances.id, id));
+  private async findInstance(db: WorkflowReader, id: string, lock = false) {
+    const query = db.select().from(workflowInstances).where(eq(workflowInstances.id, id));
+    const [instance] = await (lock ? query.for('update') : query);
     return instance;
   }
 

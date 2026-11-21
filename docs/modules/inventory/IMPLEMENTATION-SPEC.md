@@ -118,7 +118,8 @@ Authorized operators post inventory movements directly. Committee removal is the
 - Provide endpoints for listing/searching assets and stock, reading transaction history, and creating the supported transactions.
 - Start removal requests with `POST /api/inventory/workflow/removal-requests` and load proposal details with `GET /api/inventory/workflow/removal-requests/:requestId`.
 - Use `GET /api/inventory/workflow/assets` to choose assets for a proposal. Asset managers can register an asset with `POST /api/inventory/workflow/assets` and update its HR employee custody with `PATCH /api/inventory/workflow/assets/:id/custody`.
-- Use the shared task and history endpoints under `/api/workflow/`. Submit every workflow action, including the committee decision, through `POST /api/workflow/tasks/:taskId/actions`. Inventory validates the per-item decisions and commits custody changes, Inventory transaction records, and workflow progression together. Follow the [shared workflow API and transaction contract](../workflows/IMPLEMENTATION-PLAN.md#api-and-transaction-behavior).
+- Submit task actions, including the committee decision, through `POST /api/workflow/tasks/:taskId/actions`. Inventory validates the per-item decisions and commits custody changes, Inventory transaction records, and workflow progression together. [Shared workflow API and transaction contract](../workflows/IMPLEMENTATION-PLAN.md#api-and-transaction-behavior)
+- Submit withdrawal through `POST /api/workflow/instances/:instanceId/withdraw`. The original requester can withdraw during review or revision. Withdrawing at the committee step requires `inventory:removal-withdraw` and confirmation that the committee has yet to decide. [Inventory withdrawal rules](../workflows/inventory-removal.md#withdraw-a-request)
 - Keep API payloads and responses typed and consistent with project conventions.
 
 ## Frontend
@@ -164,7 +165,7 @@ active users. My Items refreshes on entry and when the window regains focus.
 | ------------------------------------------------- | --------------------------------------------------------------------- |
 | `/inventory/workflow/tasks`                       | Inventory task inbox                                                  |
 | `/inventory/workflow/tasks/:taskId`               | Review, Revise, or Committee Decision based on the current task       |
-| `/inventory/workflow/instances/:instanceId`       | Instance status and history                                           |
+| `/inventory/workflow/instances/:instanceId`       | Instance status, history, and withdrawal when eligible                |
 | `/inventory/workflow/monitor`                     | Inventory monitor for users with `workflow:monitor` and record access |
 | `/inventory/workflow/removal-requests/new`        | Start a removal proposal                                              |
 | `/inventory/workflow/removal-requests/:requestId` | Proposal revisions and the recorded committee decision                |
@@ -172,10 +173,11 @@ active users. My Items refreshes on entry and when the window regains focus.
 The web app provides a shared inbox and monitor. When a shared task or history link
 identifies an Inventory removal record, it opens the localized Inventory page
 for the same ID. The page shows the actions allowed by the shared workflow API.
-After a successful action, it opens instance history. The next task appears in the
-inbox of eligible users. A return sends the proposal to its original requester,
-and resubmission opens a fresh review task. See the
-[workflow diagrams](../workflows/inventory-removal.md).
+After a successful task action, the app opens instance history. The next task
+appears in the inbox of eligible users. A return sends the proposal to its
+original requester, and resubmission opens a fresh review task. Eligible users
+can withdraw from instance history, which refreshes to show the cancelled
+status and withdrawal event. [Workflow diagrams](../workflows/inventory-removal.md)
 
 ## Data integrity and audit requirements
 

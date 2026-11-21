@@ -1,4 +1,4 @@
-import { DateInput } from '@project/ui/date-input';
+import { DateInput } from '@/components/ui/date-input';
 import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription } from './ui/alert';

@@ -326,9 +326,6 @@ importers:
 
   apps/web:
     dependencies:
-      '@project/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
       '@radix-ui/react-direction':
         specifier: ^1.2.0
         version: 1.2.0(@types/react@19.3.0)(react@19.3.1)
@@ -456,25 +453,6 @@ importers:
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
-
-  packages/ui:
-    dependencies:
-      class-variance-authority:
-        specifier: catalog:frontend
-        version: 0.7.1
-      radix-ui:
-        specifier: catalog:frontend
-        version: 1.8.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      react:
-        specifier: catalog:frontend
-        version: 19.3.1
-      react-dom:
-        specifier: catalog:frontend
-        version: 19.3.1(react@19.3.1)
-    devDependencies:
-      '@types/react':
-        specifier: catalog:frontend
-        version: 19.3.0
 
 packages:
 

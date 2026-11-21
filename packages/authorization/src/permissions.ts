@@ -39,6 +39,7 @@ export const PERMISSION = {
     requestRemoval: 'inventory:request-removal',
     reviewRemoval: 'inventory:removal-review',
     decideRemoval: 'inventory:removal-decide',
+    withdrawRemoval: 'inventory:removal-withdraw',
   },
 } as const;
 
@@ -79,6 +80,10 @@ export const PERMISSION_CATALOG = [
   {
     key: PERMISSION.inventory.decideRemoval,
     description: 'Record asset removal committee decisions',
+  },
+  {
+    key: PERMISSION.inventory.withdrawRemoval,
+    description: 'Withdraw asset removal requests awaiting a committee decision',
   },
 ] as const;
 

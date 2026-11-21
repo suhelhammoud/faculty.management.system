@@ -17,6 +17,8 @@ export interface WorkflowSubject {
 export type Transition<Step extends string = string> =
   { next: Step } | { finish: 'completed' | 'rejected' | 'cancelled' };
 
+export type WorkflowEligibility = { permission: PermissionKey } | { requester: true };
+
 export interface WorkflowDefinition<Step extends string = string> {
   key: `${string}.${string}`;
   version: number;
@@ -28,7 +30,8 @@ export interface WorkflowDefinition<Step extends string = string> {
     {
       title: string;
       instructions: string;
-      eligible: { permission: PermissionKey } | { requester: true };
+      eligible: WorkflowEligibility;
+      withdraw?: WorkflowEligibility;
       actions: Readonly<Record<string, Transition<Step>>>;
     }
   >;

@@ -32,6 +32,7 @@ import { asset, committeeDecision, proposal } from './inventory-removal.schemas.
 import { InventoryTransactionsService } from './inventory-transactions.service.js';
 
 const subjectType = 'removal-request';
+const committeeWithdrawal = z.strictObject({ committeeUndecided: z.literal(true) });
 function validate<T>(schema: z.ZodType<T>, value: unknown) {
   const result = schema.safeParse(value);
   if (!result.success)
@@ -174,7 +175,8 @@ export class InventoryRemovalService implements OnModuleInit {
     const resource = { type: `inventory.${subjectType}`, id };
     return (
       (await this.auth.can(actorId, PERMISSION.inventory.reviewRemoval, resource, db)) ||
-      (await this.auth.can(actorId, PERMISSION.inventory.decideRemoval, resource, db))
+      (await this.auth.can(actorId, PERMISSION.inventory.decideRemoval, resource, db)) ||
+      (await this.auth.can(actorId, PERMISSION.inventory.withdrawRemoval, resource, db))
     );
   }
 
@@ -186,9 +188,16 @@ export class InventoryRemovalService implements OnModuleInit {
     return request;
   }
 
-  private async apply({ db, subject, actorId, action, comment, input }: WorkflowAction) {
+  private async apply({ db, subject, actorId, task, action, comment, input }: WorkflowAction) {
     const request = await this.request(db, subject.id);
     if (!request) throw new NotFoundException();
+    if (
+      action === 'withdraw' &&
+      task.step === 'committee-decision' &&
+      !committeeWithdrawal.safeParse(input).success
+    ) {
+      throw new BadRequestException('Confirm that the committee has not made a decision');
+    }
     if (action === 'return' && !comment?.trim())
       throw new BadRequestException('Enter a reason for returning the request');
     if (action === 'resubmit') {

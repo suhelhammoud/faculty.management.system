@@ -29,9 +29,12 @@ export class WorkflowRegistry implements OnApplicationBootstrap {
       }
       if (!Object.hasOwn(steps, initialStep))
         throw new Error(`Invalid initial step for ${key}@${version}`);
-      for (const [step, { eligible, actions }] of Object.entries(steps)) {
+      for (const [step, { eligible, actions, withdraw }] of Object.entries(steps)) {
         if ('permission' in eligible && !permissions.has(eligible.permission)) {
           throw new Error(`Unknown permission for ${key}@${version}/${step}`);
+        }
+        if (withdraw && 'permission' in withdraw && !permissions.has(withdraw.permission)) {
+          throw new Error(`Unknown withdrawal permission for ${key}@${version}/${step}`);
         }
         if (!Object.keys(actions).length)
           throw new Error(`No actions for ${key}@${version}/${step}`);
