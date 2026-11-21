@@ -4,13 +4,10 @@ import { AuthGuard } from './auth.guard.js';
 import { Module } from '@nestjs/common';
 import { authProvider, AUTH } from './auth.provider.js';
 import { AuthorizationService } from './authorization.service.js';
+import { ElevatedGrantsController } from './elevated-grants.controller.js';
 @Module({
-  controllers: [AdminController],
-  providers: [
-    authProvider,
-    AuthorizationService,
-    { provide: APP_GUARD, useClass: AuthGuard },
-  ],
+  controllers: [AdminController, ElevatedGrantsController],
+  providers: [authProvider, AuthorizationService, { provide: APP_GUARD, useClass: AuthGuard }],
   exports: [AUTH, AuthorizationService],
 })
 export class AuthModule {}

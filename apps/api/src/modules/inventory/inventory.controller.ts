@@ -14,7 +14,13 @@ import {
 import { PERMISSION } from '@project/authorization';
 import { AuthorizationService } from '../../auth/authorization.service.js';
 import type { z } from 'zod';
-import { ActorId, RequirePermission, RequireSession } from '../../auth/auth.guard.js';
+import {
+  ActorId,
+  ClaimPermission,
+  RequireActionPermission,
+  RequirePermission,
+  RequireSession,
+} from '../../auth/auth.guard.js';
 import { parseIdempotencyKey } from '../workflows/workflows.controller.js';
 import { InventoryReadService } from './inventory-read.service.js';
 import { InventoryTransactionsService } from './inventory-transactions.service.js';
@@ -48,7 +54,7 @@ export class InventoryController {
     const [read, configure, postTransactions, dispose, requestRemoval, monitorWorkflows, employee] =
       await Promise.all([
         this.auth.can(actorId, keys.read),
-        this.auth.can(actorId, keys.configure),
+        this.auth.canAttempt(actorId, keys.configure),
         this.auth.can(actorId, keys.postTransactions),
         this.auth.can(actorId, keys.dispose),
         this.auth.can(actorId, keys.requestRemoval),
@@ -120,11 +126,13 @@ export class InventoryController {
   }
 
   @Put('storage/:id')
-  @RequirePermission(PERMISSION.inventory.configure)
-  configureStorage(
+  @RequireActionPermission(PERMISSION.inventory.configure)
+  async configureStorage(
     @Param('id', { schema: uuid }) id: string,
     @Body({ schema: storageInput }) body: z.infer<typeof storageInput>,
+    @ClaimPermission() claim: () => Promise<void>,
   ) {
+    await claim();
     return this.inventory.configureStorage(id, body);
   }
 
@@ -135,8 +143,12 @@ export class InventoryController {
   }
 
   @Post('shared-accounts')
-  @RequirePermission(PERMISSION.inventory.configure)
-  createShared(@Body({ schema: sharedInput }) body: z.infer<typeof sharedInput>) {
+  @RequireActionPermission(PERMISSION.inventory.configure)
+  async createShared(
+    @Body({ schema: sharedInput }) body: z.infer<typeof sharedInput>,
+    @ClaimPermission() claim: () => Promise<void>,
+  ) {
+    await claim();
     return this.inventory.createShared(body.name);
   }
 
@@ -153,8 +165,12 @@ export class InventoryController {
   }
 
   @Post('consumables')
-  @RequirePermission(PERMISSION.inventory.configure)
-  createConsumable(@Body({ schema: consumableInput }) body: z.infer<typeof consumableInput>) {
+  @RequireActionPermission(PERMISSION.inventory.configure)
+  async createConsumable(
+    @Body({ schema: consumableInput }) body: z.infer<typeof consumableInput>,
+    @ClaimPermission() claim: () => Promise<void>,
+  ) {
+    await claim();
     return this.inventory.createConsumable(body);
   }
 }

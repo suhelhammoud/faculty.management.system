@@ -29,6 +29,18 @@ type Acl = {
   permission: string;
   effect: string;
 };
+type EligiblePermission = { key: string; description: string | null; resourceType: string | null };
+type ElevatedGrant = {
+  id: string;
+  permission: string;
+  resourceId: string | null;
+  resourceType: string | null;
+  expiresAt: string;
+  maxUses: number;
+  remainingUses: number;
+  revokedAt: string | null;
+};
+type ElevatedAccess = { grants: ElevatedGrant[]; eligiblePermissions: EligiblePermission[] };
 type AuditRecord = {
   id: string;
   actorId: string;
@@ -74,16 +86,19 @@ function ActionForm({
   method = 'POST',
   children,
   onSuccess,
+  mapBody,
 }: {
   title: string;
   path: string;
   method?: string;
   children?: ReactNode;
   onSuccess?: () => void;
+  mapBody?: (body: Record<string, FormDataEntryValue>) => unknown;
 }) {
   const client = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (body: Record<string, FormDataEntryValue>) => api(path, method, body),
+    mutationFn: (body: Record<string, FormDataEntryValue>) =>
+      api(path, method, mapBody ? mapBody(body) : body),
     onSuccess: async () => {
       await client.invalidateQueries();
       onSuccess?.();
@@ -113,6 +128,158 @@ function ActionForm({
       {mutation.error && <p role="alert">{mutation.error.message}</p>}
       {done && <p role="status">Saved successfully.</p>}
     </form>
+  );
+}
+function ElevatedGrants({ userId, users }: { userId: string; users: User[] }) {
+  const path = `admin/users/${enc(userId)}/elevated-grants`;
+  const client = useQueryClient();
+  const [permission, setPermission] = useState('');
+  const queryKey = ['elevated-grants', userId];
+  const access = useQuery({
+    queryKey,
+    queryFn: () => api<ElevatedAccess>(path),
+    retry: false,
+  });
+  const revoke = useMutation({
+    mutationFn: (id: string) => api(`${path}/${enc(id)}`, 'DELETE'),
+    onSuccess: () => client.invalidateQueries({ queryKey }),
+  });
+  const resourceType = access.data?.eligiblePermissions.find(
+    (p) => p.key === permission,
+  )?.resourceType;
+  const expiryFormat = new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+
+  if (access.isPending) return <p role="status">Loading elevated grants…</p>;
+  if (access.error)
+    return <p role="alert">Elevated grants could not be loaded. {access.error.message}</p>;
+  return (
+    <>
+      <ActionForm
+        title="Issue elevated grant"
+        path={path}
+        onSuccess={() => setPermission('')}
+        mapBody={(body) => ({
+          permission: body.permission,
+          resourceId: body.resourceId || undefined,
+          expiresAt: new Date(String(body.expiresAt)).toISOString(),
+          maxUses: Number(body.maxUses),
+        })}
+      >
+        <label>
+          Permission
+          <select
+            name="permission"
+            required
+            value={permission}
+            onChange={(event) => setPermission(event.target.value)}
+          >
+            <option value="">Choose permission</option>
+            {access.data.eligiblePermissions.map(({ key, description }) => (
+              <option key={key} value={key}>
+                {description ?? key} ({key})
+              </option>
+            ))}
+          </select>
+        </label>
+        {resourceType === 'users' && (
+          <label>
+            Target account
+            <select name="resourceId">
+              <option value="">Any account</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name} (@{u.username})
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {resourceType === 'inventory.asset' && (
+          <label>
+            Asset ID (optional)
+            <Input name="resourceId" placeholder="Any asset" />
+          </label>
+        )}
+        <label>
+          Expires at (local time)
+          <Input name="expiresAt" type="datetime-local" required />
+        </label>
+        <label>
+          Maximum attempts
+          <Input name="maxUses" type="number" min="1" max="2147483647" step="1" required />
+        </label>
+        <p>An attempt uses one grant allowance even if the action fails.</p>
+      </ActionForm>
+      <section className="panel overflow-x-auto">
+        <h2>Elevated grants</h2>
+        {revoke.error && <p role="alert">{revoke.error.message}</p>}
+        {access.data.grants.length === 0 ? (
+          <p>No elevated grants.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Permission</th>
+                <th>Scope</th>
+                <th>Expires</th>
+                <th>Attempts left</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {access.data.grants.map((grant) => {
+                const expiresAt = new Date(grant.expiresAt);
+                const status = grant.revokedAt
+                  ? 'Revoked'
+                  : !grant.remainingUses
+                    ? 'Used up'
+                    : expiresAt.getTime() <= Date.now()
+                      ? 'Expired'
+                      : 'Active';
+                const targetUser =
+                  grant.resourceType === 'users'
+                    ? users.find((u) => u.id === grant.resourceId)
+                    : undefined;
+                return (
+                  <tr key={grant.id}>
+                    <td>{grant.permission}</td>
+                    <td>
+                      {targetUser
+                        ? `${targetUser.name} (@${targetUser.username})`
+                        : grant.resourceId || 'All records'}
+                    </td>
+                    <td>{expiryFormat.format(expiresAt)}</td>
+                    <td>
+                      {grant.remainingUses} / {grant.maxUses}
+                    </td>
+                    <td>{status}</td>
+                    <td>
+                      {status === 'Active' && (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          disabled={revoke.isPending}
+                          onClick={() => {
+                            if (window.confirm('Revoke this elevated grant?'))
+                              revoke.mutate(grant.id);
+                          }}
+                        >
+                          Revoke
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </section>
+    </>
   );
 }
 function Access() {
@@ -598,6 +765,7 @@ function Dashboard() {
           </section>
           {selectedUser && (
             <>
+              <ElevatedGrants key={selectedUser} userId={selectedUser} users={users.data ?? []} />
               <ActionForm title="Add access rule" path={`admin/users/${enc(selectedUser)}/acl`}>
                 <label>
                   Resource type

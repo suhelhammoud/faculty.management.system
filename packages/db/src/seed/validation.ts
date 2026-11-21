@@ -3,12 +3,13 @@ import { inventoryDemoUsers, inventoryOperatorUsername } from './fixtures/local/
 import { validateFacilities } from './modules/facilities/validation.js';
 import { validateHr } from './modules/hr/validation.js';
 import { validateInventory } from './modules/inventory/validation.js';
-import { DEFAULT_ROLE_TEMPLATES } from '@project/authorization';
+import { DEFAULT_ROLE_TEMPLATES, ELEVATED_PERMISSION_SCOPES } from '@project/authorization';
 import type {
   AuthSeedUser,
   AdministratorSeed,
   ReferenceSeed,
   EmployeeSeed,
+  ElevatedGrantSeed,
   FacilitiesSeed,
   InventorySeed,
 } from './fixtures/local/types.js';
@@ -45,11 +46,40 @@ export function validateUsers(seedUsers: AuthSeedUser[]): void {
 export type LocalSeedFixtures = {
   administrator: AdministratorSeed;
   users: AuthSeedUser[];
+  elevatedGrants: ElevatedGrantSeed[];
   references: ReferenceSeed;
   employees: EmployeeSeed[];
   facilities: FacilitiesSeed;
   inventory: InventorySeed;
 };
+
+function validateElevatedGrants(grants: ElevatedGrantSeed[], usernames: ReadonlySet<string>) {
+  const keys = new Set<string>();
+  for (const grant of grants) {
+    if (!/^[a-z0-9-]+$/.test(grant.key) || keys.has(grant.key)) {
+      throw new Error(`Invalid or duplicate elevated grant key ${grant.key}`);
+    }
+    keys.add(grant.key);
+    if (
+      !usernames.has(grant.username) ||
+      (grant.targetUsername !== undefined && !usernames.has(grant.targetUsername))
+    ) {
+      throw new Error(`Unknown demo account for elevated grant ${grant.key}`);
+    }
+    const scope = ELEVATED_PERMISSION_SCOPES.get(grant.permission);
+    if (scope === undefined || (grant.targetUsername !== undefined && scope !== 'users')) {
+      throw new Error(`Unsupported permission or scope for elevated grant ${grant.key}`);
+    }
+    if (
+      [grant.validForHours, grant.maxUses].some(
+        (value) => !Number.isInteger(value) || value < 1 || value > 2_147_483_647,
+      )
+    ) {
+      throw new Error(`Invalid lifetime or attempt limit for elevated grant ${grant.key}`);
+    }
+  }
+}
+
 export function validateLocalFixtures(fixtures: LocalSeedFixtures, password: string): void {
   validatePassword(password);
   validateUsers(fixtures.users);
@@ -72,11 +102,9 @@ export function validateLocalFixtures(fixtures: LocalSeedFixtures, password: str
     )
   )
     throw new Error('Administrator conflicts with a demo user');
-  validateHr(
-    fixtures.references,
-    fixtures.employees,
-    new Set(fixtures.users.map((u) => u.username)),
-  );
+  const usernames = new Set(fixtures.users.map((u) => u.username));
+  validateElevatedGrants(fixtures.elevatedGrants, usernames);
+  validateHr(fixtures.references, fixtures.employees, usernames);
   validateFacilities(fixtures.facilities);
   if (
     !fixtures.users.some(

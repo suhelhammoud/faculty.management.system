@@ -14,7 +14,12 @@ import {
 } from '@nestjs/common';
 import { PERMISSION } from '@project/authorization';
 import type { z } from 'zod';
-import { ActorId, RequirePermission, RequireSession } from '../../auth/auth.guard.js';
+import {
+  ActorId,
+  ClaimPermission,
+  RequireActionPermission,
+  RequireSession,
+} from '../../auth/auth.guard.js';
 import { parseIdempotencyKey } from '../workflows/workflows.controller.js';
 import { InventoryRemovalService } from './inventory-removal.service.js';
 import { asset, custody, proposal, uuid } from './inventory-removal.schemas.js';
@@ -36,19 +41,26 @@ export class InventoryRemovalController {
   }
 
   @Post('assets')
-  @RequirePermission(PERMISSION.inventory.manageAssets)
-  registerAsset(@ActorId() actorId: string, @Body({ schema: asset }) body: z.infer<typeof asset>) {
+  @RequireActionPermission(PERMISSION.inventory.manageAssets)
+  async registerAsset(
+    @ActorId() actorId: string,
+    @Body({ schema: asset }) body: z.infer<typeof asset>,
+    @ClaimPermission() claim: () => Promise<void>,
+  ) {
+    await claim();
     return this.inventory.registerAsset(actorId, body);
   }
 
   @Patch('assets/:id/custody')
   @HttpCode(204)
-  @RequirePermission(PERMISSION.inventory.manageAssets, 'inventory.asset')
-  changeCustody(
+  @RequireActionPermission(PERMISSION.inventory.manageAssets, 'inventory.asset')
+  async changeCustody(
     @ActorId() actorId: string,
     @Param('id', { schema: uuid }) id: string,
     @Body({ schema: custody }) body: z.infer<typeof custody>,
+    @ClaimPermission() claim: () => Promise<void>,
   ) {
+    await claim();
     return this.inventory.changeCustody(actorId, id, body.employeeId);
   }
 

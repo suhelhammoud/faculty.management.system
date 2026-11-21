@@ -7,7 +7,12 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { createDb } from '../dist/client.js';
 import { seedLocalDatabase } from '../dist/seed/run-local.js';
 import { validateLocalFixtures } from '../dist/seed/validation.js';
-import { localAdministrator, localUsers } from '../dist/seed/fixtures/local/auth.js';
+import {
+  localAdministrator,
+  localElevatedGrants,
+  localUsers,
+} from '../dist/seed/fixtures/local/auth.js';
+import { seedPermissionCatalog } from '../dist/seed/access/permissions.js';
 import { hrReferenceData } from '../dist/seed/fixtures/local/hr-reference-data.js';
 import { hrEmployees } from '../dist/seed/fixtures/local/hr-employees.js';
 import { localInventory } from '../dist/seed/fixtures/local/inventory.js';
@@ -24,13 +29,25 @@ import {
   workflowTasks,
 } from '../dist/schema/index.js';
 import { localFacilities } from '../dist/seed/fixtures/local/facilities.js';
-import { user, account, roles, userRoles, rolePermissions } from '../dist/schema/auth/index.js';
-import { ADMINISTRATOR_DEFAULT_ROLE, DEFAULT_ROLE_TEMPLATES } from '@project/authorization';
+import {
+  user,
+  account,
+  roles,
+  userRoles,
+  rolePermissions,
+  elevatedGrants,
+} from '../dist/schema/auth/index.js';
+import {
+  ADMINISTRATOR_DEFAULT_ROLE,
+  DEFAULT_ROLE_TEMPLATES,
+  PERMISSION,
+} from '@project/authorization';
 
 const password = 'local-test-password';
 const fixtures = {
   administrator: localAdministrator,
   users: localUsers,
+  elevatedGrants: localElevatedGrants,
   references: hrReferenceData,
   employees: hrEmployees,
   facilities: localFacilities,
@@ -42,6 +59,20 @@ test('fixture preflight rejects duplicates, missing references, and invalid capa
   validateLocalFixtures(fixtures, password);
   const cases = [
     [(f) => f.users.push(f.users[0]), /Duplicate username/],
+    [(f) => f.elevatedGrants.push(f.elevatedGrants[0]), /duplicate elevated grant key/],
+    [
+      (f) => (f.elevatedGrants[0].targetUsername = 'unknown'),
+      /Unknown demo account for elevated grant/,
+    ],
+    [
+      (f) => (f.elevatedGrants[0].permission = PERMISSION.users.assignRoles),
+      /Unsupported permission or scope/,
+    ],
+    [
+      (f) => (f.elevatedGrants[0].permission = PERMISSION.facilities.write),
+      /Unsupported permission or scope/,
+    ],
+    [(f) => (f.elevatedGrants[0].maxUses = 0), /Invalid lifetime or attempt limit/],
     [(f) => f.employees.push(f.employees[0]), /Duplicate employee number/],
     [(f) => (f.employees[0].username = 'unknown'), /Unknown username/],
     [
@@ -261,6 +292,49 @@ describe('local seed PostgreSQL integration', { skip: !process.env.SEED_TEST_DAT
         ({ roleId }) => roleId === inventoryDemoRoles[0].id,
       ),
     );
+  });
+  test('seeds direct grants and preserves usage, expiry, and revocation on rerun', async () => {
+    const { db } = connection;
+    const recipientId = 'seed-elevation_demo';
+    const grants = () =>
+      db
+        .select()
+        .from(elevatedGrants)
+        .where(eq(elevatedGrants.userId, recipientId))
+        .orderBy(elevatedGrants.id);
+    assert.deepEqual(
+      await db.select().from(userRoles).where(eq(userRoles.userId, recipientId)),
+      [],
+    );
+
+    const [approval, facilities] = await grants();
+    assert.equal(approval.permission, PERMISSION.users.approve);
+    assert.equal(approval.resourceType, 'users');
+    assert.equal(approval.resourceId, 'seed-staff_two');
+    assert.equal(approval.maxUses, 1);
+    assert.equal(approval.grantedBy, localAdministrator.id);
+    assert.equal(facilities.permission, PERMISSION.facilities.write);
+    assert.equal(facilities.resourceType, null);
+    assert.equal(facilities.resourceId, null);
+    assert.equal(facilities.maxUses, 3);
+    for (const grant of [approval, facilities]) {
+      assert.equal(grant.remainingUses, grant.maxUses);
+      assert.ok(grant.expiresAt.getTime() - grant.createdAt.getTime() >= 24 * 60 * 60 * 1000);
+    }
+
+    await db
+      .update(elevatedGrants)
+      .set({ remainingUses: 0, expiresAt: new Date(0) })
+      .where(eq(elevatedGrants.id, approval.id));
+    await db
+      .update(elevatedGrants)
+      .set({ remainingUses: 2, revokedAt: new Date() })
+      .where(eq(elevatedGrants.id, facilities.id));
+    const before = await grants();
+    await db.transaction(seedPermissionCatalog);
+    assert.deepEqual(await grants(), before);
+    await seedLocalDatabase(db, fixtures, password);
+    assert.deepEqual(await grants(), before);
   });
   test('rejects an Inventory tag collision and rolls back earlier fixture writes', async () => {
     const { db } = connection;

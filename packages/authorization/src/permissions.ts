@@ -84,6 +84,19 @@ export const PERMISSION_CATALOG = [
 
 export type PermissionKey = (typeof PERMISSION_CATALOG)[number]['key'];
 
+export const ELEVATED_PERMISSION_SCOPES: ReadonlyMap<string, 'users' | 'inventory.asset' | null> =
+  new Map<PermissionKey, 'users' | 'inventory.asset' | null>([
+    [PERMISSION.users.create, null],
+    [PERMISSION.users.approve, 'users'],
+    [PERMISSION.users.resetPassword, 'users'],
+    [PERMISSION.hrEmployees.create, null],
+    [PERMISSION.hrEmployees.update, null],
+    [PERMISSION.hrReferenceData.write, null],
+    [PERMISSION.facilities.write, null],
+    [PERMISSION.inventory.configure, null],
+    [PERMISSION.inventory.manageAssets, 'inventory.asset'],
+  ]);
+
 export const HR_PERMISSIONS = [
   PERMISSION.hrEmployees.read,
   PERMISSION.hrEmployees.create,

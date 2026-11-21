@@ -1,8 +1,28 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { and, eq } from '@project/db';
 import type { Database } from '@project/db';
-import { resourceAcl, rolePermissions, userRoles, user } from '@project/db/schema';
+import {
+  auditLog,
+  elevatedGrants,
+  resourceAcl,
+  rolePermissions,
+  userRoles,
+  user,
+} from '@project/db/schema';
+import { gt, isNull, or, sql } from 'drizzle-orm';
 import { DATABASE } from '../database/database.constants.js';
+
+export type ResourceScope = { type: string; id: string };
+type Reader = Pick<Database, 'select'>;
+
+function usableGrant() {
+  return and(
+    isNull(elevatedGrants.revokedAt),
+    gt(elevatedGrants.remainingUses, 0),
+    gt(elevatedGrants.expiresAt, sql`clock_timestamp()`),
+  );
+}
 
 export function evaluatePermission(effects: string[], roleGranted: boolean): boolean {
   if (effects.includes('deny')) return false;
@@ -12,17 +32,102 @@ export function evaluatePermission(effects: string[], roleGranted: boolean): boo
 @Injectable()
 export class AuthorizationService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
-  async isActive(userId: string, db: Pick<Database, 'select'> = this.db): Promise<boolean> {
+  async isActive(userId: string, db: Reader = this.db): Promise<boolean> {
     const [person] = await db.select().from(user).where(eq(user.id, userId));
     return Boolean(person?.approved && person.enabled && !person.mustChangePassword);
   }
   async can(
     userId: string,
     permission: string,
-    resource?: { type: string; id: string },
-    db: Pick<Database, 'select'> = this.db,
+    resource?: ResourceScope,
+    db: Reader = this.db,
   ): Promise<boolean> {
-    if (!(await this.isActive(userId, db))) return false;
+    return (await this.access(userId, permission, resource, db)) === 'allowed';
+  }
+
+  async canAttempt(userId: string, permission: string, resource?: ResourceScope): Promise<boolean> {
+    const access = await this.access(userId, permission, resource, this.db);
+    if (access === 'allowed') return true;
+    if (access === 'blocked') return false;
+    return (await this.grantCandidates(this.db, userId, permission, resource)).length > 0;
+  }
+
+  async prepareAttempt(userId: string, permission: string, resource?: ResourceScope) {
+    const access = await this.access(userId, permission, resource, this.db);
+    if (access === 'allowed') return async () => {};
+    if (
+      access === 'blocked' ||
+      !(await this.grantCandidates(this.db, userId, permission, resource)).length
+    ) {
+      throw new ForbiddenException();
+    }
+
+    return async () => {
+      await this.db.transaction(async (tx) => {
+        const [candidate] = await this.grantCandidates(tx, userId, permission, resource).for(
+          'update',
+        );
+        const currentAccess = await this.access(userId, permission, resource, tx);
+        if (currentAccess === 'allowed') return;
+        if (currentAccess === 'blocked' || !candidate) throw new ForbiddenException();
+        const [claimed] = await tx
+          .update(elevatedGrants)
+          .set({ remainingUses: sql`${elevatedGrants.remainingUses} - 1` })
+          .where(and(eq(elevatedGrants.id, candidate.id), usableGrant()))
+          .returning({ id: elevatedGrants.id });
+        if (!claimed) throw new ForbiddenException();
+        await tx.insert(auditLog).values({
+          id: randomUUID(),
+          actorId: userId,
+          action: 'elevated-grants:use',
+          targetId: JSON.stringify({ grantId: claimed.id, permission, resource }),
+        });
+      });
+    };
+  }
+
+  private grantCandidates(
+    db: Reader,
+    userId: string,
+    permission: string,
+    resource?: ResourceScope,
+  ) {
+    const globalScope = isNull(elevatedGrants.resourceType);
+    const scope = resource
+      ? or(
+          globalScope,
+          and(
+            eq(elevatedGrants.resourceType, resource.type),
+            eq(elevatedGrants.resourceId, resource.id),
+          ),
+        )
+      : globalScope;
+    return db
+      .select({ id: elevatedGrants.id })
+      .from(elevatedGrants)
+      .where(
+        and(
+          eq(elevatedGrants.userId, userId),
+          eq(elevatedGrants.permission, permission),
+          scope,
+          usableGrant(),
+        ),
+      )
+      .orderBy(
+        sql`${elevatedGrants.resourceId} is null`,
+        elevatedGrants.expiresAt,
+        elevatedGrants.id,
+      )
+      .limit(1);
+  }
+
+  private async access(
+    userId: string,
+    permission: string,
+    resource: ResourceScope | undefined,
+    db: Reader,
+  ) {
+    if (!(await this.isActive(userId, db))) return 'blocked';
     const rules = resource
       ? await db
           .select()
@@ -36,14 +141,14 @@ export class AuthorizationService {
             ),
           )
       : [];
-    if (rules.some((rule) => rule.effect === 'deny')) return false;
-    if (rules.some((rule) => rule.effect === 'allow')) return true;
+    if (rules.some((rule) => rule.effect === 'deny')) return 'blocked';
+    if (rules.some((rule) => rule.effect === 'allow')) return 'allowed';
     const grants = await db
       .select({ permission: rolePermissions.permission })
       .from(userRoles)
       .innerJoin(rolePermissions, eq(rolePermissions.roleId, userRoles.roleId))
       .where(and(eq(userRoles.userId, userId), eq(rolePermissions.permission, permission)))
       .limit(1);
-    return grants.length > 0;
+    return grants.length > 0 ? 'allowed' : 'missing';
   }
 }

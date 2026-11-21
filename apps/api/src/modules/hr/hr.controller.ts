@@ -17,7 +17,11 @@ import { fromNodeHeaders } from 'better-auth/node';
 import { PERMISSION } from '@project/authorization';
 import type { Request } from 'express';
 import { AUTH, type Auth } from '../../auth/auth.provider.js';
-import { RequirePermission } from '../../auth/auth.guard.js';
+import {
+  ClaimPermission,
+  RequireActionPermission,
+  RequirePermission,
+} from '../../auth/auth.guard.js';
 import { HrEmployeesService } from './hr-employees.service.js';
 import { HrReferenceService } from './hr-reference.service.js';
 import {
@@ -59,12 +63,15 @@ export class HrController {
   }
 
   @Post('employees')
-  @RequirePermission(PERMISSION.hrEmployees.create)
+  @RequireActionPermission(PERMISSION.hrEmployees.create)
   async createEmployee(
     @Body({ schema: employeeCreate }) body: EmployeeCreate,
     @Req() req: Request,
+    @ClaimPermission() claim: () => Promise<void>,
   ) {
-    return this.employees.create(body, await this.actor(req));
+    const actorId = await this.actor(req);
+    await claim();
+    return this.employees.create(body, actorId);
   }
 
   @Get('employees/:employeeId')
@@ -74,23 +81,29 @@ export class HrController {
   }
 
   @Patch('employees/:employeeId')
-  @RequirePermission(PERMISSION.hrEmployees.update)
+  @RequireActionPermission(PERMISSION.hrEmployees.update)
   async updateEmployee(
     @Param('employeeId', { schema: uuid }) id: string,
     @Body({ schema: employeePatch }) body: EmployeePatch,
     @Req() req: Request,
+    @ClaimPermission() claim: () => Promise<void>,
   ) {
-    return this.employees.update(id, body, await this.actor(req));
+    const actorId = await this.actor(req);
+    await claim();
+    return this.employees.update(id, body, actorId);
   }
 
   @Put('employees/:employeeId/employment')
-  @RequirePermission(PERMISSION.hrEmployees.update)
+  @RequireActionPermission(PERMISSION.hrEmployees.update)
   async putEmployment(
     @Param('employeeId', { schema: uuid }) id: string,
     @Body({ schema: employmentPut }) body: EmploymentPut,
     @Req() req: Request,
+    @ClaimPermission() claim: () => Promise<void>,
   ) {
-    return this.employees.putEmployment(id, body, await this.actor(req));
+    const actorId = await this.actor(req);
+    await claim();
+    return this.employees.putEmployment(id, body, actorId);
   }
 
   @Get(':kind')
@@ -103,23 +116,25 @@ export class HrController {
   }
 
   @Post(':kind')
-  @RequirePermission(PERMISSION.hrReferenceData.write)
+  @RequireActionPermission(PERMISSION.hrReferenceData.write)
   async createReference(
     @Param('kind', { schema: referenceKind }) kind: ReferenceKind,
     @Body() body: unknown,
     @Req() req: Request,
+    @ClaimPermission() claim: () => Promise<void>,
   ) {
-    return this.references.write(kind, undefined, body, await this.actor(req));
+    return this.references.write(kind, undefined, body, await this.actor(req), claim);
   }
 
   @Patch(':kind/:id')
-  @RequirePermission(PERMISSION.hrReferenceData.write)
+  @RequireActionPermission(PERMISSION.hrReferenceData.write)
   async updateReference(
     @Param('kind', { schema: referenceKind }) kind: ReferenceKind,
     @Param('id', { schema: uuid }) id: string,
     @Body() body: unknown,
     @Req() req: Request,
+    @ClaimPermission() claim: () => Promise<void>,
   ) {
-    return this.references.write(kind, id, body, await this.actor(req));
+    return this.references.write(kind, id, body, await this.actor(req), claim);
   }
 }

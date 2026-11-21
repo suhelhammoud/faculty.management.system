@@ -1,6 +1,7 @@
 import type { Database } from '../client.js';
 import { seedLocalAccess } from './access/local-access.js';
 import { seedAuth } from './access/auth.js';
+import { seedElevatedGrants } from './access/elevated-grants.js';
 import { seedHr } from './modules/hr/seed.js';
 import { seedInventory } from './modules/inventory/seed.js';
 import { inventoryOperatorUsername } from './fixtures/local/auth.js';
@@ -20,6 +21,7 @@ export async function seedLocalDatabase(
       await assertSeedAccounts(tx, [fixtures.administrator, ...fixtures.users.map(demoIdentity)]);
       await seedLocalAccess(tx, fixtures.administrator, password);
       const userIds = await seedAuth(tx, fixtures.users, password);
+      await seedElevatedGrants(tx, fixtures.elevatedGrants, userIds, fixtures.administrator.id);
       const employeeCount = await seedHr(tx, fixtures.references, fixtures.employees, userIds);
       const roomCount = await seedFacilities(tx, fixtures.facilities);
       const operator = userIds.get(inventoryOperatorUsername);

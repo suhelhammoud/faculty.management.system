@@ -1,4 +1,4 @@
-import type { DEFAULT_ROLE_TEMPLATES } from '@project/authorization';
+import type { DEFAULT_ROLE_TEMPLATES, PermissionKey } from '@project/authorization';
 
 import type { inventoryConditions } from '../../../schema/inventory/index.js';
 import type { inventoryDemoRoles } from './inventory-roles.js';
@@ -7,6 +7,14 @@ export type SharedSeedRoleId = (typeof DEFAULT_ROLE_TEMPLATES)[number]['id'];
 export type InventoryDemoRoleId = (typeof inventoryDemoRoles)[number]['id'];
 export type SeedRoleId = SharedSeedRoleId | InventoryDemoRoleId;
 export type AuthSeedUser = { username: string; name: string; roles?: SeedRoleId[] };
+export type ElevatedGrantSeed = {
+  key: string;
+  username: string;
+  permission: PermissionKey;
+  targetUsername?: string;
+  validForHours: number;
+  maxUses: number;
+};
 export type ReferenceSeed = {
   staffCategories: {
     code: string;

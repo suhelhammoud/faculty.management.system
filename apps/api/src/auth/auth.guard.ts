@@ -17,17 +17,31 @@ import type { PermissionKey } from '@project/authorization';
 export const Public = () => SetMetadata('auth:public', true);
 export const RequireSession = () => SetMetadata('auth:session', true);
 const actorId = Symbol('authenticated actor');
-type AuthenticatedRequest = Request & { [actorId]?: string };
+const claimAttempt = Symbol('claim elevated permission');
+type AuthenticatedRequest = Request & {
+  [actorId]?: string;
+  [claimAttempt]?: () => Promise<void>;
+};
 export const ActorId = createParamDecorator((_data: unknown, context: ExecutionContext) => {
   const id = context.switchToHttp().getRequest<AuthenticatedRequest>()[actorId];
   if (!id) throw new UnauthorizedException();
   return id;
+});
+export const ClaimPermission = createParamDecorator((_data: unknown, context: ExecutionContext) => {
+  const claim = context.switchToHttp().getRequest<AuthenticatedRequest>()[claimAttempt];
+  if (!claim) throw new ForbiddenException();
+  return claim;
 });
 export const RequirePermission = (
   permission: PermissionKey,
   resourceType?: string,
   idParam = 'id',
 ) => SetMetadata('auth:permission', { permission, resourceType, idParam });
+export const RequireActionPermission = (
+  permission: PermissionKey,
+  resourceType?: string,
+  idParam = 'id',
+) => SetMetadata('auth:permission', { permission, resourceType, idParam, elevated: true });
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
@@ -47,6 +61,7 @@ export class AuthGuard implements CanActivate {
       permission: string;
       resourceType?: string;
       idParam: string;
+      elevated?: boolean;
     }>('auth:permission', [context.getHandler(), context.getClass()]);
     if (!rule) {
       const requiresSession = this.reflector.getAllAndOverride<boolean>('auth:session', [
@@ -60,14 +75,16 @@ export class AuthGuard implements CanActivate {
     }
     const id = req.params[rule.idParam];
     if (rule.resourceType && typeof id !== 'string') throw new ForbiddenException();
-    if (
-      !(await this.authorization.can(
+    const resource = rule.resourceType ? { type: rule.resourceType, id: id as string } : undefined;
+    if (rule.elevated) {
+      req[claimAttempt] = await this.authorization.prepareAttempt(
         current.user.id,
         rule.permission,
-        rule.resourceType ? { type: rule.resourceType, id: id as string } : undefined,
-      ))
-    )
+        resource,
+      );
+    } else if (!(await this.authorization.can(current.user.id, rule.permission, resource))) {
       throw new ForbiddenException();
+    }
     req[actorId] = current.user.id;
     return true;
   }

@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createDb } from '../client.js';
 import { seedLocalDatabase } from './run-local.js';
-import { localAdministrator, localUsers } from './fixtures/local/auth.js';
+import { localAdministrator, localElevatedGrants, localUsers } from './fixtures/local/auth.js';
 import { hrReferenceData } from './fixtures/local/hr-reference-data.js';
 import { hrEmployees } from './fixtures/local/hr-employees.js';
 import { localInventory } from './fixtures/local/inventory.js';
@@ -52,6 +52,7 @@ try {
       {
         administrator: localAdministrator,
         users: localUsers,
+        elevatedGrants: localElevatedGrants,
         references: hrReferenceData,
         employees: hrEmployees,
         facilities: localFacilities,

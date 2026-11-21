@@ -31,7 +31,12 @@ import {
 import type { Request } from 'express';
 import { DATABASE } from '../database/database.constants.js';
 import { AUTH, type Auth } from './auth.provider.js';
-import { Public, RequirePermission } from './auth.guard.js';
+import {
+  ClaimPermission,
+  Public,
+  RequireActionPermission,
+  RequirePermission,
+} from './auth.guard.js';
 function value(body: Record<string, unknown>, key: string) {
   const v = body?.[key];
   if (typeof v !== 'string' || !v.trim()) throw new BadRequestException(key);
@@ -71,19 +76,25 @@ export class AdminController {
       .from(user);
   }
   @Post('users')
-  @RequirePermission(PERMISSION.users.create)
-  async create(@Body() body: Record<string, unknown>, @Req() req: Request) {
+  @RequireActionPermission(PERMISSION.users.create)
+  async create(
+    @Body() body: Record<string, unknown>,
+    @Req() req: Request,
+    @ClaimPermission() claim: () => Promise<void>,
+  ) {
     const username = value(body, 'username').toLowerCase();
     if (!/^[a-z0-9_]{3,30}$/.test(username)) throw new BadRequestException('Invalid username');
+    const name = value(body, 'name');
     const hash = await hashPassword(password(body));
     const id = randomUUID();
     const actorId = await this.actor(req);
+    await claim();
     await this.db.transaction(async (tx) => {
       await tx.insert(user).values({
         id,
         username,
         displayUsername: username,
-        name: value(body, 'name'),
+        name,
         email: `${id}@accounts.invalid`,
       });
       await tx.insert(account).values({
@@ -103,9 +114,14 @@ export class AdminController {
     return { id };
   }
   @Post('users/:id/approve')
-  @RequirePermission(PERMISSION.users.approve, 'users')
-  async approve(@Param('id') id: string, @Req() req: Request) {
+  @RequireActionPermission(PERMISSION.users.approve, 'users')
+  async approve(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @ClaimPermission() claim: () => Promise<void>,
+  ) {
     const actorId = await this.actor(req);
+    await claim();
     await this.db.transaction(async (tx) => {
       await tx.update(user).set({ approved: true }).where(eq(user.id, id));
       await tx.insert(auditLog).values({
@@ -118,10 +134,16 @@ export class AdminController {
     return { success: true };
   }
   @Post('users/:id/reset-password')
-  @RequirePermission(PERMISSION.users.resetPassword, 'users')
-  async reset(@Param('id') id: string, @Body() body: Record<string, unknown>, @Req() req: Request) {
+  @RequireActionPermission(PERMISSION.users.resetPassword, 'users')
+  async reset(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+    @Req() req: Request,
+    @ClaimPermission() claim: () => Promise<void>,
+  ) {
     const hash = await hashPassword(password(body));
     const actorId = await this.actor(req);
+    await claim();
     await this.db.transaction(async (tx) => {
       await tx.select().from(user).where(eq(user.id, id)).for('update');
       await tx.update(user).set({ mustChangePassword: true }).where(eq(user.id, id));
@@ -238,9 +260,14 @@ export class AdminController {
   }
 
   @Post('users/:id/disable')
-  @RequirePermission(PERMISSION.users.approve, 'users')
-  async disable(@Param('id') id: string, @Req() req: Request) {
+  @RequireActionPermission(PERMISSION.users.approve, 'users')
+  async disable(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @ClaimPermission() claim: () => Promise<void>,
+  ) {
     const actorId = await this.actor(req);
+    await claim();
     await this.db.transaction(
       async (tx) => {
         const changed = await tx
@@ -264,9 +291,14 @@ export class AdminController {
   }
 
   @Post('users/:id/enable')
-  @RequirePermission(PERMISSION.users.approve, 'users')
-  async enable(@Param('id') id: string, @Req() req: Request) {
+  @RequireActionPermission(PERMISSION.users.approve, 'users')
+  async enable(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @ClaimPermission() claim: () => Promise<void>,
+  ) {
     const actorId = await this.actor(req);
+    await claim();
     await this.db.transaction(async (tx) => {
       const changed = await tx
         .update(user)

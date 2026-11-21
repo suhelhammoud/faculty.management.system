@@ -64,13 +64,20 @@ export class HrReferenceService {
     return this.db.select().from(table).where(filter).orderBy(asc(order), asc(id));
   }
 
-  async write(kind: ReferenceKind, id: string | undefined, input: unknown, actorId: string) {
+  async write(
+    kind: ReferenceKind,
+    id: string | undefined,
+    input: unknown,
+    actorId: string,
+    claim?: () => Promise<void>,
+  ) {
     const parsed = (id ? referencePatchSchemas[kind] : referenceSchemas[kind]).safeParse(input);
     if (!parsed.success)
       throw new BadRequestException(
         parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`),
       );
     const values = parsed.data as Record<string, unknown>;
+    await claim?.();
     return handleDatabaseErrors(() =>
       this.db.transaction(async (tx) => {
         const definition = tables[kind];

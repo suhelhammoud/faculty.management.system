@@ -54,6 +54,17 @@ enabled, and does not require a password change.
 The runner only accepts loopback database hosts and rejects production-like
 database names. Never add real credentials or personnel data to these fixtures.
 
+## Elevated access demo
+
+The `elevation_demo` account uses `SEED_USER_PASSWORD` and receives two direct grants. Each expires 24 hours after it is first seeded.
+
+| Permission         | Scope                   | Attempts |
+| ------------------ | ----------------------- | -------- |
+| `users:approve`    | The `staff_two` account | 1        |
+| `facilities:write` | All Facilities records  | 3        |
+
+Sign in as `admin`, open **Administration → Resource access**, and select `elevation_demo` to inspect or revoke these grants. Rerunning the local seed preserves each grant’s original deadline, remaining attempts, and revocation state. `seed:permissions` synchronizes the permission catalog only.
+
 ## Inventory demo
 
 The TypeScript fixtures add two demo storage rooms, their shared custodians, six assets, and three consumable types. Opening receipts and two employee issues appear in transaction history. Reruns preserve current balances, custody, asset condition and location, storage configuration, and workflow progress. Add new opening data in new transaction batches.

@@ -38,7 +38,12 @@ export class FacilitiesService {
     return { buildings, floors, roomTypes, rooms };
   }
 
-  async write(kind: FacilityKind, id: string | undefined, input: unknown) {
+  async write(
+    kind: FacilityKind,
+    id: string | undefined,
+    input: unknown,
+    claim?: () => Promise<void>,
+  ) {
     const schema = id ? facilityPatchSchemas[kind] : facilitySchemas[kind];
     const parsed = schema.safeParse(input);
     if (!parsed.success) {
@@ -47,6 +52,7 @@ export class FacilitiesService {
       );
     }
 
+    await claim?.();
     return handleDatabaseErrors(() =>
       this.db.transaction(async (tx) => {
         const definition = definitions[kind];

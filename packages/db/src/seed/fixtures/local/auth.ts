@@ -1,6 +1,6 @@
-import { HR_DEFAULT_ROLE, FACILITIES_DEFAULT_ROLE } from '@project/authorization';
+import { HR_DEFAULT_ROLE, FACILITIES_DEFAULT_ROLE, PERMISSION } from '@project/authorization';
 import { inventoryDemoRoles } from './inventory-roles.js';
-import type { AuthSeedUser, AdministratorSeed } from './types.js';
+import type { AuthSeedUser, AdministratorSeed, ElevatedGrantSeed } from './types.js';
 
 export const inventoryDemoUsers = [
   {
@@ -26,6 +26,7 @@ export const inventoryDemoUsers = [
 ] satisfies AuthSeedUser[];
 
 export const inventoryOperatorUsername = inventoryDemoUsers[0].username;
+const elevatedDemoUsername = 'elevation_demo';
 
 export const localUsers = [
   {
@@ -54,7 +55,30 @@ export const localUsers = [
     roles: [],
   },
   ...inventoryDemoUsers,
+  {
+    username: elevatedDemoUsername,
+    name: 'Demo Elevated Access',
+    roles: [],
+  },
 ] satisfies AuthSeedUser[];
+
+export const localElevatedGrants = [
+  {
+    key: 'approve-staff-two',
+    username: elevatedDemoUsername,
+    permission: PERMISSION.users.approve,
+    targetUsername: 'staff_two',
+    validForHours: 24,
+    maxUses: 1,
+  },
+  {
+    key: 'facilities-write',
+    username: elevatedDemoUsername,
+    permission: PERMISSION.facilities.write,
+    validForHours: 24,
+    maxUses: 3,
+  },
+] satisfies ElevatedGrantSeed[];
 
 export const localAdministrator = {
   id: 'seed-admin',
