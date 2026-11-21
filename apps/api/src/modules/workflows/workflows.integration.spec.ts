@@ -37,6 +37,8 @@ import { InventoryRemovalService } from '../inventory/inventory-removal.service.
 import { InventoryController } from '../inventory/inventory.controller.js';
 import { InventoryReadService } from '../inventory/inventory-read.service.js';
 import { InventoryTransactionsService } from '../inventory/inventory-transactions.service.js';
+import { InventoryDiscrepanciesController } from '../inventory/inventory-discrepancies.controller.js';
+import { InventoryDiscrepanciesService } from '../inventory/inventory-discrepancies.service.js';
 import type { WorkflowRegistration } from './workflow-definition.js';
 import { WorkflowRegistry } from './workflow-registry.js';
 import { WorkflowsController } from './workflows.controller.js';
@@ -144,13 +146,19 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       },
     } as unknown as Auth;
     const module = await Test.createTestingModule({
-      controllers: [WorkflowsController, InventoryRemovalController, InventoryController],
+      controllers: [
+        WorkflowsController,
+        InventoryRemovalController,
+        InventoryController,
+        InventoryDiscrepanciesController,
+      ],
       providers: [
         WorkflowsService,
         WorkflowRegistry,
         InventoryRemovalService,
         InventoryReadService,
         InventoryTransactionsService,
+        InventoryDiscrepanciesService,
         { provide: DATABASE, useValue: db },
         { provide: AuthorizationService, useValue: new AuthorizationService(db) },
       ],
@@ -824,6 +832,46 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
     expect(after.items).not.toContainEqual(expect.objectContaining({ id }));
     const recipient = (await client().get(mine).set(headers(actors.requester)).expect(200)).body;
     expect(recipient.items).toContainEqual(expect.objectContaining({ id }));
+  });
+
+  it('accepts discrepancy reports from the assigned employee and queues them for Inventory staff', async () => {
+    const { db } = connection;
+    await db
+      .update(hrEmployees)
+      .set({ userId: actors.outsider })
+      .where(eq(hrEmployees.employeeId, employeeId));
+    const id = await asset();
+    const path = '/api/inventory/discrepancies';
+    const reporter = headers(actors.outsider);
+    const manager = headers(actors.manager);
+    const payload = { assetId: id, category: 'room', details: 'The projector is in another room.' };
+    await client().post(path).set(headers(actors.requester)).send(payload).expect(404);
+    const post = () => client().post(path).set(reporter).send(payload).expect(201);
+    const [first, duplicate] = await Promise.all([post(), post()]);
+    expect(first.body).toEqual(duplicate.body);
+    const reportId = first.body.id;
+    const review = path + '/' + reportId + '/review';
+    await client().get(path).set(reporter).expect(403);
+    await client().post(review).set(reporter).send({ note: 'Confirmed.' }).expect(403);
+    expect((await client().get(path).set(manager).expect(200)).body).toContainEqual(
+      expect.objectContaining({ id: reportId, assetId: id, reviewedAt: null }),
+    );
+    await client().post(review).set(manager).send({ note: 'Confirmed.' }).expect(201);
+    await client().post(review).set(manager).send({ note: 'Different note.' }).expect(409);
+    expect((await client().get(path).set(manager).expect(200)).body).toEqual([]);
+    expect(
+      (
+        await client()
+          .get(path + '?status=reviewed')
+          .set(manager)
+          .expect(200)
+      ).body,
+    ).toContainEqual(
+      expect.objectContaining({ id: reportId, reviewNote: 'Confirmed.', reviewedBy: 'manager' }),
+    );
+    expect(
+      (await client().get('/api/inventory/my-items').set(reporter).expect(200)).body.items,
+    ).toContainEqual(expect.objectContaining({ id }));
   });
 
   it('rechecks a permission after the task has been opened', async () => {

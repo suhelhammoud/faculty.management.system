@@ -56,6 +56,19 @@ languages where available.
 
 List endpoints accept `offset` and `limit`, which defaults to 50 and accepts at most 100. Changing a storage designation does not change existing asset custody. Assets with no known historical condition use `unassessed`.
 
+## Discrepancy reports
+
+- `POST /discrepancies` accepts `{ assetId, category, details }` for an active asset
+  currently assigned to the signed-in employee. The category is `assignment`,
+  `room`, or `condition`. The report records the custody, room, and condition
+  at submission. An identical open report returns its existing ID.
+- `GET /discrepancies` lists reports with `status=open` (default) or
+  `status=reviewed` and accepts `offset` and `limit`.
+- `POST /discrepancies/:id/review` records `{ note }`, the reviewer, and the
+  time of review. Listing and reviewing reports require both `inventory:read`
+  and `inventory:post-transactions`. Asset custody and condition changes are
+  posted through the transaction API.
+
 ## Post a transaction
 
 Send `POST /transactions` with `type`, `name`, `eventDate` (YYYY-MM-DD), `items`, optional `reference`, and optional `notes`. The response is `201` with `{ id, type }`. An `Idempotency-Key` header lets the same actor retry an identical request and receive the same result. Stale asset revisions, insufficient stock, and reuse of a key with different input return `409`. A request either posts in full or rolls back.

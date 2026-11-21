@@ -26,6 +26,7 @@ import {
 import { useLanguage } from '../lib/i18n';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
+import { ReportDiscrepancy } from './discrepancies';
 
 export const operations = [
   'receipt',
@@ -95,7 +96,7 @@ export function MyItemsPage() {
           ) : (
             <div className="inv-stack">
               <Grid
-                columns={['Tag', 'Name', 'Condition', 'Room', 'Assigned on']}
+                columns={['Tag', 'Name', 'Condition', 'Room', 'Assigned on', 'Actions']}
                 rows={items.map((row) => ({
                   id: row.id,
                   cells: [
@@ -104,6 +105,7 @@ export function MyItemsPage() {
                     t(row.condition),
                     row.room ? bidi(row.room) : t('No room'),
                     date(row.assignedAt),
+                    <ReportDiscrepancy key="report" asset={row} />,
                   ],
                 }))}
               />

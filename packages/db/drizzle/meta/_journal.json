@@ -36,6 +36,13 @@
       "when": 1795283811548,
       "tag": "0004_student_affairs_access",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795288147803,
+      "tag": "0005_inventory_discrepancies",
+      "breakpoints": true
     }
   ]
 }

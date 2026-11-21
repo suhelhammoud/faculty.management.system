@@ -18,6 +18,7 @@ import {
   TransactionPage,
 } from './pages/reads';
 import { SettingsPage, TransactionForm } from './pages/write';
+import { DiscrepanciesPage } from './pages/discrepancies';
 import {
   InboxPage,
   InstancePage,
@@ -60,6 +61,9 @@ function Workspace() {
                 <NavLink to="/inventory/assets">{t('Assets')}</NavLink>
                 <NavLink to="/inventory/stock">{t('Stock')}</NavLink>
                 <NavLink to="/inventory/transactions">{t('Transactions')}</NavLink>
+                {access.postTransactions && (
+                  <NavLink to="/inventory/discrepancies">{t('Discrepancy reports')}</NavLink>
+                )}
                 {access.configure && <NavLink to="/inventory/settings">{t('Settings')}</NavLink>}
               </>
             )}
@@ -90,6 +94,14 @@ function Workspace() {
               }
             />
             <Route path="my-items" element={<MyItemsPage />} />
+            <Route
+              path="discrepancies"
+              element={
+                <Permit allow={access.read && access.postTransactions}>
+                  <DiscrepanciesPage />
+                </Permit>
+              }
+            />
             <Route
               path="assets"
               element={

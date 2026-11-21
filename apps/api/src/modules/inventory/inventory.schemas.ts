@@ -1,4 +1,8 @@
-import { inventoryConditions, inventoryTransactionTypes } from '@project/db/schema';
+import {
+  inventoryConditions,
+  inventoryDiscrepancyCategories,
+  inventoryTransactionTypes,
+} from '@project/db/schema';
 import { z } from 'zod';
 import { uuid } from './inventory-removal.schemas.js';
 
@@ -116,6 +120,16 @@ const offset = z.coerce.number().int().min(0).max(2147483647).default(0);
 const limit = z.coerce.number().int().min(1).max(100).default(50);
 const page = { offset, limit };
 export const myItemsQuery = z.strictObject(page);
+export const discrepancyQuery = z.strictObject({
+  ...page,
+  status: z.enum(['open', 'reviewed']).default('open'),
+});
+export const discrepancyInput = z.strictObject({
+  assetId: uuid,
+  category: z.enum(inventoryDiscrepancyCategories),
+  details: notes,
+});
+export const discrepancyReview = z.strictObject({ note: notes });
 export const referenceQuery = z.strictObject({ ...page, q: label.optional() });
 export const assetQuery = z.strictObject({
   ...page,

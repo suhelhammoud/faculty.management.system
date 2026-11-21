@@ -8,6 +8,9 @@ import { Input } from './ui/input';
 import { NativeSelect } from './ui/native-select';
 
 const messages = new Set([
+  'Asset assignment not found',
+  'An open report already exists for this issue.',
+  'This report has already been reviewed.',
   'Asset changed since it was loaded',
   'Insufficient stock',
   'Asset tag already exists',

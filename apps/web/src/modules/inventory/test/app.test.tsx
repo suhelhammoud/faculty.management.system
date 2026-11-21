@@ -111,6 +111,85 @@ describe('Inventory workspace', () => {
     ).toBeInTheDocument();
   });
 
+  it('lets the assigned employee report a discrepancy in Arabic', async () => {
+    const submit = vi.fn(() => response({ id: 'report' }, 201));
+    useLanguage.getState().change('ar');
+    mount('/inventory/my-items', {
+      '/api/inventory/my-items': {
+        linkedEmployee: true,
+        items: [
+          {
+            id: 'a1',
+            tag: 'INV-1',
+            name: 'Projector',
+            condition: 'serviceable',
+            assignedAt: '2025-01-01T00:00:00Z',
+          },
+        ],
+      },
+      '/api/inventory/discrepancies': submit,
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'الإبلاغ عن عدم تطابق' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveAttribute('dir', 'rtl');
+    expect(within(dialog).getByText('INV-1')).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText('المشكلة'), { target: { value: 'room' } });
+    fireEvent.change(within(dialog).getByLabelText('صِف عدم التطابق'), {
+      target: { value: 'الأصل في غرفة أخرى' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'إرسال البلاغ' }));
+    expect(await screen.findByText('أُرسل البلاغ إلى إدارة المخزون')).toBeInTheDocument();
+    expect(submit).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ assetId: 'a1', category: 'room', details: 'الأصل في غرفة أخرى' }),
+      }),
+    );
+    expect(screen.queryByRole('link', { name: 'بلاغات عدم التطابق' })).not.toBeInTheDocument();
+  });
+
+  it('refreshes the staff queue after a report is reviewed', async () => {
+    let reviewed = false;
+    const submit = vi.fn(() => {
+      reviewed = true;
+      return response({ id: 'report' }, 201);
+    });
+    mount('/inventory/discrepancies', {
+      '/api/inventory/capabilities': { ...capabilities, read: true, postTransactions: true },
+      '/api/inventory/discrepancies': () =>
+        response(
+          reviewed
+            ? []
+            : [
+                {
+                  id: 'report',
+                  assetId: 'a1',
+                  assetTag: 'INV-1',
+                  assetName: 'Projector',
+                  reportedBy: 'Staff One',
+                  reportedAt: '2025-01-01T00:00:00Z',
+                  category: 'room',
+                  details: 'The projector is in another room.',
+                  condition: 'serviceable',
+                  assetRevision: 2,
+                  reviewedAt: null,
+                },
+              ],
+        ),
+      '/api/inventory/discrepancies/report/review': submit,
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Review report' }));
+    fireEvent.change(screen.getByLabelText('Review note'), { target: { value: 'Confirmed.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Mark reviewed' }));
+    expect(await screen.findByText('No results')).toBeInTheDocument();
+    expect(submit).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ note: 'Confirmed.' }),
+      }),
+    );
+  });
+
   it('posts an asset issue from the register with the prefilled asset and source', async () => {
     const post = vi.fn(() => response({ id: 'posted' }, 201));
     mount('/inventory/assets', {
