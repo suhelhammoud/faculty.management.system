@@ -48,4 +48,21 @@ describe('WorkflowRegistry', () => {
     expect(() => registry.register(draft)).toThrow('Duplicate workflow definition');
     expect(() => registry.onApplicationBootstrap()).toThrow('Unknown transition target');
   });
+  it('requires an explicit match rule and a resolver for department routing', () => {
+    const missingMatch = registration(1, true);
+    Object.assign(missingMatch.definition.steps.review.eligible, { position: 'dean' });
+    const matchRegistry = new WorkflowRegistry();
+    matchRegistry.register(missingMatch);
+    expect(() => matchRegistry.onApplicationBootstrap()).toThrow('Invalid combined eligibility');
+
+    const department = registration(1, true);
+    department.definition.steps.review.eligible = {
+      position: { byDepartment: { 'software-engineering': 'head-software-engineering' } },
+    };
+    const departmentRegistry = new WorkflowRegistry();
+    departmentRegistry.register(department);
+    expect(() => departmentRegistry.onApplicationBootstrap()).toThrow(
+      'Missing department resolver',
+    );
+  });
 });

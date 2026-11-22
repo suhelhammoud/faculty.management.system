@@ -30,6 +30,8 @@ Open **Faculty Positions** and choose **Assign holder** or **Manage holder** on 
 
 After the database migration and permission catalog sync, grant `faculty-positions:read` to existing roles that need to view the tab. Also grant `faculty-positions:manage` to roles that manage positions and appointments. New Administrator accounts provisioned with the default role template receive both permissions.
 
+For workflows configured to use a position, pending approvals follow the incoming holder after a replacement if that user can see the record and meets the step rules. A vacant position leaves a position-only approval pending. [Position-based approval rules](../../../../../docs/modules/workflows/IMPLEMENTATION-PLAN.md#position-based-approval-steps)
+
 ## Production URL configuration
 
 Follow the [web deployment guide](../../../README.md#build-and-host). On the API, set `BETTER_AUTH_URL` to its public HTTPS origin and include the exact web origin in `TRUSTED_ORIGINS`. The API uses the same allowlist for credentialed CORS and administrative requests.

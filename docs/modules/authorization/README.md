@@ -21,6 +21,12 @@ A **permission** names an action, such as `hr-employees:read` or `facilities:wri
 3. **Check roles.** Any assigned role with the required permission grants access. The API reads current access from PostgreSQL on requests. Modules may apply additional record, ownership, or workflow rules.
 4. **Check elevated access.** An endpoint that supports elevation can use a matching, unexpired, unrevoked grant with attempts remaining. If an earlier step granted access, the user keeps their elevated attempts. If no rule grants access, the API denies the action.
 
+## Faculty positions in workflow approvals
+
+A Faculty Position identifies a standing office and its current appointment. Appointing someone makes them eligible for steps configured to accept that position, subject to record access and any additional step rules. Role membership and permission grants are managed separately.
+
+When a step combines a permission and a position, an explicit deny for that permission on the record blocks the action. Under an either-route rule, the position holder can still qualify if the permission is simply absent. [Configure position-based approval steps](../workflows/IMPLEMENTATION-PLAN.md#position-based-approval-steps)
+
 ## Elevated grants
 
 An administrator can give a user one permission across all records it covers, or limit the grant to one supported record. The same attempt limit applies across all eligible actions covered by that permission and scope. When several grants match, the API prefers a record-specific grant over a global grant, then the earlier expiry.
@@ -62,6 +68,7 @@ The catalog groups permissions by area.
 | Audit             | `audit:read`                                                                                                                                                                                                                              |
 | HR employees      | `hr-employees:read`, `hr-employees:create`, `hr-employees:update`                                                                                                                                                                         |
 | HR reference data | `hr-reference-data:read`, `hr-reference-data:write`                                                                                                                                                                                       |
+| Faculty positions | `faculty-positions:read`, `faculty-positions:manage`                                                                                                                                                                                      |
 | Facilities        | `facilities:read`, `facilities:write`                                                                                                                                                                                                     |
 | Inventory         | `inventory:read`, `inventory:configure`, `inventory:post-transactions`, `inventory:dispose`, `inventory:manage-assets`, `inventory:request-removal`, `inventory:removal-review`, `inventory:removal-decide`, `inventory:removal-withdraw` |
 | Workflows         | `workflow:monitor`                                                                                                                                                                                                                        |

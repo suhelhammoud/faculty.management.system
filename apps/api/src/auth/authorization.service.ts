@@ -42,7 +42,7 @@ export class AuthorizationService {
     resource?: ResourceScope,
     db: Reader = this.db,
   ): Promise<boolean> {
-    return (await this.access(userId, permission, resource, db)) === 'allowed';
+    return (await this.permissionAccess(userId, permission, resource, db)) === 'allowed';
   }
 
   async canMany(
@@ -95,14 +95,14 @@ export class AuthorizationService {
   }
 
   async canAttempt(userId: string, permission: string, resource?: ResourceScope): Promise<boolean> {
-    const access = await this.access(userId, permission, resource, this.db);
+    const access = await this.permissionAccess(userId, permission, resource, this.db);
     if (access === 'allowed') return true;
     if (access === 'blocked') return false;
     return (await this.grantCandidates(this.db, userId, permission, resource)).length > 0;
   }
 
   async prepareAttempt(userId: string, permission: string, resource?: ResourceScope) {
-    const access = await this.access(userId, permission, resource, this.db);
+    const access = await this.permissionAccess(userId, permission, resource, this.db);
     if (access === 'allowed') return async () => {};
     if (
       access === 'blocked' ||
@@ -116,7 +116,7 @@ export class AuthorizationService {
         const [candidate] = await this.grantCandidates(tx, userId, permission, resource).for(
           'update',
         );
-        const currentAccess = await this.access(userId, permission, resource, tx);
+        const currentAccess = await this.permissionAccess(userId, permission, resource, tx);
         if (currentAccess === 'allowed') return;
         if (currentAccess === 'blocked' || !candidate) throw new ForbiddenException();
         const [claimed] = await tx
@@ -170,7 +170,7 @@ export class AuthorizationService {
       .limit(1);
   }
 
-  private async access(
+  async permissionAccess(
     userId: string,
     permission: string,
     resource: ResourceScope | undefined,

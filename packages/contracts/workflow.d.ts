@@ -38,6 +38,7 @@ export interface WorkflowHistoryEvent {
   id: string;
   taskId: string | null;
   actorId: string;
+  actedAsPosition?: { code: string; appointmentId: string };
   action: string;
   occurredAt: string;
   comment: string | null;

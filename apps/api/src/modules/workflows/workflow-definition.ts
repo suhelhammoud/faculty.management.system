@@ -19,6 +19,13 @@ export type Transition<Step extends string = string> =
 
 export type WorkflowEligibility = { permission: PermissionKey } | { requester: true };
 
+export type WorkflowPositionTarget = string | { byDepartment: Readonly<Record<string, string>> };
+
+export type WorkflowStepEligibility =
+  | WorkflowEligibility
+  | { position: WorkflowPositionTarget; permission?: never; match?: never }
+  | { permission: PermissionKey; position: WorkflowPositionTarget; match: 'any' | 'all' };
+
 export interface WorkflowDefinition<Step extends string = string> {
   key: `${string}.${string}`;
   version: number;
@@ -30,7 +37,7 @@ export interface WorkflowDefinition<Step extends string = string> {
     {
       title: string;
       instructions: string;
-      eligible: WorkflowEligibility;
+      eligible: WorkflowStepEligibility;
       withdraw?: WorkflowEligibility;
       actions: Readonly<Record<string, Transition<Step>>>;
     }
@@ -69,6 +76,10 @@ export interface WorkflowRegistration {
     requesters: ReadonlyMap<string, string>;
     permits: (permission: PermissionKey, id: string) => boolean;
   }>;
+  resolveDepartments?(
+    db: WorkflowReader,
+    subjectIds: string[],
+  ): Promise<ReadonlyMap<string, string>>;
   requester(context: WorkflowAccess): Promise<string | null>;
   canAct?(context: WorkflowActionAccess): Promise<boolean>;
   canViewEvent?(context: WorkflowAccess, event: WorkflowEvent): Promise<boolean>;

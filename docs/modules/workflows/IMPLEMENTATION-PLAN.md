@@ -4,7 +4,7 @@
 
 Build a reusable Workflows module inside the shared NestJS API. Inventory, Student Affairs, Exams, HR, and future modules can use it to route work through a sequence of people. Inventory removal is the first worked example. The other examples show how the same contract applies to different records and access rules.
 
-Start with versioned TypeScript definitions, one active task at a time, permission-based queues, a common task inbox, opt-in withdrawal, and a read-only monitor. Support assignment to a specific person when a process requires it. Add parallel approvals, timers, notifications, claiming, reassignment, and a workflow editor when a confirmed process needs them.
+Start with versioned TypeScript definitions, one active task at a time, queues based on permissions or faculty positions, a common task inbox, opt-in withdrawal, and a read-only monitor. Support assignment to a specific person when a process requires it. Add parallel approvals, timers, notifications, claiming, reassignment, and a workflow editor when a confirmed process needs them.
 
 ## NestJS module structure
 
@@ -23,7 +23,7 @@ Use three shared PostgreSQL tables:
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `workflow_instances` | ID, definition key and version, starter user, lifecycle status, current step, start and completion timestamps, and a stable subject reference with module, record type, and record ID. |
 | `workflow_tasks`     | ID, instance ID, step key, optional assigned user, pending/completed/cancelled status, and open and completion timestamps. Each visit to a step gets its own task ID.                  |
-| `workflow_events`    | ID, instance ID, optional task ID, action, actor, timestamp, and workflow comment where appropriate. Corrections append a new event.                                                   |
+| `workflow_events`    | ID, instance ID, optional task ID, action, actor, timestamp, optional comment, and the appointment ID when the action relied on a position.                                            |
 
 Enforce at most one pending task per instance with a PostgreSQL partial unique index. Keep action history in events and resolve step eligibility from the pinned definition. Keep marks, student records, attachments, and per-item decisions in the owning module's typed tables. Workflow history can reference the domain revision or decision that an action used.
 
@@ -32,30 +32,8 @@ Enforce at most one pending task per instance with a PostgreSQL partial unique i
 Each definition declares a namespaced key, version, initial step, and steps with instructions, eligibility, and action transitions. A transition identifies a next step or a terminal workflow status. A step can opt in to instance withdrawal by declaring `withdraw` eligibility for the requester or a scoped permission. The Inventory definition uses typed step permissions from the shared catalog. [Inventory definition](../../../apps/api/src/modules/inventory/inventory-removal.definition.ts)
 
 ```ts
-import { PERMISSION, type PermissionKey } from '@project/authorization';
-
-type Transition<Step extends string> =
-  { next: Step } | { finish: 'completed' | 'rejected' | 'cancelled' };
-
-type WorkflowEligibility = { permission: PermissionKey } | { requester: true };
-
-type WorkflowDefinition<Step extends string> = {
-  key: `${string}.${string}`;
-  version: number;
-  title: string;
-  description: string;
-  initialStep: Step;
-  steps: Record<
-    Step,
-    {
-      title: string;
-      instructions: string;
-      eligible: WorkflowEligibility;
-      withdraw?: WorkflowEligibility;
-      actions: Record<string, Transition<Step>>;
-    }
-  >;
-};
+import { PERMISSION } from '@project/authorization';
+import type { WorkflowDefinition } from '../workflows/workflow-definition.js';
 
 type RemovalStep = 'review' | 'revise' | 'committee-decision';
 
@@ -114,6 +92,29 @@ Apply module record scope and the relevant visibility rules to the inbox, direct
 
 Withdrawal requires record access and the active step's `withdraw` eligibility. The pending task's assignee and action permissions continue to govern its task actions. The module's action handler can validate withdrawal input within the transaction.
 
+### Position-based approval steps
+
+Configure the rule in the step’s `eligible` field. It applies to every task action on that step. Modules can use `canAct` for additional action-specific checks.
+
+| Who may act                                         | Value of `eligible`                                                                       |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| An account with the configured permission           | `{ permission }`                                                                          |
+| The requester identified by the owning module       | `{ requester: true }`                                                                     |
+| The current holder of a faculty-wide position       | `{ position: 'dean' }`                                                                    |
+| The current department head for the request         | `{ position: { byDepartment: { 'software-engineering': 'head-software-engineering' } } }` |
+| Either the permission holder or the position holder | `{ permission, position: 'dean', match: 'any' }`                                          |
+| The position holder who also has the permission     | `{ permission, position: 'dean', match: 'all' }`                                          |
+
+In the table, `permission` is a key from the shared `PERMISSION` catalog. In a combined rule, an explicit record-level deny for that key blocks the action through either route. With `match: 'any'`, a current holder can qualify through the position when the permission is missing. If both routes qualify, the engine uses the permission route.
+
+Use stable Faculty Position codes. A plain string targets a faculty-wide position. For department routing, implement `resolveDepartments(db, subjectIds)` on the registration and return a map from subject ID to department code. Read scope from the stored record and preserve it for the workflow or protect changes in the approval transaction. The engine checks that the selected position belongs to that department. A missing or unmapped department, missing position, or vacancy leaves the position rule unsatisfied.
+
+Officeholders also need access to the underlying record. Keep `canView`, `queueAccess` when implemented, and the module’s own detail endpoints consistent. Use `assign` only when the step must also require a named user. Position rules apply to step actions. The module controls workflow starts, and `withdraw` uses its own requester or permission rule.
+
+When an administrator replaces a holder, pending work becomes available to the incoming holder if they meet the rule and can see the record. The engine locks the position and rechecks the active appointment when a submitted action relies on it. Appointment authority changes when saved in Administration. The appointment date records the date entered by staff. [Manage faculty appointments](../../../apps/web/src/modules/admin/README.md#faculty-positions)
+
+Apply migration `0010_workflow_position_approvals.sql` before starting the updated API. To adopt an approval rule, register a new active definition version and retain the prior definition and handlers for its existing instances. Inventory’s asset-removal workflow uses its current permission and requester rules. [Database migration](../../../packages/db/drizzle/0010_workflow_position_approvals.sql) · [Inventory approval rules](inventory-removal.md#inbox-and-pages)
+
 ## API and transaction behavior
 
 Keep the `/workflow/` segment in workflow URLs. Use these shared endpoints:
@@ -154,7 +155,9 @@ The API explicitly maps records to these types and serializes timestamps as ISO
 strings. Instances include the pinned definition key and version. Task status
 and instance status have separate types. Nullable values such as a task's
 assignee, a completed instance's current task, and an event's task ID or hidden
-comment are represented as `null`.
+comment are represented as `null`. An action authorized through a position includes
+`actedAsPosition: { code, appointmentId }` on the visible history event alongside
+`actorId`. Permission-authorized events and earlier history omit that field.
 
 Step and action keys remain strings so different modules can use their own keys.
 The UI uses the task's `actions` list to display the actions available to the
@@ -209,6 +212,8 @@ A staff member could open a certificate request on behalf of a student. The requ
 - An eligible withdrawal cancels the pending task and writes one audit event. An identical retry returns the original result. Withdrawal and a competing committee decision can produce only one terminal outcome.
 - An asset handover during review produces a conflict on a stale decision. The workflow and asset writes roll back together, and the reviewer can still return the proposal.
 - An out-of-scope user cannot discover the task in the inbox, open its history by direct link, or act on it. A user who loses the step permission after opening the task cannot submit a decision.
+- A pending position-based task follows the incoming holder after a handover. An approval already holding the position lock records the outgoing appointment before the handover takes effect.
+- Department mismatches and vacancies fail the position rule. An explicit record-level deny blocks either route in a combined rule.
 - An instance started under an older definition version can still advance using its matching handlers after a new version becomes active.
 
 ## Run Inventory removal

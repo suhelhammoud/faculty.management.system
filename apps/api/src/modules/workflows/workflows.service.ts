@@ -17,7 +17,13 @@ import type {
   WorkflowTask as WorkflowTaskResponse,
 } from '@project/contracts/workflow';
 import type { Database } from '@project/db';
-import { workflowEvents, workflowInstances, workflowTasks } from '@project/db/schema';
+import {
+  facultyPositionAppointments,
+  facultyPositions,
+  workflowEvents,
+  workflowInstances,
+  workflowTasks,
+} from '@project/db/schema';
 import { and, asc, desc, eq, gt, isNull, or, sql } from 'drizzle-orm';
 import { AuthorizationService } from '../../auth/authorization.service.js';
 import { DATABASE } from '../../database/database.constants.js';
@@ -33,6 +39,11 @@ import type {
 } from './workflow-definition.js';
 import { queueCursor, type QueuePosition } from './workflow-cursor.js';
 import { WorkflowRegistry } from './workflow-registry.js';
+import {
+  loadWorkflowAppointments,
+  qualifyingAppointment,
+  type WorkflowAppointments,
+} from './workflow-positions.js';
 
 export interface WorkflowQueueQuery {
   limit: number;
@@ -43,6 +54,11 @@ export interface WorkflowQueueQuery {
 }
 
 type QueueAccess = Awaited<ReturnType<NonNullable<WorkflowRegistration['queueAccess']>>>;
+type EligibilityBatch = {
+  access?: QueueAccess;
+  appointments?: WorkflowAppointments;
+  departments?: ReadonlyMap<string, string>;
+};
 type QueueRow = { position: QueuePosition; instance: WorkflowInstance };
 const scanLimit = 500;
 const batchSize = 100;
@@ -180,7 +196,13 @@ export class WorkflowsService {
         throw new ConflictException('This task is no longer pending');
       }
 
-      const actions = await this.available(context, registration, task);
+      const { actions, appointmentId } = await this.available(
+        context,
+        registration,
+        task,
+        undefined,
+        tx,
+      );
       if (!actions.includes(command.action)) throw new ForbiddenException('Action is unavailable');
       const transition = registration.definition.steps[task.step].actions[command.action];
       const effect = await registration.apply({
@@ -223,6 +245,7 @@ export class WorkflowsService {
         retry,
         command.comment,
         effect?.domainReference,
+        appointmentId,
       );
       return result;
     });
@@ -326,13 +349,7 @@ export class WorkflowsService {
       },
       async ({ instance, task }, registration, batch) => {
         const context = this.access(this.db, actorId, instance);
-        const eligible = registration.definition.steps[task.step].eligible;
-        const batchEligible =
-          batch &&
-          ('requester' in eligible
-            ? batch.requesters.get(instance.subjectId) === actorId
-            : batch.permits(eligible.permission, instance.subjectId));
-        const actions = await this.available(context, registration, task, batchEligible);
+        const { actions } = await this.available(context, registration, task, batch);
         return actions.length ? this.taskView(task, instance, registration, actions) : undefined;
       },
     );
@@ -352,7 +369,7 @@ export class WorkflowsService {
       row.task,
       row.instance,
       registration,
-      await this.available(context, registration, row.task),
+      (await this.available(context, registration, row.task)).actions,
     );
   }
 
@@ -363,12 +380,17 @@ export class WorkflowsService {
     const registration = await this.visible(context);
     if (!registration) throw new NotFoundException();
     const rows = await this.db
-      .select()
+      .select({ event: workflowEvents, positionCode: facultyPositions.code })
       .from(workflowEvents)
+      .leftJoin(
+        facultyPositionAppointments,
+        eq(facultyPositionAppointments.id, workflowEvents.positionAppointmentId),
+      )
+      .leftJoin(facultyPositions, eq(facultyPositions.id, facultyPositionAppointments.positionId))
       .where(eq(workflowEvents.instanceId, id))
       .orderBy(asc(workflowEvents.occurredAt), asc(workflowEvents.id));
     const history: WorkflowHistoryEvent[] = [];
-    for (const event of rows) {
+    for (const { event, positionCode } of rows) {
       if (registration.canViewEvent && !(await registration.canViewEvent(context, event))) continue;
       const showComment = registration.canViewComment
         ? await registration.canViewComment(context, event)
@@ -377,6 +399,9 @@ export class WorkflowsService {
         id: event.id,
         taskId: event.taskId,
         actorId: event.actorId,
+        ...(event.positionAppointmentId && positionCode
+          ? { actedAsPosition: { code: positionCode, appointmentId: event.positionAppointmentId } }
+          : {}),
         action: event.action,
         occurredAt: event.occurredAt.toISOString(),
         comment: showComment ? event.comment : null,
@@ -446,7 +471,7 @@ export class WorkflowsService {
     resolve: (
       row: Row,
       registration: WorkflowRegistration,
-      batch?: QueueAccess,
+      batch: EligibilityBatch,
     ) => Promise<Result | undefined>,
   ): Promise<WorkflowPage<Result>> {
     const cursor = queueCursor(
@@ -457,6 +482,7 @@ export class WorkflowsService {
     let examined = 0;
     let hasMore = true;
     const records: Result[] = [];
+    let appointments: WorkflowAppointments | undefined;
     while (hasMore && examined < scanLimit && records.length < query.limit) {
       const take = Math.min(batchSize, scanLimit - examined);
       const candidates = await fetch(after, take + 1);
@@ -464,21 +490,51 @@ export class WorkflowsService {
       const registrations = rows.map(({ instance }) =>
         this.registry.get(instance.definitionKey, instance.definitionVersion),
       );
-      const idsByRegistration = new Map<WorkflowRegistration, string[]>();
+      const idsByRegistration = new Map<WorkflowRegistration, Set<string>>();
+      const departmentIds = new Map<WorkflowRegistration, Set<string>>();
+      let needsAppointments = false;
       for (const [index, registration] of registrations.entries()) {
-        if (!registration?.queueAccess) continue;
-        const ids = idsByRegistration.get(registration) ?? [];
-        ids.push(rows[index].instance.subjectId);
-        idsByRegistration.set(registration, ids);
+        if (!registration) continue;
+        const { subjectId, currentStep } = rows[index].instance;
+        if (registration.queueAccess) {
+          const ids = idsByRegistration.get(registration) ?? new Set<string>();
+          ids.add(subjectId);
+          idsByRegistration.set(registration, ids);
+        }
+        const rule = currentStep ? registration.definition.steps[currentStep]?.eligible : undefined;
+        if (kind === 'inbox' && rule && 'position' in rule) {
+          needsAppointments = true;
+          if (typeof rule.position !== 'string') {
+            const ids = departmentIds.get(registration) ?? new Set<string>();
+            ids.add(subjectId);
+            departmentIds.set(registration, ids);
+          }
+        }
       }
-      const batched = new Map(
-        await Promise.all(
-          [...idsByRegistration].map(
-            async ([registration, ids]) =>
-              [registration, await registration.queueAccess!(this.db, actorId, ids)] as const,
+      const [accessByRegistration, departmentsByRegistration, currentAppointments] =
+        await Promise.all([
+          Promise.all(
+            [...idsByRegistration].map(
+              async ([registration, ids]) =>
+                [
+                  registration,
+                  await registration.queueAccess!(this.db, actorId, [...ids]),
+                ] as const,
+            ),
           ),
-        ),
-      );
+          Promise.all(
+            [...departmentIds].map(
+              async ([registration, ids]) =>
+                [registration, await registration.resolveDepartments!(this.db, [...ids])] as const,
+            ),
+          ),
+          needsAppointments && appointments === undefined
+            ? loadWorkflowAppointments(this.db, actorId)
+            : appointments,
+        ]);
+      appointments = currentAppointments;
+      const batched = new Map(accessByRegistration);
+      const departments = new Map(departmentsByRegistration);
       hasMore = candidates.length > take;
       for (const [index, row] of rows.entries()) {
         examined += 1;
@@ -490,7 +546,11 @@ export class WorkflowsService {
           ? batch.requesters.has(row.instance.subjectId)
           : await registration.canView(this.access(this.db, actorId, row.instance));
         if (!visible) continue;
-        const result = await resolve(row, registration, batch);
+        const result = await resolve(row, registration, {
+          access: batch,
+          appointments,
+          departments: departments.get(registration),
+        });
         if (result !== undefined) records.push(result);
         if (records.length === query.limit) {
           hasMore ||= index + 1 < rows.length;
@@ -524,23 +584,60 @@ export class WorkflowsService {
     context: WorkflowAccess,
     registration: WorkflowRegistration,
     task: WorkflowTask,
-    batchEligible?: boolean,
-  ) {
+    batch?: EligibilityBatch,
+    transaction?: WorkflowTransaction,
+  ): Promise<{ actions: string[]; appointmentId?: string }> {
+    const unavailable = { actions: [] };
     if (
       task.status !== 'pending' ||
       context.instance.status !== 'running' ||
-      context.instance.currentStep !== task.step
-    )
-      return [];
-    if (task.assignedUserId && task.assignedUserId !== context.actorId) return [];
+      context.instance.currentStep !== task.step ||
+      (task.assignedUserId && task.assignedUserId !== context.actorId)
+    ) {
+      return unavailable;
+    }
     const { eligible, actions } = registration.definition.steps[task.step];
-    if (!(batchEligible ?? (await this.isEligible(context, registration, eligible)))) return [];
+    let appointmentId: string | undefined;
+    if ('position' in eligible) {
+      const { actorId, db, subject } = context;
+      const { permission, match } = eligible;
+      const access = permission
+        ? await this.authorization.permissionAccess(
+            actorId,
+            permission,
+            { type: `${subject.module}.${subject.type}`, id: subject.id },
+            db,
+          )
+        : undefined;
+      if (access === 'blocked' || (match === 'all' && access !== 'allowed')) return unavailable;
+      if (match !== 'any' || access !== 'allowed') {
+        if (!permission && !(await this.authorization.isActive(actorId, db))) return unavailable;
+        appointmentId = await qualifyingAppointment(
+          context,
+          registration,
+          eligible.position,
+          batch?.appointments
+            ? { appointments: batch.appointments, departments: batch.departments }
+            : undefined,
+          transaction,
+        );
+        if (!appointmentId) return unavailable;
+      }
+    } else {
+      const access = batch?.access;
+      const permitted = access
+        ? 'requester' in eligible
+          ? access.requesters.get(context.subject.id) === context.actorId
+          : access.permits(eligible.permission, context.subject.id)
+        : await this.isEligible(context, registration, eligible);
+      if (!permitted) return unavailable;
+    }
     const available: string[] = [];
     for (const action of Object.keys(actions)) {
       if (!registration.canAct || (await registration.canAct({ ...context, task, action })))
         available.push(action);
     }
-    return available;
+    return { actions: available, appointmentId };
   }
 
   private async canWithdraw(context: WorkflowAccess, registration: WorkflowRegistration) {
@@ -620,12 +717,14 @@ export class WorkflowsService {
     retry: Idempotency,
     comment?: string,
     domainReference?: string,
+    appointmentId?: string,
   ) {
     await tx.insert(workflowEvents).values({
       instanceId: result.instanceId,
       taskId,
       action,
       actorId: retry.actorId,
+      positionAppointmentId: appointmentId,
       comment,
       domainReference,
       occurredAt: sql`clock_timestamp()`,

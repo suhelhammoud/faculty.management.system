@@ -10,6 +10,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { user } from '../auth/users.js';
+import { facultyPositionAppointments } from '../faculty-positions/index.js';
 
 const timestampWithZone = (name: string) => timestamp(name, { withTimezone: true });
 
@@ -83,6 +84,9 @@ export const workflowEvents = pgTable(
     actorId: text('actor_id')
       .notNull()
       .references(() => user.id),
+    positionAppointmentId: uuid('position_appointment_id').references(
+      () => facultyPositionAppointments.id,
+    ),
     action: text().notNull(),
     comment: text(),
     domainReference: text('domain_reference'),

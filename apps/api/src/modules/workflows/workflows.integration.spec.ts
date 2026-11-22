@@ -8,6 +8,7 @@ import { PERMISSION } from '@project/authorization';
 import type { WorkflowActionResult } from '@project/contracts/workflow';
 import { createDb } from '@project/db';
 import {
+  facultyPositions,
   facilitiesBuildings,
   facilitiesFloors,
   facilitiesRooms,
@@ -28,15 +29,16 @@ import {
   userRoles,
   workflowEvents,
 } from '@project/db/schema';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { adminOriginProtection } from '../../auth/admin-origin-protection.js';
 import { AuthGuard } from '../../auth/auth.guard.js';
 import type { Auth } from '../../auth/auth.provider.js';
 import { AuthorizationService } from '../../auth/authorization.service.js';
 import { DATABASE } from '../../database/database.constants.js';
+import { FacultyPositionsService } from '../faculty-positions/faculty-positions.service.js';
 import { InventoryRemovalController } from '../inventory/inventory-removal.controller.js';
 import { InventoryRemovalService } from '../inventory/inventory-removal.service.js';
 import { InventoryController } from '../inventory/inventory.controller.js';
@@ -44,7 +46,7 @@ import { InventoryReadService } from '../inventory/inventory-read.service.js';
 import { InventoryTransactionsService } from '../inventory/inventory-transactions.service.js';
 import { InventoryDiscrepanciesController } from '../inventory/inventory-discrepancies.controller.js';
 import { InventoryDiscrepanciesService } from '../inventory/inventory-discrepancies.service.js';
-import type { WorkflowRegistration } from './workflow-definition.js';
+import type { WorkflowRegistration, WorkflowStepEligibility } from './workflow-definition.js';
 import { WorkflowRegistry } from './workflow-registry.js';
 import { WorkflowsController } from './workflows.controller.js';
 import { WorkflowsService } from './workflows.service.js';
@@ -72,6 +74,25 @@ const removalApi = '/api/inventory/workflow/removal-requests';
 describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
   let connection: ReturnType<typeof createDb>;
   let app: INestApplication;
+  let workflows: WorkflowsService;
+  const departments = new Map<string, string>();
+  const departmentReads: string[][] = [];
+  let beforeApprove: (() => Promise<void>) | undefined;
+
+  const approvalRules = {
+    office: { position: 'dean' },
+    either: { position: 'dean', permission: PERMISSION.workflow.monitor, match: 'any' },
+    both: { position: 'dean', permission: PERMISSION.workflow.monitor, match: 'all' },
+    departmental: {
+      position: {
+        byDepartment: {
+          'software-engineering': 'head-software-engineering',
+          'network-systems': 'head-network-systems',
+          'artificial-intelligence': 'head-software-engineering',
+        },
+      },
+    },
+  } satisfies Record<string, WorkflowStepEligibility>;
   const client = () => request(app.getHttpServer());
   const headers = (actorId: string) => ({ origin, 'x-test-actor': actorId });
   const started = (body: unknown) => {
@@ -172,6 +193,45 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
         { provide: AuthorizationService, useValue: new AuthorizationService(db) },
       ],
     }).compile();
+    const registry = module.get(WorkflowRegistry);
+    workflows = module.get(WorkflowsService);
+    for (const [key, eligible] of Object.entries(approvalRules)) {
+      registry.register({
+        definition: {
+          key: `approvals.${key}`,
+          version: 1,
+          title: 'Test approval',
+          description: 'Appointment eligibility',
+          initialStep: 'review',
+          steps: {
+            review: {
+              title: 'Approve',
+              instructions: 'Review the record',
+              eligible,
+              actions: { approve: { finish: 'completed' } },
+            },
+          },
+        },
+        active: true,
+        subjectType: 'request',
+        canView: async ({ actorId }) => actorId !== actors.requester,
+        requester: async () => null,
+        resolveDepartments: async (_db, ids) => {
+          departmentReads.push(ids);
+          return new Map(
+            ids.flatMap((id) => {
+              const department = departments.get(id);
+              return department ? [[id, department]] : [];
+            }),
+          );
+        },
+        canAct: async () => {
+          await beforeApprove?.();
+          return true;
+        },
+        apply: async () => undefined,
+      });
+    }
     app = module.createNestApplication();
     app.use(adminOriginProtection([origin], ['/api/workflow', '/api/inventory']));
     app.useGlobalGuards(new AuthGuard(new Reflector(), auth, new AuthorizationService(db)));
@@ -1032,5 +1092,180 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       await updated.act({ taskId, actorId: actors.reviewer, action: 'approve' });
     }
     expect(calls).toEqual([1, 2]);
+  });
+
+  it('routes position-based approvals using current appointments, scope, and explicit denies', async () => {
+    const { db } = connection;
+    const appointments = new FacultyPositionsService(db);
+    const dean = await positionId('dean');
+    const software = await positionId('head-software-engineering');
+
+    async function positionId(code: string) {
+      const [position] = await db
+        .select({ id: facultyPositions.id })
+        .from(facultyPositions)
+        .where(eq(facultyPositions.code, code));
+      return position.id;
+    }
+
+    const startApproval = async (rule: keyof typeof approvalRules, department?: string) => {
+      const subjectId = randomUUID();
+      if (department) departments.set(subjectId, department);
+      return {
+        ...started(
+          await workflows.start({
+            definitionKey: `approvals.${rule}`,
+            actorId: actors.manager,
+            input: {},
+            create: async () => ({
+              subject: { module: 'approvals', type: 'request', id: subjectId },
+            }),
+          }),
+        ),
+        subjectId,
+      };
+    };
+    const getTask = (id: string, actor: string) =>
+      client().get(`${taskApi}/${id}`).set(headers(actor)).expect(200);
+    const inbox = async (actor: string) =>
+      (
+        await client().get(`${taskApi}?subjectModule=approvals`).set(headers(actor)).expect(200)
+      ).body.records.map(({ id }: { id: string }) => id);
+    const approve = (id: string, actor: string) => action(id, actor, { action: 'approve' });
+    const history = async (id: string) =>
+      (await client().get(`/api/workflow/instances/${id}`).set(headers(actors.manager)).expect(200))
+        .body.history;
+    const open = await startApproval('office');
+    const pending = await startApproval('office');
+    expect(await inbox(actors.outsider)).toEqual([]);
+    await approve(open.taskId, actors.outsider).expect(403);
+    const first = await appointments.updateHolder(
+      dean,
+      { userId: actors.outsider, expectedAppointmentId: null },
+      actors.manager,
+    );
+    expect(await inbox(actors.outsider)).toEqual([open.taskId, pending.taskId]);
+    expect((await getTask(open.taskId, actors.outsider)).body.actions).toEqual(['approve']);
+    await approve(open.taskId, actors.requester).expect(404);
+
+    const denied = await startApproval('either');
+    const allowed = await startApproval('either');
+    const both = await startApproval('both');
+    await db.insert(resourceAcl).values({
+      id: randomUUID(),
+      userId: actors.outsider,
+      permission: PERMISSION.workflow.monitor,
+      resourceType: 'approvals.request',
+      resourceId: denied.subjectId,
+      effect: 'deny',
+    });
+    expect(await inbox(actors.outsider)).not.toContain(denied.taskId);
+    expect((await getTask(denied.taskId, actors.outsider)).body.actions).toEqual([]);
+    await approve(denied.taskId, actors.outsider).expect(403);
+    await approve(both.taskId, actors.outsider).expect(403);
+    await approve(both.taskId, actors.reviewer).expect(403);
+    const noPermission = await startApproval('either');
+    await approve(noPermission.taskId, actors.outsider).expect(200);
+    expect(await history(noPermission.instanceId)).toContainEqual(
+      expect.objectContaining({
+        actorId: actors.outsider,
+        actedAsPosition: { code: 'dean', appointmentId: first.appointmentId },
+      }),
+    );
+
+    await appointments.updateHolder(
+      software,
+      { userId: actors.outsider, expectedAppointmentId: null },
+      actors.manager,
+    );
+    const scoped = await startApproval('departmental', 'software-engineering');
+    const wrong = await startApproval('departmental', 'network-systems');
+    const mismatch = await startApproval('departmental', 'artificial-intelligence');
+    const missing = await startApproval('departmental');
+    departmentReads.length = 0;
+    const visible = await inbox(actors.outsider);
+    expect(visible).toContain(scoped.taskId);
+    for (const other of [wrong, mismatch, missing]) expect(visible).not.toContain(other.taskId);
+    expect(departmentReads).toHaveLength(1);
+    expect(departmentReads[0]).toEqual(
+      expect.arrayContaining([
+        scoped.subjectId,
+        wrong.subjectId,
+        mismatch.subjectId,
+        missing.subjectId,
+      ]),
+    );
+    await approve(scoped.taskId, actors.outsider).expect(200);
+
+    let reachedApproval!: () => void;
+    let releaseApproval!: () => void;
+    const reached = new Promise<void>((resolve) => {
+      reachedApproval = resolve;
+    });
+    const release = new Promise<void>((resolve) => {
+      releaseApproval = resolve;
+    });
+    beforeApprove = async () => {
+      reachedApproval();
+      await release;
+    };
+    const approval = approve(open.taskId, actors.outsider)
+      .expect(200)
+      .then(() => undefined);
+    try {
+      await Promise.race([reached, approval]);
+      const handover = appointments.updateHolder(
+        dean,
+        {
+          userId: actors.reviewer,
+          expectedAppointmentId: first.appointmentId,
+        },
+        actors.manager,
+      );
+      try {
+        await vi.waitFor(async () => {
+          const {
+            rows: [state],
+          } = await db.execute<{ waiting: boolean }>(sql`
+            select exists (
+              select 1 from pg_stat_activity
+              where datname = current_database() and wait_event_type = 'Lock'
+                and query like '%"faculty_positions"%for update%'
+            ) as waiting
+          `);
+          expect(state.waiting).toBe(true);
+        });
+      } finally {
+        releaseApproval();
+        await Promise.all([approval, handover]);
+      }
+      const second = await handover;
+      expect(await history(open.instanceId)).toContainEqual(
+        expect.objectContaining({
+          actorId: actors.outsider,
+          actedAsPosition: { code: 'dean', appointmentId: first.appointmentId },
+        }),
+      );
+      expect(await inbox(actors.outsider)).not.toContain(pending.taskId);
+      expect(await inbox(actors.reviewer)).toContain(pending.taskId);
+      expect((await getTask(pending.taskId, actors.outsider)).body.actions).toEqual([]);
+      await approve(pending.taskId, actors.outsider).expect(403);
+      await approve(pending.taskId, actors.reviewer).expect(200);
+      await approve(both.taskId, actors.reviewer).expect(200);
+      expect(await history(both.instanceId)).toContainEqual(
+        expect.objectContaining({
+          actorId: actors.reviewer,
+          actedAsPosition: { code: 'dean', appointmentId: second.appointmentId },
+        }),
+      );
+      await approve(allowed.taskId, actors.reviewer).expect(200);
+      const permissionEvent = (await history(allowed.instanceId)).find(
+        ({ action }: { action: string }) => action === 'approve',
+      );
+      expect(permissionEvent).not.toHaveProperty('actedAsPosition');
+    } finally {
+      beforeApprove = undefined;
+      releaseApproval();
+    }
   });
 });

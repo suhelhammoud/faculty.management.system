@@ -1,0 +1,2 @@
+ALTER TABLE "workflow_events" ADD COLUMN "position_appointment_id" uuid;--> statement-breakpoint
+ALTER TABLE "workflow_events" ADD CONSTRAINT "workflow_events_position_appointment_id_faculty_position_appointments_id_fk" FOREIGN KEY ("position_appointment_id") REFERENCES "public"."faculty_position_appointments"("id") ON DELETE no action ON UPDATE no action;
