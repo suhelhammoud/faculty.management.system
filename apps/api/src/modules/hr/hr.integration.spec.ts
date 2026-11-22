@@ -132,9 +132,9 @@ describe.skipIf(!databaseName)('HR API integration (isolated PostgreSQL)', () =>
 
   it('maintains profiles, setup data and current employment with audit records', async () => {
     const api = request(app.getHttpServer());
-    const post = (path: string, body: unknown) =>
+    const post = (path: string, body: object) =>
       api.post(`${base}/${path}`).set('Origin', origin).send(body);
-    const patch = (path: string, body: unknown) =>
+    const patch = (path: string, body: object) =>
       api.patch(`${base}/${path}`).set('Origin', origin).send(body);
     const profile = {
       employeeNumber: 'EMP-001',
@@ -186,7 +186,7 @@ describe.skipIf(!databaseName)('HR API integration (isolated PostgreSQL)', () =>
       employmentRegime: 'Faculty staff',
       startDate: '2026-01-01',
     };
-    const put = (body: unknown) =>
+    const put = (body: object) =>
       api.put(`${base}/employees/${id}/employment`).set('Origin', origin).send(body);
     await put({ ...employment, categoryId: category2.categoryId }).expect(400);
     await put({ ...employment, endDate: '2025-01-01' }).expect(400);

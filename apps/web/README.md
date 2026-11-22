@@ -16,7 +16,7 @@ Use the shared colors, spacing, and typography in `src/theme.css` when styling
 a feature. `src/utility-theme.css` maps those colors to Tailwind utilities.
 Use the form primitives in `src/components/ui` and the shared module header and
 navigation styles for new screens. Verify controls at phone widths in both English
-and Arabic.
+and Arabic. HR, Facilities, Inventory, and Student Affairs share one language preference. Domain translations remain in each module.
 
 ## Build and host
 

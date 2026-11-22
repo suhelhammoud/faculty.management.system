@@ -1,5 +1,6 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { LanguageContext, type Language } from './language-context';
+import { useFacultyLanguage } from '@/components/language-preference';
+import { useMemo, type ReactNode } from 'react';
+import { LanguageContext } from './language-context';
 
 const arabic: Record<string, string> = {
   Facilities: 'المرافق',
@@ -94,28 +95,14 @@ const arabic: Record<string, string> = {
 };
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(() => {
-    try {
-      return localStorage.getItem('faculty-facilities-language') === 'ar' ? 'ar' : 'en';
-    } catch {
-      return 'en';
-    }
-  });
-  const setLanguage = (next: Language) => {
-    try {
-      localStorage.setItem('faculty-facilities-language', next);
-    } catch {
-      // Storage can be unavailable in restricted browser contexts.
-    }
-    setLanguageState(next);
-  };
+  const { language, setLanguage } = useFacultyLanguage();
   const value = useMemo(
     () => ({
       language,
       setLanguage,
       t: (text: string) => (language === 'ar' ? arabic[text] || text : text),
     }),
-    [language],
+    [language, setLanguage],
   );
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

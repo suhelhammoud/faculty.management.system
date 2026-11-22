@@ -5,6 +5,21 @@ import userEvent from '@testing-library/user-event';
 import { DateInput, formatDate, parseDate } from './date-input';
 
 describe('shared date controls', () => {
+  it('localizes the picker name and validation in Arabic', () => {
+    render(
+      <DateInput
+        aria-label="تاريخ الميلاد"
+        language="ar"
+        value="31/02/2026"
+        onValueChange={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'اختر تاريخًا' })).toBeInTheDocument();
+    expect(screen.getByRole<HTMLInputElement>('textbox').validationMessage).toContain(
+      'أدخل تاريخًا صالحًا',
+    );
+  });
+
   it('formats ISO dates without shifting the day and rejects impossible dates', () => {
     expect(formatDate('2026-11-17')).toBe('17/11/2026');
     expect(parseDate('29/02/2024')).toBe('2024-02-29');

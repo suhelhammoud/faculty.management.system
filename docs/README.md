@@ -7,6 +7,7 @@ Module specifications also record proposed requirements and open decisions.
 ## Architecture and setup
 
 - [Project overview](project-overview.md) covers the workspace, frontend routes, and deployment.
+- [Pilot release and recovery](pilot-runbook.md) covers coordinated releases and the PostgreSQL restore rehearsal.
 - [Local setup](../README.md#configure-migrate-and-seed) covers configuration, migrations, and demo data.
 - [Auth API setup](auth-api-setup.md) covers sessions, trusted origins, and administrator bootstrap.
 - [Shared authorization](modules/authorization/README.md) describes roles, permissions, and record access.

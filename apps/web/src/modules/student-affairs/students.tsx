@@ -8,7 +8,7 @@ import type {
   StudentList,
   StudentProfile,
 } from '@project/contracts/student-affairs';
-import { root, useRead, useWrite } from './api';
+import { ApiError, root, useRead, useWrite } from './api';
 import {
   ActionLink,
   Button,
@@ -30,7 +30,7 @@ const profilePath = (id: string) => `students/${encodeURIComponent(id)}`;
 const studentUrl = (id: string) => `${root}/${profilePath(id)}`;
 type ProfileKey = Exclude<
   keyof StudentProfile,
-  'studentId' | 'currentStudyYear' | 'createdAt' | 'updatedAt'
+  'studentId' | 'currentStudyYear' | 'createdAt' | 'updatedAt' | 'revision'
 >;
 type CoreKey = 'academicId' | 'firstName' | 'fatherName' | 'lastName';
 type ProfileField = [
@@ -199,11 +199,30 @@ export function Registry({ access }: { access: Access }) {
 }
 
 function DateField({ name, initial }: { name: string; initial?: string | null }) {
+  const { language } = useLanguage();
   const [value, setValue] = useState(initial ?? '');
-  return <DateInput name={name} value={value} onValueChange={setValue} data-slot="input" />;
+  return (
+    <DateInput
+      language={language}
+      name={name}
+      value={value}
+      onValueChange={setValue}
+      data-slot="input"
+    />
+  );
 }
 
-function ProfileForm({ access, student }: { access: Access; student?: StudentProfile }) {
+function ProfileForm({
+  access,
+  student,
+  reload,
+}: {
+  access: Access;
+  student?: StudentProfile;
+  reload?: () => Promise<void>;
+}) {
+  const [baseline] = useState(student);
+  const [reloading, setReloading] = useState(false);
   const { t } = useLanguage();
   const navigate = useNavigate();
   const write = useWrite<StudentProfile>();
@@ -216,13 +235,14 @@ function ProfileForm({ access, student }: { access: Access; student?: StudentPro
         if (key === 'adjustedScore') continue;
         const text = String(input.get(key) ?? '').trim();
         const value = kind === 'date' ? parseDate(text) : text || null;
-        if (value !== (student?.[key] ?? null)) body[key] = value;
+        if (value !== (baseline?.[key] ?? null)) body[key] = value;
       }
     if (!student) body.currentStudyYear = Number(input.get('currentStudyYear'));
     if (student && Object.keys(body).length === 0) {
       void navigate(studentUrl(student.studentId));
       return;
     }
+    if (baseline) body.expectedRevision = baseline.revision;
     write.mutate(
       {
         path: student ? profilePath(student.studentId) : 'students',
@@ -232,6 +252,8 @@ function ProfileForm({ access, student }: { access: Access; student?: StudentPro
       { onSuccess: (saved) => void navigate(studentUrl(saved.studentId)) },
     );
   }
+  const conflict =
+    write.error instanceof ApiError && write.error.code === 'STUDENT_REVISION_CONFLICT';
   return (
     <form className="sta-stack" onSubmit={submit}>
       <fieldset className="sta-form-sections" disabled={write.isPending}>
@@ -253,7 +275,7 @@ function ProfileForm({ access, student }: { access: Access; student?: StudentPro
                 if (key === 'adjustedScore') return null;
                 const required =
                   identityKeys.some((identity) => identity === key) &&
-                  (!student || Boolean(student[key]));
+                  (!student || Boolean(baseline?.[key]));
                 return (
                   <Field label={t(label)} key={key}>
                     {kind === 'textarea' ? (
@@ -261,10 +283,10 @@ function ProfileForm({ access, student }: { access: Access; student?: StudentPro
                         name={key}
                         maxLength={10000}
                         data-slot="textarea"
-                        defaultValue={student?.[key] ?? ''}
+                        defaultValue={baseline?.[key] ?? ''}
                       />
                     ) : kind === 'date' ? (
-                      <DateField name={key} initial={student?.[key]} />
+                      <DateField name={key} initial={baseline?.[key]} />
                     ) : (
                       <Input
                         name={key}
@@ -280,7 +302,7 @@ function ProfileForm({ access, student }: { access: Access; student?: StudentPro
                             ? 'ltr'
                             : 'auto'
                         }
-                        defaultValue={student?.[key] ?? ''}
+                        defaultValue={baseline?.[key] ?? ''}
                       />
                     )}
                   </Field>
@@ -292,7 +314,26 @@ function ProfileForm({ access, student }: { access: Access; student?: StudentPro
       </fieldset>
       <ErrorMessage error={write.error} />
       <div className="sta-actions">
-        <Button disabled={write.isPending}>{t('Save')}</Button>
+        <Button disabled={write.isPending || conflict}>{t('Save')}</Button>
+        {conflict && reload && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={reloading}
+            onClick={async () => {
+              if (!window.confirm(t('Discard your unsaved edits and reload the latest record?')))
+                return;
+              setReloading(true);
+              try {
+                await reload();
+              } finally {
+                setReloading(false);
+              }
+            }}
+          >
+            {t('Reload latest record')}
+          </Button>
+        )}
         <ActionLink to={student ? studentUrl(student.studentId) : registry}>
           {t('Cancel')}
         </ActionLink>
@@ -323,6 +364,7 @@ export function StudentRoute({
 }) {
   const { studentId = '' } = useParams();
   const query = useRead<StudentProfile>(profilePath(studentId));
+  const [draftGeneration, newDraft] = useState(0);
   const { t, year } = useLanguage();
   return (
     <Resource query={query}>
@@ -351,7 +393,15 @@ export function StudentRoute({
             canWriteYear(access, student.currentStudyYear) ? (
               <>
                 <h3>{t('Edit profile')}</h3>
-                <ProfileForm key={`edit-${student.studentId}`} student={student} access={access} />
+                <ProfileForm
+                  key={`edit-${student.studentId}-${draftGeneration}`}
+                  student={student}
+                  access={access}
+                  reload={async () => {
+                    const result = await query.refetch();
+                    if (result.isSuccess) newDraft((generation) => generation + 1);
+                  }}
+                />
               </>
             ) : (
               <p role="alert">{t('Access denied')}</p>
@@ -367,7 +417,13 @@ export function StudentRoute({
                   </ActionLink>
                 </div>
               )}
-              {access.administer && <YearChange key={student.studentId} student={student} />}
+              {access.administer && (
+                <YearChange
+                  key={student.studentId}
+                  student={student}
+                  refreshStudent={query.refetch}
+                />
+              )}
               {groups.map(({ title, fields }) => (
                 <section className="sta-panel" key={title}>
                   <h3>{t(title)}</h3>
@@ -397,7 +453,13 @@ export function StudentRoute({
   );
 }
 
-function YearChange({ student }: { student: StudentProfile }) {
+function YearChange({
+  student,
+  refreshStudent,
+}: {
+  student: StudentProfile;
+  refreshStudent: () => Promise<unknown>;
+}) {
   const { t, year, dateTime } = useLanguage();
   const query = useRead<{ grant: PromotionGrant | null }>('promotion-grants/current', 30_000);
   const { refetch } = query;
@@ -408,7 +470,11 @@ function YearChange({ student }: { student: StudentProfile }) {
     if (expired) void refetch();
   }, [expired, refetch, grant?.id]);
   const [destination, setDestination] = useState('');
-  const [confirming, setConfirming] = useState(false);
+  const [confirming, setConfirming] = useState<{
+    revision: number;
+    source: number | null;
+    destination: number;
+  } | null>(null);
   const write = useWrite<StudentProfile>();
   const active = !!grant && !query.isError && !expired && !grant.revokedAt;
   const canMove = student.currentStudyYear === null || active;
@@ -448,20 +514,29 @@ function YearChange({ student }: { student: StudentProfile }) {
           className="sta-stack"
           onSubmit={(event) => {
             event.preventDefault();
-            if (!confirming) return setConfirming(true);
+            if (!confirming)
+              return setConfirming({
+                revision: student.revision,
+                source: student.currentStudyYear,
+                destination: Number(destination),
+              });
             write.mutate(
               {
                 path: `${profilePath(student.studentId)}/current-study-year`,
                 method: 'PUT',
-                body: { currentStudyYear: Number(destination) },
+                body: {
+                  currentStudyYear: confirming.destination,
+                  expectedRevision: confirming.revision,
+                },
               },
               {
                 onSuccess: () => {
-                  setConfirming(false);
+                  setConfirming(null);
                   setDestination('');
                 },
                 onError: () => {
-                  setConfirming(false);
+                  void refreshStudent();
+                  setConfirming(null);
                   void refetch();
                 },
               },
@@ -474,7 +549,7 @@ function YearChange({ student }: { student: StudentProfile }) {
                 data-slot="native-select"
                 value={destination}
                 required
-                disabled={confirming || write.isPending}
+                disabled={Boolean(confirming) || write.isPending}
                 onChange={(event) => setDestination(event.target.value)}
               >
                 <option value="">{t('Choose a year')}</option>
@@ -495,7 +570,7 @@ function YearChange({ student }: { student: StudentProfile }) {
                 type="button"
                 variant="outline"
                 disabled={write.isPending}
-                onClick={() => setConfirming(false)}
+                onClick={() => setConfirming(null)}
               >
                 {t('Cancel')}
               </Button>
@@ -503,8 +578,8 @@ function YearChange({ student }: { student: StudentProfile }) {
           </div>
           {confirming && (
             <p role="status">
-              {t('Previous study year')} {year(student.currentStudyYear)} · {t('Destination year')}{' '}
-              {year(Number(destination))}
+              {t('Previous study year')} {year(confirming.source)} · {t('Destination year')}{' '}
+              {year(confirming.destination)}
             </p>
           )}
         </form>

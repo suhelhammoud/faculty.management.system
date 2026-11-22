@@ -1,3 +1,4 @@
+import { useFacultyLanguage } from '@/components/language-preference';
 import { useRef, useState, type FormEvent } from 'react';
 import { QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate, NavLink, Route, Routes } from 'react-router';
@@ -5,7 +6,7 @@ import { ModuleHeaderActions, ModuleSessionControls } from '@/components/ModuleD
 import type { StudentAffairsCapabilities } from '@project/contracts/student-affairs';
 import { ApiError, clearData, createClient, request, root, sessionKey, useRead } from './api';
 import { Button, ErrorMessage, Field, Input, Resource } from './common';
-import { LanguageContext, useLanguage, type Language } from './language';
+import { LanguageContext, useLanguage } from './language';
 import { Registry, StudentRoute, NewStudent } from './students';
 import { Grants, StaffAssignments } from './management';
 import './student-affairs.css';
@@ -20,7 +21,6 @@ type Session = {
     mustChangePassword: boolean;
   };
 } | null;
-const languageKey = 'faculty-student-affairs-language';
 
 function Workspace() {
   const { t } = useLanguage();
@@ -249,14 +249,8 @@ function Shell({ switchLanguage }: { switchLanguage: () => void }) {
 
 export default function App() {
   const [client] = useState(createClient);
-  const [language, setLanguage] = useState<Language>(() =>
-    localStorage.getItem(languageKey) === 'ar' ? 'ar' : 'en',
-  );
-  function switchLanguage() {
-    const next = language === 'ar' ? 'en' : 'ar';
-    localStorage.setItem(languageKey, next);
-    setLanguage(next);
-  }
+  const { language, setLanguage } = useFacultyLanguage();
+  const switchLanguage = () => setLanguage(language === 'ar' ? 'en' : 'ar');
   return (
     <QueryClientProvider client={client}>
       <LanguageContext.Provider value={language}>

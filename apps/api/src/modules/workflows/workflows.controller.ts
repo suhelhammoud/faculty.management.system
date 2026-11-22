@@ -25,7 +25,22 @@ const act = z.strictObject({
   input: z.unknown().optional(),
 });
 const withdraw = act.omit({ action: true });
-const monitorQuery = z.object({
+const inboxQuery = z.strictObject({
+  limit: z
+    .string()
+    .regex(/^[1-9]\d*$/)
+    .transform(Number)
+    .pipe(z.number().int().max(100))
+    .optional()
+    .default(25),
+  cursor: z.string().min(1).max(512).optional(),
+  subjectModule: z
+    .string()
+    .regex(/^[a-z][a-z0-9-]*$/)
+    .max(100)
+    .optional(),
+});
+const monitorQuery = inboxQuery.extend({
   status: z.enum(['running', 'completed', 'rejected', 'cancelled']).optional(),
   step: z.string().min(1).max(100).optional(),
 });
@@ -37,8 +52,11 @@ export class WorkflowsController {
   constructor(@Inject(WorkflowsService) private readonly workflows: WorkflowsService) {}
 
   @Get('tasks')
-  inbox(@ActorId() actorId: string) {
-    return this.workflows.inbox(actorId);
+  inbox(
+    @ActorId() actorId: string,
+    @Query({ schema: inboxQuery }) query: z.infer<typeof inboxQuery>,
+  ) {
+    return this.workflows.inbox(actorId, query);
   }
 
   @Get('tasks/:id')
@@ -52,7 +70,7 @@ export class WorkflowsController {
     @ActorId() actorId: string,
     @Query({ schema: monitorQuery }) query: z.infer<typeof monitorQuery>,
   ) {
-    return this.workflows.monitor(actorId, query.status, query.step);
+    return this.workflows.monitor(actorId, query);
   }
 
   @Get('instances/:id')

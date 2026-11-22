@@ -61,6 +61,14 @@ export interface WorkflowRegistration {
   subjectType: string;
   active?: boolean;
   canView(context: WorkflowAccess): Promise<boolean>;
+  queueAccess?(
+    db: WorkflowReader,
+    actorId: string,
+    ids: string[],
+  ): Promise<{
+    requesters: ReadonlyMap<string, string>;
+    permits: (permission: PermissionKey, id: string) => boolean;
+  }>;
   requester(context: WorkflowAccess): Promise<string | null>;
   canAct?(context: WorkflowActionAccess): Promise<boolean>;
   canViewEvent?(context: WorkflowAccess, event: WorkflowEvent): Promise<boolean>;

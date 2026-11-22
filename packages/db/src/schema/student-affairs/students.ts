@@ -3,6 +3,7 @@ import {
   check,
   date,
   index,
+  integer,
   numeric,
   pgTable,
   smallint,
@@ -17,6 +18,7 @@ export const students = pgTable(
   'students',
   {
     studentId: uuid('student_id').defaultRandom().primaryKey(),
+    revision: integer().notNull().default(1),
     academicId: text('academic_id').notNull(),
     firstName: text('first_name'),
     fatherName: text('father_name'),
@@ -52,6 +54,7 @@ export const students = pgTable(
   (table) => [
     unique('students_academic_id_unique').on(table.academicId),
     unique('students_user_id_unique').on(table.userId),
+    check('students_revision_check', sql`${table.revision} > 0`),
     check('students_current_study_year_check', sql`${table.currentStudyYear} between 1 and 5`),
     index('students_current_study_year_idx').on(table.currentStudyYear),
   ],

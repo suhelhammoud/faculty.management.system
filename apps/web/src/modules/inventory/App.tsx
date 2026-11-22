@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import { DirectionProvider } from '@radix-ui/react-direction';
@@ -173,7 +173,10 @@ function Workspace() {
 
 function Layout() {
   const { t } = useTranslation();
-  const { language, change } = useLanguage();
+  const { language, setLanguage } = useLanguage();
+  useEffect(() => {
+    void i18n.changeLanguage(language);
+  }, [language]);
   const dir = language === 'ar' ? 'rtl' : 'ltr';
   return (
     <DirectionProvider dir={dir}>
@@ -182,12 +185,12 @@ function Layout() {
           renderHeader={(sessionControls) => (
             <header className="module-header">
               <h1>{t('Inventory')}</h1>
-              <ModuleHeaderActions sessionControls={sessionControls}>
+              <ModuleHeaderActions language={language} sessionControls={sessionControls}>
                 <Button
                   type="button"
                   variant="outline"
                   lang={language === 'ar' ? 'en' : 'ar'}
-                  onClick={() => change(language === 'ar' ? 'en' : 'ar')}
+                  onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
                 >
                   {language === 'ar' ? 'English' : 'العربية'}
                 </Button>

@@ -1,24 +1,17 @@
+import { QueuePagination } from '../../workflows/QueuePagination';
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { ApiError, asQuery, useResource, useWrite, workflow } from '../lib/api';
 import type {
   WorkflowActionResult,
   WorkflowInstance,
   WorkflowInstanceDetail,
+  WorkflowPage,
   WorkflowTask,
 } from '@project/contracts/workflow';
 import type { ProposalLine, RemovalAssetOption, RemovalRequest } from '../lib/removal-types';
-import {
-  bidi,
-  Choice,
-  ErrorMessage,
-  Field,
-  Grid,
-  Resource,
-  useDate,
-  useFilters,
-} from '../components/common';
+import { bidi, Choice, ErrorMessage, Field, Grid, Resource, useDate } from '../components/common';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -37,24 +30,39 @@ const instructions: Record<string, string> = {
 
 export function InboxPage() {
   const { t } = useTranslation();
-  const query = useResource<WorkflowTask[]>('workflow/tasks', true, true);
+  const [params] = useSearchParams();
+  const query = useResource<WorkflowPage<WorkflowTask>>(
+    asQuery('workflow/tasks', {
+      subjectModule: 'inventory',
+      cursor: params.get('cursor') ?? undefined,
+    }),
+    true,
+    true,
+  );
   return (
     <section>
       <h2>{t('Task inbox')}</h2>
       <Resource query={query}>
-        {(tasks) => (
-          <Grid
-            columns={['Step', 'Lifecycle']}
-            rows={tasks
-              .filter((task) => inventoryOnly(task.instance))
-              .map((task) => ({
-                id: task.id,
-                cells: [
-                  <Link to={`${workflow}/tasks/${task.id}`}>{t(task.step)}</Link>,
-                  t(task.status),
-                ],
-              }))}
-          />
+        {({ records: tasks, nextCursor }) => (
+          <>
+            <Grid
+              columns={['Step', 'Lifecycle']}
+              rows={tasks
+                .filter((task) => inventoryOnly(task.instance))
+                .map((task) => ({
+                  id: task.id,
+                  cells: [
+                    <Link to={`${workflow}/tasks/${task.id}`}>{t(task.step)}</Link>,
+                    t(task.status),
+                  ],
+                }))}
+            />
+            <QueuePagination
+              nextCursor={nextCursor}
+              firstLabel={t('First page')}
+              nextLabel={t('Next page')}
+            />
+          </>
         )}
       </Resource>
     </section>
@@ -62,10 +70,23 @@ export function InboxPage() {
 }
 export function MonitorPage() {
   const { t } = useTranslation();
-  const filters = useFilters();
+  const [params, setParams] = useSearchParams();
+  const get = (key: string) => params.get(key) ?? '';
+  const filter = (key: string, value: string) => {
+    const next = new URLSearchParams(params);
+    next.delete('cursor');
+    if (value) next.set(key, value);
+    else next.delete(key);
+    setParams(next, { replace: true });
+  };
   const date = useDate();
-  const query = useResource<WorkflowInstance[]>(
-    asQuery('workflow/instances', { status: filters.get('status'), step: filters.get('step') }),
+  const query = useResource<WorkflowPage<WorkflowInstance>>(
+    asQuery('workflow/instances', {
+      subjectModule: 'inventory',
+      status: get('status'),
+      step: get('step'),
+      cursor: get('cursor'),
+    }),
   );
   return (
     <section className="inv-stack">
@@ -73,33 +94,40 @@ export function MonitorPage() {
       <div className="inv-fields inv-panel">
         <Choice
           label="Lifecycle"
-          value={filters.get('status')}
-          onChange={(value) => filters.update('status', value)}
+          value={get('status')}
+          onChange={(value) => filter('status', value)}
           choices={statuses}
           optional
         />
         <Choice
           label="Step"
-          value={filters.get('step')}
-          onChange={(value) => filters.update('step', value)}
+          value={get('step')}
+          onChange={(value) => filter('step', value)}
           choices={steps}
           optional
         />
       </div>
       <Resource query={query}>
-        {(items) => (
-          <Grid
-            columns={['Removal proposal', 'Lifecycle', 'Step', 'Last activity']}
-            rows={items.filter(inventoryOnly).map((item) => ({
-              id: item.id,
-              cells: [
-                <Link to={`${workflow}/instances/${item.id}`}>{t('Workflow history')}</Link>,
-                t(item.status),
-                item.currentStep ? t(item.currentStep) : '—',
-                date(item.lastActivityAt),
-              ],
-            }))}
-          />
+        {({ records: items, nextCursor }) => (
+          <>
+            <Grid
+              columns={['Removal proposal', 'Lifecycle', 'Step', 'Last activity']}
+              rows={items.filter(inventoryOnly).map((item) => ({
+                id: item.id,
+                cells: [
+                  <Link to={`${workflow}/instances/${item.id}`}>{t('Workflow history')}</Link>,
+                  t(item.status),
+                  item.currentStep ? t(item.currentStep) : '—',
+                  date(item.lastActivityAt),
+                ],
+              }))}
+            />
+            <QueuePagination
+              nextCursor={nextCursor}
+              firstLabel={t('First page')}
+              nextLabel={t('Next page')}
+            />
+          </>
         )}
       </Resource>
     </section>

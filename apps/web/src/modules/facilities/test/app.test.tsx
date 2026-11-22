@@ -1,3 +1,4 @@
+import { useFacultyLanguage } from '@/components/language-preference';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -75,6 +76,7 @@ function renderFacilities() {
 
 describe('Facilities rooms screen', () => {
   beforeEach(() => {
+    useFacultyLanguage.getState().setLanguage('en');
     localStorage.clear();
     mockAuthApi.mockImplementation((path: string) =>
       Promise.resolve(

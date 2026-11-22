@@ -119,10 +119,13 @@ Withdrawal requires record access and the active step's `withdraw` eligibility. 
 Keep the `/workflow/` segment in workflow URLs. Use these shared endpoints:
 
 - `GET /api/workflow/tasks` lists pending tasks the signed-in user can act on.
+- `GET /api/workflow/instances` lists workflow instances visible to a caller with monitor access. It accepts optional `status` and `step` filters.
 - `GET /api/workflow/tasks/:taskId` loads a task by ID for the review page and exposes the actions currently available to the caller.
 - `GET /api/workflow/instances/:instanceId` returns the current instance, the history the caller may view, and `canWithdraw` for the signed-in caller.
 - `POST /api/workflow/tasks/:taskId/actions` is the single endpoint for submitting a task action. It accepts an action key, an optional comment, and any input validated by the owning module.
 - `POST /api/workflow/instances/:instanceId/withdraw` accepts a JSON object with an optional `comment` and optional module-validated `input`. On success it returns HTTP `200` with the instance ID, `status: 'cancelled'`, and `taskId: null`.
+
+Both lists return `{ records, nextCursor }`. Pass `limit` from 1 to 100 (default 25), and optionally `subjectModule`. Send `nextCursor` as `cursor` with the same filters until it is `null`. Sparse pages can contain zero visible records and still have a continuation. Start from the first page after changing filters or receiving an invalid cursor response.
 
 Module endpoints start workflows and serve domain details. For example, Inventory creates a proposal and starts its workflow via `POST /api/inventory/workflow/removal-requests`. The proposal and its item details are available via `GET /api/inventory/workflow/removal-requests/:requestId`.
 
@@ -140,12 +143,12 @@ The API, shared Workflows pages, and Inventory use type imports from `@project/c
 The [contract declarations](../../../packages/contracts/workflow.d.ts) describe JSON
 responses and have no runtime dependencies.
 
-| Response                             | Shared type                         |
-| ------------------------------------ | ----------------------------------- |
-| Task inbox and task detail           | `WorkflowTask[]` and `WorkflowTask` |
-| Instance monitor                     | `WorkflowInstance[]`                |
-| Instance detail and visible history  | `WorkflowInstanceDetail`            |
-| Start, submit an action, or withdraw | `WorkflowActionResult`              |
+| Response                             | Shared type                                     |
+| ------------------------------------ | ----------------------------------------------- |
+| Task inbox and task detail           | `WorkflowPage<WorkflowTask>` and `WorkflowTask` |
+| Instance monitor                     | `WorkflowPage<WorkflowInstance>`                |
+| Instance detail and visible history  | `WorkflowInstanceDetail`                        |
+| Start, submit an action, or withdraw | `WorkflowActionResult`                          |
 
 The API explicitly maps records to these types and serializes timestamps as ISO
 strings. Instances include the pinned definition key and version. Task status

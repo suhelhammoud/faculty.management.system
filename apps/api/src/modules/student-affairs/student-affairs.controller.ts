@@ -13,6 +13,7 @@ import {
   StandardSchemaValidationPipe,
   UsePipes,
 } from '@nestjs/common';
+import type { StudentYearChange } from '@project/contracts/student-affairs';
 import { PERMISSION } from '@project/authorization';
 import { ActorId, RequirePermission, RequireSession } from '../../auth/auth.guard.js';
 import {
@@ -84,9 +85,9 @@ export class StudentAffairsController {
   changeYear(
     @ActorId() actor: string,
     @Param('studentId', { schema: uuid }) id: string,
-    @Body({ schema: currentYearPut }) body: { currentStudyYear: number },
+    @Body({ schema: currentYearPut }) body: StudentYearChange,
   ) {
-    return this.affairs.changeYear(actor, id, body.currentStudyYear);
+    return this.affairs.changeYear(actor, id, body);
   }
 
   @Get('students/:studentId/academic-years')

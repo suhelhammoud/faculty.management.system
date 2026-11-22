@@ -1,30 +1,11 @@
 import { createInstance } from 'i18next';
-import { create } from 'zustand';
+import { readLanguage } from '@/components/language-preference';
+export { useFacultyLanguage as useLanguage } from '@/components/language-preference';
+export type { FacultyLanguage as Language } from '@/components/language-preference';
 
-export type Language = 'en' | 'ar';
-const pref = 'faculty-inventory-language';
-export function readLanguage(): Language {
-  try {
-    return localStorage.getItem(pref) === 'ar' ? 'ar' : 'en';
-  } catch {
-    return 'en';
-  }
-}
-export const useLanguage = create<{ language: Language; change: (value: Language) => void }>(
-  (set) => ({
-    language: readLanguage(),
-    change: (language) => {
-      try {
-        localStorage.setItem(pref, language);
-      } catch {
-        /* Storage is optional. */
-      }
-      void i18n.changeLanguage(language);
-      set({ language });
-    },
-  }),
-);
 export const ar: Record<string, string> = {
+  'First page': 'الصفحة الأولى',
+  'Next page': 'الصفحة التالية',
   employee: 'موظف',
   shared: 'عهدة مشتركة',
   asset: 'أصل',

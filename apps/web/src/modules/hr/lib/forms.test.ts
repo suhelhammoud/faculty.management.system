@@ -7,6 +7,8 @@ describe('HR form boundaries', () => {
     expect(readLanguage()).toBe('en');
     localStorage.setItem('faculty-hr-language', 'ar');
     expect(readLanguage()).toBe('ar');
+    expect(localStorage.getItem('faculty-language')).toBe('ar');
+    localStorage.removeItem('faculty-language');
     localStorage.setItem('faculty-hr-language', 'unknown');
     expect(readLanguage()).toBe('en');
   });

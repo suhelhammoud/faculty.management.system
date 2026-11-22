@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { facilityPatchSchemas, facilitySchemas } from './facilities.schemas';
+import { facilityPatchSchemas, facilitySchemas } from './facilities.schemas.js';
 
 const room = {
   buildingId: '11111111-1111-4111-8111-111111111111',

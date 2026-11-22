@@ -16,7 +16,7 @@ import {
   inventoryRemovalRequests,
   workflowInstances,
 } from '@project/db/schema';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { AuthorizationService } from '../../auth/authorization.service.js';
 import { DATABASE } from '../../database/database.constants.js';
@@ -32,6 +32,11 @@ import { asset, committeeDecision, proposal } from './inventory-removal.schemas.
 import { InventoryTransactionsService } from './inventory-transactions.service.js';
 
 const subjectType = 'removal-request';
+const removalVisibilityPermissions = [
+  PERMISSION.inventory.reviewRemoval,
+  PERMISSION.inventory.decideRemoval,
+  PERMISSION.inventory.withdrawRemoval,
+] as const;
 const committeeWithdrawal = z.strictObject({ committeeUndecided: z.literal(true) });
 function validate<T>(schema: z.ZodType<T>, value: unknown) {
   const result = schema.safeParse(value);
@@ -57,6 +62,36 @@ export class InventoryRemovalService implements OnModuleInit {
       subjectType,
       active: true,
       canView: ({ db, actorId, subject }) => this.canView(db, actorId, subject.id),
+      queueAccess: async (db, actorId, ids) => {
+        const [requests, permits] = await Promise.all([
+          db
+            .select({
+              id: inventoryRemovalRequests.id,
+              requester: inventoryRemovalRequests.requesterId,
+            })
+            .from(inventoryRemovalRequests)
+            .where(inArray(inventoryRemovalRequests.id, ids)),
+          this.auth.canMany(
+            actorId,
+            removalVisibilityPermissions,
+            `inventory.${subjectType}`,
+            ids,
+            db,
+          ),
+        ]);
+        return {
+          requesters: new Map(
+            requests
+              .filter(
+                ({ id, requester }) =>
+                  requester === actorId ||
+                  removalVisibilityPermissions.some((permission) => permits(permission, id)),
+              )
+              .map(({ id, requester }) => [id, requester]),
+          ),
+          permits,
+        };
+      },
       requester: async ({ db, subject }) =>
         (await this.request(db, subject.id))?.requesterId ?? null,
       canViewComment: async () => true,

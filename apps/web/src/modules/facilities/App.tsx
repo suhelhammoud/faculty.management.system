@@ -32,7 +32,7 @@ function FacilitiesShell() {
                 <h1>{t('Facilities')}</h1>
               </div>
             </div>
-            <ModuleHeaderActions sessionControls={sessionControls}>
+            <ModuleHeaderActions language={language} sessionControls={sessionControls}>
               <button
                 type="button"
                 className="fac-button fac-button--secondary fac-language-button"

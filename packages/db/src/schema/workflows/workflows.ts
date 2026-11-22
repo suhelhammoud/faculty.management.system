@@ -32,6 +32,7 @@ export const workflowInstances = pgTable(
     completedAt: timestampWithZone('completed_at'),
   },
   (table) => [
+    index('workflow_instances_activity_idx').on(table.lastActivityAt.desc(), table.id),
     index('workflow_instances_monitor_idx').on(table.status, table.currentStep),
     index('workflow_instances_subject_idx').on(
       table.subjectModule,
@@ -55,6 +56,9 @@ export const workflowTasks = pgTable(
     completedAt: timestampWithZone('completed_at'),
   },
   (table) => [
+    index('workflow_tasks_pending_order_idx')
+      .on(table.openedAt, table.id)
+      .where(sql`${table.status} = 'pending'`),
     uniqueIndex('workflow_tasks_one_pending_idx')
       .on(table.instanceId)
       .where(sql`${table.status} = 'pending'`),

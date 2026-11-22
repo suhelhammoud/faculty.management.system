@@ -49,6 +49,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build API
         run: pnpm --filter api build
+      - name: Type check the API and tests
+        run: pnpm --filter api typecheck
       - name: Run frontend tests
         run: pnpm --filter web test
       - name: Create PostgreSQL integration databases
@@ -79,3 +81,6 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Build web app and run browser smoke tests
         run: pnpm test:frontend:smoke
+
+      - name: Run live Student Affairs browser journey
+        run: node packages/db/test/pilot.mjs

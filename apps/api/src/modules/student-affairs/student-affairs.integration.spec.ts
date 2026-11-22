@@ -79,11 +79,11 @@ describe.skipIf(!databaseName)('Student Affairs HTTP API', () => {
       .expect(201);
     return body.studentId as string;
   };
-  const changeYear = (id: string, year: number, actor: Actor = 'admin') =>
+  const changeYear = (id: string, year: number, actor: Actor = 'admin', expectedRevision = 1) =>
     client()
       .put(`${registry}/${id}/current-study-year`)
       .set(headers(actor))
-      .send({ currentStudyYear: year });
+      .send({ currentStudyYear: year, expectedRevision });
   const expiry = () => new Date(Date.now() + 3_600_000).toISOString();
   const grant = (issuer: Actor, recipient: Actor, expiresAt = expiry()) =>
     client().post(grantPath).set(headers(issuer)).send({ userId: actors[recipient], expiresAt });
@@ -227,13 +227,21 @@ describe.skipIf(!databaseName)('Student Affairs HTTP API', () => {
         expect(match).toMatchObject({ fatherName: values.fatherName, currentStudyYear: 1 });
         expect(match).not.toHaveProperty('mobileNumber');
       });
-    await client().patch(path).set(headers('second')).send({ notes: 'Denied' }).expect(403);
-    await client().patch(path).set(headers('third')).send({ notes: 'Allowed' }).expect(200);
+    await client()
+      .patch(path)
+      .set(headers('second'))
+      .send({ notes: 'Denied', expectedRevision: 1 })
+      .expect(403);
+    await client()
+      .patch(path)
+      .set(headers('third'))
+      .send({ notes: 'Allowed', expectedRevision: 1 })
+      .expect(200);
     await client()
       .patch(path)
       .set(headers('first'))
       .set('origin', 'https://other.test')
-      .send({ notes: 'Denied' })
+      .send({ notes: 'Denied', expectedRevision: 1 })
       .expect(403);
     await client().patch(path).set(headers('first')).send({ currentStudyYear: 2 }).expect(400);
     await client().post(registry).set(headers('first')).send(values).expect(409);
@@ -245,13 +253,37 @@ describe.skipIf(!databaseName)('Student Affairs HTTP API', () => {
     await client()
       .patch(`${registry}/${secondId}`)
       .set(headers('first'))
-      .send({ academicId: values.academicId })
+      .send({ academicId: values.academicId, expectedRevision: 1 })
       .expect(409);
     const audit = await connection.db
       .select()
       .from(auditLog)
       .where(eq(auditLog.targetId, body.studentId));
     expect(audit.map(({ actorId }) => actorId).sort()).toEqual([actors.first, actors.third].sort());
+  });
+
+  it('rejects stale profile writes and preserves a fresh retry and audit history', async () => {
+    const id = await register('first', 1);
+    const path = `${registry}/${id}`;
+    await client()
+      .patch(path)
+      .set(headers('first'))
+      .send({ birthDate: '2002-02-15', expectedRevision: 1 })
+      .expect(200);
+    const stale = await client()
+      .patch(path)
+      .set(headers('third'))
+      .send({ notes: 'New notes', expectedRevision: 1 })
+      .expect(409);
+    expect(stale.body.code).toBe('STUDENT_REVISION_CONFLICT');
+    const before = await connection.db.select().from(auditLog).where(eq(auditLog.targetId, id));
+    expect(before).toHaveLength(2);
+    const result = await client()
+      .patch(path)
+      .set(headers('third'))
+      .send({ notes: 'New notes', expectedRevision: 2 })
+      .expect(200);
+    expect(result.body).toMatchObject({ birthDate: '2002-02-15', notes: 'New notes', revision: 3 });
   });
 
   it('preserves legacy records and revokes a year assignment without removing read access', async () => {
@@ -272,7 +304,11 @@ describe.skipIf(!databaseName)('Student Affairs HTTP API', () => {
           currentStudyYear: null,
         });
       });
-    await client().patch(path).set(headers('first')).send({ firstName: 'Anna' }).expect(403);
+    await client()
+      .patch(path)
+      .set(headers('first'))
+      .send({ firstName: 'Anna', expectedRevision: 1 })
+      .expect(403);
     await changeYear(old.studentId, 1).expect(200);
     await assign('third', 3);
     await assign('third', 3);
@@ -331,12 +367,12 @@ describe.skipIf(!databaseName)('Student Affairs HTTP API', () => {
       await client()
         .patch(`${registry}/${id}`)
         .set(headers('first'))
-        .send({ notes: 'Denied' })
+        .send({ notes: 'Denied', expectedRevision: 1 })
         .expect(403);
       await client()
         .patch(`${registry}/${id}`)
         .set(headers('second'))
-        .send({ notes: 'Allowed' })
+        .send({ notes: 'Allowed', expectedRevision: 2 })
         .expect(200);
       await client()
         .patch(`${years}/2026-2027`)
@@ -364,8 +400,8 @@ describe.skipIf(!databaseName)('Student Affairs HTTP API', () => {
     } finally {
       await revoke(idOfGrant).expect(204);
     }
-    await changeYear(id, 2).expect(200);
-    await changeYear(id, 3).expect(403);
+    await changeYear(id, 2, 'admin', 3).expect(200);
+    await changeYear(id, 3, 'admin', 3).expect(403);
   });
 
   it('serializes revocation with a promotion and rejects expired grants', async () => {
@@ -374,7 +410,8 @@ describe.skipIf(!databaseName)('Student Affairs HTTP API', () => {
     const [move, cancellation] = await Promise.all([changeYear(id, 2), revoke(first.id)]);
     expect(cancellation.status).toBe(204);
     expect([200, 403]).toContain(move.status);
-    await changeYear(id, 3).expect(403);
+    const revision = move.status === 200 ? 2 : 1;
+    await changeYear(id, 3, 'admin', revision).expect(403);
     const { body: second } = await grant('dean', 'admin').expect(201);
     await connection.db
       .update(studentAffairsPromotionGrants)
@@ -383,7 +420,7 @@ describe.skipIf(!databaseName)('Student Affairs HTTP API', () => {
         expiresAt: sql`clock_timestamp() - interval '1 hour'`,
       })
       .where(eq(studentAffairsPromotionGrants.id, second.id));
-    await changeYear(id, 3).expect(403);
+    await changeYear(id, 3, 'admin', revision).expect(403);
     const entries = await connection.db
       .select()
       .from(auditLog)

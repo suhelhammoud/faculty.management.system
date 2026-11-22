@@ -54,3 +54,8 @@ export interface WorkflowActionResult {
   taskId: string | null;
   status: WorkflowInstanceStatus;
 }
+
+export interface WorkflowPage<T> {
+  records: T[];
+  nextCursor: string | null;
+}

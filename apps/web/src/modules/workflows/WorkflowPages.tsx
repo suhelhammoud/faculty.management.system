@@ -4,9 +4,11 @@ import type {
   WorkflowActionResult,
   WorkflowInstance,
   WorkflowInstanceDetail,
+  WorkflowPage,
   WorkflowTask as WorkflowTaskResponse,
 } from '@project/contracts/workflow';
 import { workflowApi } from './api';
+import { QueuePagination } from './QueuePagination';
 import './workflows.css';
 
 const removalPath = 'inventory/workflow/removal-requests';
@@ -66,24 +68,31 @@ function Frame({ title, children }: { title: string; children: ReactNode }) {
 }
 
 export function WorkflowInbox() {
-  const state = useResource<WorkflowTaskResponse[]>('workflow/tasks');
+  const [params] = useSearchParams();
+  const cursor = params.get('cursor');
+  const state = useResource<WorkflowPage<WorkflowTaskResponse>>(
+    cursor ? `workflow/tasks?cursor=${encodeURIComponent(cursor)}` : 'workflow/tasks',
+  );
   return (
     <Frame title="Task inbox">
       <Resource state={state}>
-        {(tasks) =>
-          tasks.length ? (
-            <ul>
-              {tasks.map((task) => (
-                <li key={task.id}>
-                  <Link to={`/workflow/tasks/${task.id}`}>{task.title}</Link>
-                  <p>{task.instance.title}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No tasks are available.</p>
-          )
-        }
+        {({ records: tasks, nextCursor }) => (
+          <>
+            {tasks.length ? (
+              <ul>
+                {tasks.map((task) => (
+                  <li key={task.id}>
+                    <Link to={`/workflow/tasks/${task.id}`}>{task.title}</Link>
+                    <p>{task.instance.title}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No tasks are available.</p>
+            )}
+            <QueuePagination nextCursor={nextCursor} />
+          </>
+        )}
       </Resource>
     </Frame>
   );
@@ -92,7 +101,9 @@ export function WorkflowInbox() {
 export function WorkflowMonitor() {
   const [params, setParams] = useSearchParams();
   const query = params.toString();
-  const state = useResource<WorkflowInstance[]>(`workflow/instances${query ? `?${query}` : ''}`);
+  const state = useResource<WorkflowPage<WorkflowInstance>>(
+    `workflow/instances${query ? `?${query}` : ''}`,
+  );
   function filter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
@@ -122,27 +133,30 @@ export function WorkflowMonitor() {
         <button type="submit">Filter</button>
       </form>
       <Resource state={state}>
-        {(instances) =>
-          instances.length ? (
-            <ul>
-              {instances.map((instance) => (
-                <li key={instance.id}>
-                  <Link to={`/workflow/instances/${instance.id}`}>{instance.title}</Link>
-                  <p>
-                    {instance.status}
-                    {instance.currentStep && ` · ${label(instance.currentStep)}`}
-                  </p>
-                  <p>
-                    Started {dateTime(instance.startedAt)} · Last activity{' '}
-                    {dateTime(instance.lastActivityAt)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No workflows match.</p>
-          )
-        }
+        {({ records: instances, nextCursor }) => (
+          <>
+            {instances.length ? (
+              <ul>
+                {instances.map((instance) => (
+                  <li key={instance.id}>
+                    <Link to={`/workflow/instances/${instance.id}`}>{instance.title}</Link>
+                    <p>
+                      {instance.status}
+                      {instance.currentStep && ` · ${label(instance.currentStep)}`}
+                    </p>
+                    <p>
+                      Started {dateTime(instance.startedAt)} · Last activity{' '}
+                      {dateTime(instance.lastActivityAt)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No workflows match.</p>
+            )}
+            <QueuePagination nextCursor={nextCursor} />
+          </>
+        )}
       </Resource>
     </Frame>
   );

@@ -1,0 +1,2 @@
+CREATE INDEX "workflow_instances_activity_idx" ON "workflow_instances" USING btree ("last_activity_at" DESC NULLS LAST,"id");--> statement-breakpoint
+CREATE INDEX "workflow_tasks_pending_order_idx" ON "workflow_tasks" USING btree ("opened_at","id") WHERE "workflow_tasks"."status" = 'pending';

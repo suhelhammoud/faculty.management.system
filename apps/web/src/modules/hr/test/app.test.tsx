@@ -165,7 +165,7 @@ describe('HR application', () => {
     await user.click(screen.getByRole('button', { name: 'Switch to Arabic' }));
     await screen.findByRole('heading', { name: 'الموظفون' });
     expect(document.querySelector('.faculty-hr')).toHaveAttribute('dir', 'rtl');
-    expect(localStorage.getItem('faculty-hr-language')).toBe('ar');
+    expect(localStorage.getItem('faculty-language')).toBe('ar');
     view.unmount();
     mount();
     await screen.findByRole('heading', { name: 'الموظفون' });

@@ -23,7 +23,7 @@ function moduleLink(page: Page, name: string) {
 }
 
 function allModulesLink(page: Page) {
-  return page.locator('main header').getByRole('link', { name: 'All modules', exact: true });
+  return page.locator('main header').getByRole('link', { name: /^(All modules|جميع الوحدات)$/ });
 }
 
 async function expectSameRow(...controls: Locator[]) {
@@ -56,7 +56,7 @@ for (const [path, moduleName] of [
       }
 
       await expect(link).toHaveCount(1);
-      await expect(link).toHaveAttribute('dir', 'ltr');
+      await expect(link).toHaveAttribute('dir', width === 320 ? 'rtl' : 'ltr');
       await expect(link).toBeInViewport({ ratio: 1 });
       await expect(languageButton).toBeInViewport({ ratio: 1 });
       await expectSameRow(link, languageButton);
@@ -278,7 +278,9 @@ test('links to the directory while a module loads and after a load failure', asy
   await expect(page.getByRole('heading', { name: 'Attendance', exact: true })).toBeVisible();
 });
 
-test('shares form styles and scopes Facilities direction during navigation', async ({ page }) => {
+test('shares form styles and carries Arabic through bilingual module navigation', async ({
+  page,
+}) => {
   const signIn = page.getByRole('button', { name: 'Sign in', exact: true });
   const username = page.getByLabel(/^Username/);
   async function expectSharedControls() {
@@ -295,7 +297,7 @@ test('shares form styles and scopes Facilities direction during navigation', asy
   await expectSharedControls();
   await page.getByRole('button', { name: 'Switch to Arabic' }).click();
   await expect(page.locator('.faculty-facilities')).toHaveAttribute('dir', 'rtl');
-  await expect(allModulesLink(page)).toHaveCSS('direction', 'ltr');
+  await expect(allModulesLink(page)).toHaveCSS('direction', 'rtl');
   await allModulesLink(page).click();
   await expect(moduleLink(page, 'Attendance')).toHaveCSS('direction', 'ltr');
 
@@ -303,11 +305,14 @@ test('shares form styles and scopes Facilities direction during navigation', asy
   await expectSharedControls();
 
   await allModulesLink(page).click();
-  await moduleLink(page, 'Inventory').click();
-  await expectSharedControls();
-
-  await allModulesLink(page).click();
-  await moduleLink(page, 'HR').click();
+  for (const module of ['Inventory', 'Student Affairs', 'HR']) {
+    await moduleLink(page, module).click();
+    await expect(page.locator('main > section')).toHaveAttribute('dir', 'rtl');
+    await page.reload();
+    await expect(page.locator('main > section')).toHaveAttribute('dir', 'rtl');
+    if (module !== 'HR') await allModulesLink(page).click();
+  }
+  await page.getByRole('button', { name: 'التبديل إلى الإنجليزية', exact: true }).click();
   await expectSharedControls();
 
   await mockHrSession(page);
@@ -321,7 +326,9 @@ test('shares form styles and scopes Facilities direction during navigation', asy
 });
 
 test('preserves the shared Workflow and fallback routes', async ({ page }) => {
-  await page.route('**/api/workflow/tasks', (route) => route.fulfill({ json: [] }));
+  await page.route('**/api/workflow/tasks', (route) =>
+    route.fulfill({ json: { records: [], nextCursor: null } }),
+  );
   await page.goto('/');
   await moduleLink(page, 'Workflows').click();
   await expect(page).toHaveURL(/\/workflow\/tasks$/);

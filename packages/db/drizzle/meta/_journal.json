@@ -43,6 +43,20 @@
       "when": 1795288147803,
       "tag": "0005_inventory_discrepancies",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795332064019,
+      "tag": "0006_student_revision",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795332228780,
+      "tag": "0007_workflow_queue_indexes",
+      "breakpoints": true
     }
   ]
 }

@@ -13,6 +13,7 @@ import type {
   StaffYearAssignments,
   StudentAffairsCapabilities,
   StudentList,
+  StudentYearChange,
 } from '@project/contracts/student-affairs';
 import type { Database } from '@project/db';
 import {
@@ -53,6 +54,16 @@ import type {
 
 type Tx = Parameters<Parameters<Database['transaction']>[0]>[0];
 const permissions = PERMISSION.studentAffairs;
+
+function requireRevision(revision: number, expected: number) {
+  if (revision !== expected)
+    throw new ConflictException({
+      statusCode: 409,
+      code: 'STUDENT_REVISION_CONFLICT',
+      message: 'This student record changed while you were editing.',
+    });
+}
+
 const { userId: _accountLink, ...profileColumns } = getTableColumns(students);
 const listColumns = {
   studentId: students.studentId,
@@ -193,14 +204,15 @@ export class StudentAffairsService {
     });
   }
 
-  async patch(actor: string, id: string, values: StudentPatch) {
+  async patch(actor: string, id: string, { expectedRevision, ...values }: StudentPatch) {
     try {
       return await this.db.transaction(async (tx) => {
         const student = await this.lockStudent(tx, id);
         await this.requireYear(tx, actor, student.currentStudyYear);
+        requireRevision(student.revision, expectedRevision);
         const [updated] = await tx
           .update(students)
-          .set(values)
+          .set({ ...values, revision: student.revision + 1 })
           .where(eq(students.studentId, id))
           .returning(profileColumns);
         await this.audit(tx, actor, 'student-affairs:student-update', id);
@@ -215,11 +227,12 @@ export class StudentAffairsService {
     }
   }
 
-  changeYear(actor: string, id: string, currentStudyYear: number) {
+  changeYear(actor: string, id: string, { currentStudyYear, expectedRevision }: StudentYearChange) {
     return this.db.transaction(async (tx) => {
       const student = await this.lockStudent(tx, id);
       await this.requirePermission(tx, actor, permissions.administer);
       const previousYear = student.currentStudyYear;
+      requireRevision(student.revision, expectedRevision);
       if (previousYear === currentStudyYear) return student;
 
       let grantId: string | null = null;
@@ -236,7 +249,7 @@ export class StudentAffairsService {
       }
       const [updated] = await tx
         .update(students)
-        .set({ currentStudyYear })
+        .set({ currentStudyYear, revision: student.revision + 1 })
         .where(
           and(
             eq(students.studentId, id),

@@ -1,3 +1,4 @@
+import type { FacultyLanguage } from '../language-preference';
 import { useRef, type ComponentProps } from 'react';
 
 /** Format date-only strings without timezone conversion. */
@@ -22,13 +23,26 @@ type Props = Omit<ComponentProps<'input'>, 'type' | 'value' | 'onChange'> & {
   value: string;
   onValueChange: (value: string) => void;
   withTime?: boolean;
+  language?: FacultyLanguage;
 };
 
 /** Explicit display format with ISO values for APIs and the browser calendar. */
-export function DateInput({ value, onValueChange, withTime = false, style, ...props }: Props) {
+export function DateInput({
+  value,
+  onValueChange,
+  withTime = false,
+  language = 'en',
+  style,
+  ...props
+}: Props) {
   const picker = useRef<HTMLInputElement>(null);
   const text = useRef<HTMLInputElement>(null);
   const displayed = formatDate(value);
+  const format = withTime ? 'dd/mm/yyyy hh:mm' : 'dd/mm/yyyy';
+  const invalid =
+    language === 'ar'
+      ? `أدخل تاريخًا صالحًا بالصيغة ${format}.`
+      : `Use a valid date in ${format} format.`;
   const valid = !value || parseDate(displayed, withTime) !== null;
   return (
     <span
@@ -39,25 +53,23 @@ export function DateInput({ value, onValueChange, withTime = false, style, ...pr
         type="text"
         ref={(input) => {
           text.current = input;
-          input?.setCustomValidity(valid ? '' : 'Use a valid date in dd/mm/yyyy format.');
+          input?.setCustomValidity(valid ? '' : invalid);
         }}
         dir="ltr"
         value={displayed}
-        placeholder={withTime ? 'dd/mm/yyyy hh:mm' : 'dd/mm/yyyy'}
+        placeholder={format}
         maxLength={withTime ? 16 : 10}
         aria-invalid={props['aria-invalid'] || !valid}
         style={{ ...style, minWidth: 0, flex: 1 }}
         onChange={(event) => {
           const raw = event.target.value;
-          event.target.setCustomValidity(
-            raw && !parseDate(raw, withTime) ? 'Use a valid date in dd/mm/yyyy format.' : '',
-          );
+          event.target.setCustomValidity(raw && !parseDate(raw, withTime) ? invalid : '');
           onValueChange(parseDate(raw, withTime) ?? raw);
         }}
       />
       <button
         type="button"
-        aria-label="Choose date"
+        aria-label={language === 'ar' ? 'اختر تاريخًا' : 'Choose date'}
         disabled={props.disabled || props.readOnly}
         style={{ flexShrink: 0, padding: 6, cursor: 'pointer' }}
         onClick={() => {

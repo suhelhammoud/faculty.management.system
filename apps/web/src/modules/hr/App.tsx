@@ -35,7 +35,7 @@ function HrApp() {
                 <p className="hr-eyebrow">{t('Employee records')}</p>
                 <h1>{t('Human resources')}</h1>
               </div>
-              <ModuleHeaderActions sessionControls={sessionControls}>
+              <ModuleHeaderActions language={language} sessionControls={sessionControls}>
                 <Button
                   type="button"
                   variant="outline"

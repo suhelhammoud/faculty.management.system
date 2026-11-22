@@ -7,7 +7,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type {
+  WorkflowPage,
   WorkflowActionResult,
   WorkflowHistoryEvent,
   WorkflowInstance as WorkflowInstanceResponse,
@@ -16,7 +18,7 @@ import type {
 } from '@project/contracts/workflow';
 import type { Database } from '@project/db';
 import { workflowEvents, workflowInstances, workflowTasks } from '@project/db/schema';
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNull, or, sql } from 'drizzle-orm';
 import { AuthorizationService } from '../../auth/authorization.service.js';
 import { DATABASE } from '../../database/database.constants.js';
 import type {
@@ -29,7 +31,21 @@ import type {
   WorkflowTask,
   WorkflowTransaction,
 } from './workflow-definition.js';
+import { queueCursor, type QueuePosition } from './workflow-cursor.js';
 import { WorkflowRegistry } from './workflow-registry.js';
+
+export interface WorkflowQueueQuery {
+  limit: number;
+  cursor?: string;
+  subjectModule?: string;
+  status?: WorkflowInstance['status'];
+  step?: string;
+}
+
+type QueueAccess = Awaited<ReturnType<NonNullable<WorkflowRegistration['queueAccess']>>>;
+type QueueRow = { position: QueuePosition; instance: WorkflowInstance };
+const scanLimit = 500;
+const batchSize = 100;
 
 function fingerprint(input: unknown): string {
   const canonical = JSON.stringify(input, (_key: string, value: unknown) => {
@@ -75,6 +91,7 @@ export class WorkflowsService {
     @Inject(DATABASE) private readonly db: Database,
     @Inject(WorkflowRegistry) private readonly registry: WorkflowRegistry,
     @Inject(AuthorizationService) private readonly authorization: AuthorizationService,
+    @Inject(ConfigService) private readonly config: ConfigService,
   ) {}
 
   async start(command: StartCommand): Promise<WorkflowActionResult> {
@@ -269,22 +286,56 @@ export class WorkflowsService {
     });
   }
 
-  async inbox(actorId: string): Promise<WorkflowTaskResponse[]> {
-    const rows = await this.db
-      .select({ task: workflowTasks, instance: workflowInstances })
-      .from(workflowTasks)
-      .innerJoin(workflowInstances, eq(workflowTasks.instanceId, workflowInstances.id))
-      .where(eq(workflowTasks.status, 'pending'))
-      .orderBy(asc(workflowTasks.openedAt), asc(workflowTasks.id));
-    const visible = [];
-    for (const { task, instance } of rows) {
-      const context = this.access(this.db, actorId, instance);
-      const registration = await this.visible(context);
-      if (!registration) continue;
-      const actions = await this.available(context, registration, task);
-      if (actions.length) visible.push(this.taskView(task, instance, registration, actions));
-    }
-    return visible;
+  inbox(actorId: string, query: WorkflowQueueQuery): Promise<WorkflowPage<WorkflowTaskResponse>> {
+    return this.queue(
+      actorId,
+      'inbox',
+      query,
+      async (after, limit) => {
+        const rows = await this.db
+          .select({
+            task: workflowTasks,
+            instance: workflowInstances,
+            time: sql<string>`to_char(${workflowTasks.openedAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`,
+          })
+          .from(workflowTasks)
+          .innerJoin(workflowInstances, eq(workflowTasks.instanceId, workflowInstances.id))
+          .where(
+            and(
+              eq(workflowTasks.status, 'pending'),
+              eq(workflowInstances.status, 'running'),
+              eq(workflowTasks.step, workflowInstances.currentStep),
+              or(isNull(workflowTasks.assignedUserId), eq(workflowTasks.assignedUserId, actorId)),
+              query.subjectModule
+                ? eq(workflowInstances.subjectModule, query.subjectModule)
+                : undefined,
+              after
+                ? or(
+                    sql`${workflowTasks.openedAt} > ${after.time}::timestamptz`,
+                    and(
+                      sql`${workflowTasks.openedAt} = ${after.time}::timestamptz`,
+                      gt(workflowTasks.id, after.id),
+                    ),
+                  )
+                : undefined,
+            ),
+          )
+          .orderBy(asc(workflowTasks.openedAt), asc(workflowTasks.id))
+          .limit(limit);
+        return rows.map(({ time, ...row }) => ({ ...row, position: { time, id: row.task.id } }));
+      },
+      async ({ instance, task }, registration, batch) => {
+        const context = this.access(this.db, actorId, instance);
+        const eligible = registration.definition.steps[task.step].eligible;
+        const batchEligible =
+          batch &&
+          ('requester' in eligible
+            ? batch.requesters.get(instance.subjectId) === actorId
+            : batch.permits(eligible.permission, instance.subjectId));
+        const actions = await this.available(context, registration, task, batchEligible);
+        return actions.length ? this.taskView(task, instance, registration, actions) : undefined;
+      },
+    );
   }
 
   async task(id: string, actorId: string): Promise<WorkflowTaskResponse> {
@@ -343,27 +394,111 @@ export class WorkflowsService {
     };
   }
 
-  async monitor(
+  monitor(
     actorId: string,
-    status?: WorkflowInstance['status'],
-    step?: string,
-  ): Promise<WorkflowInstanceResponse[]> {
-    const rows = await this.db
-      .select()
-      .from(workflowInstances)
-      .where(
-        and(
-          status ? eq(workflowInstances.status, status) : undefined,
-          step ? eq(workflowInstances.currentStep, step) : undefined,
+    query: WorkflowQueueQuery,
+  ): Promise<WorkflowPage<WorkflowInstanceResponse>> {
+    return this.queue(
+      actorId,
+      'monitor',
+      query,
+      async (after, limit) => {
+        const rows = await this.db
+          .select({
+            instance: workflowInstances,
+            time: sql<string>`to_char(${workflowInstances.lastActivityAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`,
+          })
+          .from(workflowInstances)
+          .where(
+            and(
+              query.status ? eq(workflowInstances.status, query.status) : undefined,
+              query.step ? eq(workflowInstances.currentStep, query.step) : undefined,
+              query.subjectModule
+                ? eq(workflowInstances.subjectModule, query.subjectModule)
+                : undefined,
+              after
+                ? or(
+                    sql`${workflowInstances.lastActivityAt} < ${after.time}::timestamptz`,
+                    and(
+                      sql`${workflowInstances.lastActivityAt} = ${after.time}::timestamptz`,
+                      gt(workflowInstances.id, after.id),
+                    ),
+                  )
+                : undefined,
+            ),
+          )
+          .orderBy(desc(workflowInstances.lastActivityAt), asc(workflowInstances.id))
+          .limit(limit);
+        return rows.map(({ instance, time }) => ({
+          instance,
+          position: { time, id: instance.id },
+        }));
+      },
+      async ({ instance }, registration) => this.instanceView(instance, registration),
+    );
+  }
+
+  private async queue<Row extends QueueRow, Result>(
+    actorId: string,
+    kind: 'inbox' | 'monitor',
+    query: WorkflowQueueQuery,
+    fetch: (after: QueuePosition | undefined, limit: number) => Promise<Row[]>,
+    resolve: (
+      row: Row,
+      registration: WorkflowRegistration,
+      batch?: QueueAccess,
+    ) => Promise<Result | undefined>,
+  ): Promise<WorkflowPage<Result>> {
+    const cursor = queueCursor(
+      this.config.getOrThrow<string>('BETTER_AUTH_SECRET'),
+      JSON.stringify([kind, actorId, query.subjectModule, query.status, query.step]),
+    );
+    let after = cursor.decode(query.cursor);
+    let examined = 0;
+    let hasMore = true;
+    const records: Result[] = [];
+    while (hasMore && examined < scanLimit && records.length < query.limit) {
+      const take = Math.min(batchSize, scanLimit - examined);
+      const candidates = await fetch(after, take + 1);
+      const rows = candidates.slice(0, take);
+      const registrations = rows.map(({ instance }) =>
+        this.registry.get(instance.definitionKey, instance.definitionVersion),
+      );
+      const idsByRegistration = new Map<WorkflowRegistration, string[]>();
+      for (const [index, registration] of registrations.entries()) {
+        if (!registration?.queueAccess) continue;
+        const ids = idsByRegistration.get(registration) ?? [];
+        ids.push(rows[index].instance.subjectId);
+        idsByRegistration.set(registration, ids);
+      }
+      const batched = new Map(
+        await Promise.all(
+          [...idsByRegistration].map(
+            async ([registration, ids]) =>
+              [registration, await registration.queueAccess!(this.db, actorId, ids)] as const,
+          ),
         ),
-      )
-      .orderBy(desc(workflowInstances.lastActivityAt), asc(workflowInstances.id));
-    const visible = [];
-    for (const row of rows) {
-      const registration = await this.visible(this.access(this.db, actorId, row));
-      if (registration) visible.push(this.instanceView(row, registration));
+      );
+      hasMore = candidates.length > take;
+      for (const [index, row] of rows.entries()) {
+        examined += 1;
+        after = row.position;
+        const registration = registrations[index];
+        if (!registration) continue;
+        const batch = batched.get(registration);
+        const visible = batch
+          ? batch.requesters.has(row.instance.subjectId)
+          : await registration.canView(this.access(this.db, actorId, row.instance));
+        if (!visible) continue;
+        const result = await resolve(row, registration, batch);
+        if (result !== undefined) records.push(result);
+        if (records.length === query.limit) {
+          hasMore ||= index + 1 < rows.length;
+          break;
+        }
+      }
     }
-    return visible;
+    return { records, nextCursor: hasMore && after ? cursor.encode(after) : null };
   }
 
   private access(db: WorkflowReader, actorId: string, instance: WorkflowInstance): WorkflowAccess {
@@ -389,6 +524,7 @@ export class WorkflowsService {
     context: WorkflowAccess,
     registration: WorkflowRegistration,
     task: WorkflowTask,
+    batchEligible?: boolean,
   ) {
     if (
       task.status !== 'pending' ||
@@ -398,7 +534,7 @@ export class WorkflowsService {
       return [];
     if (task.assignedUserId && task.assignedUserId !== context.actorId) return [];
     const { eligible, actions } = registration.definition.steps[task.step];
-    if (!(await this.isEligible(context, registration, eligible))) return [];
+    if (!(batchEligible ?? (await this.isEligible(context, registration, eligible)))) return [];
     const available: string[] = [];
     for (const action of Object.keys(actions)) {
       if (!registration.canAct || (await registration.canAct({ ...context, task, action })))

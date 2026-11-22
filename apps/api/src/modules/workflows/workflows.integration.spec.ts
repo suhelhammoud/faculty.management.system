@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
@@ -15,6 +16,10 @@ import {
   inventoryAssets,
   inventoryCustodies,
   inventoryRemovalDecisions,
+  inventoryRemovalRequests,
+  resourceAcl,
+  workflowInstances,
+  workflowTasks,
   inventoryTransactions,
   permissions,
   rolePermissions,
@@ -154,6 +159,10 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       ],
       providers: [
         WorkflowsService,
+        {
+          provide: ConfigService,
+          useValue: new ConfigService({ BETTER_AUTH_SECRET: 'workflow-test-only-secret' }),
+        },
         WorkflowRegistry,
         InventoryRemovalService,
         InventoryReadService,
@@ -238,7 +247,7 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       .expect(409);
     await client().get(taskApi).expect(401);
     const inbox = await client().get(taskApi).set(headers(actors.outsider)).expect(200);
-    expect(inbox.body).toEqual([]);
+    expect(inbox.body).toEqual({ records: [], nextCursor: null });
     await client().get(`${taskApi}/${first.taskId}`).set(headers(actors.outsider)).expect(404);
     const task = await client()
       .get(`${taskApi}/${first.taskId}`)
@@ -281,7 +290,7 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       .get('/api/workflow/instances?status=running&step=review')
       .set(headers(actors.reviewer))
       .expect(200);
-    expect(monitor.body).toEqual(
+    expect(monitor.body.records).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: first.instanceId })]),
     );
     await client()
@@ -467,7 +476,7 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       ).body,
     );
     const inbox = async (actor: string) =>
-      (await client().get(taskApi).set(headers(actor)).expect(200)).body;
+      (await client().get(taskApi).set(headers(actor)).expect(200)).body.records;
     const revisionTask = expect.objectContaining({
       id: revision.taskId,
       step: 'revise',
@@ -834,6 +843,87 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
     expect(recipient.items).toContainEqual(expect.objectContaining({ id }));
   });
 
+  it('pages matching timestamps and continues through sparse pages without exposing denied records', async () => {
+    const { db } = connection;
+    const ids = Array.from({ length: 502 }, () => randomUUID()).sort();
+    const requests = ids.map(() => randomUUID());
+    const time = new Date('1901-01-01T00:00:00Z');
+    const permission = PERMISSION.inventory.reviewRemoval;
+    const acl = [randomUUID(), randomUUID()];
+    await db
+      .insert(inventoryRemovalRequests)
+      .values(requests.map((id) => ({ id, requesterId: actors.requester })));
+    await db.insert(workflowInstances).values(
+      ids.map((id, index) => ({
+        id,
+        definitionKey: 'inventory.removal',
+        definitionVersion: 1,
+        status: 'running' as const,
+        currentStep: 'review',
+        startedBy: actors.requester,
+        subjectModule: 'inventory',
+        subjectType: 'removal-request',
+        subjectId: requests[index],
+        lastActivityAt: time,
+      })),
+    );
+    await db.insert(workflowTasks).values(
+      ids.map((id) => ({
+        id,
+        instanceId: id,
+        status: 'pending' as const,
+        step: 'review',
+        openedAt: time,
+      })),
+    );
+    await db.insert(resourceAcl).values([
+      {
+        id: acl[0],
+        userId: actors.outsider,
+        permission,
+        resourceType: 'inventory.removal-request',
+        resourceId: requests[501],
+        effect: 'allow',
+      },
+      {
+        id: acl[1],
+        userId: actors.reviewer2,
+        permission,
+        resourceType: 'inventory.removal-request',
+        resourceId: requests[0],
+        effect: 'deny',
+      },
+    ]);
+    const query = (actor: string, cursor?: string, subjectModule = 'inventory') =>
+      client()
+        .get(taskApi)
+        .query({ limit: 1, subjectModule, ...(cursor ? { cursor } : {}) })
+        .set(headers(actor));
+    try {
+      const first = (await query(actors.outsider).expect(200)).body;
+      expect(first.records).toEqual([]);
+      expect(first.nextCursor).toEqual(expect.any(String));
+      const resumed = (await query(actors.outsider, first.nextCursor).expect(200)).body;
+      expect(resumed.records.map(({ id }: { id: string }) => id)).toEqual([ids[501]]);
+      await query(actors.reviewer, first.nextCursor).expect(400);
+      await query(actors.outsider, first.nextCursor, 'exams').expect(400);
+      await query(actors.outsider, first.nextCursor + 'x').expect(400);
+      await client().get(`${taskApi}/${ids[0]}`).set(headers(actors.reviewer2)).expect(404);
+      const firstReviewer = (await query(actors.reviewer2).expect(200)).body;
+      expect(firstReviewer.records[0].id).toBe(ids[1]);
+      const nextReviewer = (await query(actors.reviewer2, firstReviewer.nextCursor).expect(200))
+        .body;
+      expect(nextReviewer.records[0].id).toBe(ids[2]);
+    } finally {
+      await db.delete(resourceAcl).where(inArray(resourceAcl.id, acl));
+      await db.delete(workflowTasks).where(inArray(workflowTasks.id, ids));
+      await db.delete(workflowInstances).where(inArray(workflowInstances.id, ids));
+      await db
+        .delete(inventoryRemovalRequests)
+        .where(inArray(inventoryRemovalRequests.id, requests));
+    }
+  });
+
   it('accepts discrepancy reports from the assigned employee and queues them for Inventory staff', async () => {
     const { db } = connection;
     await db
@@ -927,13 +1017,15 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
     const originalRegistry = new WorkflowRegistry();
     originalRegistry.register(registration(1, true));
     originalRegistry.onApplicationBootstrap();
-    const original = await startBatch(new WorkflowsService(db, originalRegistry, authorization));
+    const original = await startBatch(
+      new WorkflowsService(db, originalRegistry, authorization, new ConfigService()),
+    );
 
     const updatedRegistry = new WorkflowRegistry();
     updatedRegistry.register(registration(1, false));
     updatedRegistry.register(registration(2, true));
     updatedRegistry.onApplicationBootstrap();
-    const updated = new WorkflowsService(db, updatedRegistry, authorization);
+    const updated = new WorkflowsService(db, updatedRegistry, authorization, new ConfigService());
     const latest = await startBatch(updated);
     for (const { taskId } of [original, latest]) {
       if (!taskId) throw new Error('The batch has no review task');

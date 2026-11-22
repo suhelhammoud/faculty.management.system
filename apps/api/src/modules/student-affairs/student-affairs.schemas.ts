@@ -58,8 +58,18 @@ const profile = z.strictObject({
   notes: z.string().trim().max(10000).nullable().optional(),
 });
 export const studentCreate = profile.extend({ currentStudyYear: studyYear });
-export const studentPatch = profile.partial().refine(nonempty, 'Supply at least one field');
-export const currentYearPut = z.strictObject({ currentStudyYear: studyYear });
+const revision = z.number().int().min(1).max(2_147_483_647);
+export const studentPatch = profile
+  .partial()
+  .extend({ expectedRevision: revision })
+  .refine(
+    ({ expectedRevision: _revision, ...changes }) => nonempty(changes),
+    'Supply at least one field',
+  );
+export const currentYearPut = z.strictObject({
+  currentStudyYear: studyYear,
+  expectedRevision: revision,
+});
 
 const annualFields = z.strictObject({
   year: studyYear,

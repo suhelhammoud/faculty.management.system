@@ -60,9 +60,15 @@ export interface StudentProfileFields {
 }
 
 export interface StudentProfile extends StudentSummary, StudentProfileFields {
+  revision: number;
   adjustedScore: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface StudentYearChange {
+  currentStudyYear: number;
+  expectedRevision: number;
 }
 
 export interface StudentList {

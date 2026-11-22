@@ -1,6 +1,10 @@
 import { createContext, useContext } from 'react';
 
 export const arabic = {
+  'This student record changed while you were editing.': 'تغيّر سجل الطالب أثناء التعديل.',
+  'Reload latest record': 'تحميل أحدث نسخة من السجل',
+  'Discard your unsaved edits and reload the latest record?':
+    'هل تريد تجاهل تعديلاتك غير المحفوظة وتحميل أحدث نسخة من السجل؟',
   'Student Affairs': 'شؤون الطلاب',
   Students: 'الطلاب',
   'Staff assignments': 'تكليفات الموظفين',

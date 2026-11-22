@@ -49,7 +49,7 @@ function mount(path: string, fixtures: Record<string, unknown> = {}) {
 }
 beforeEach(() => {
   localStorage.clear();
-  useLanguage.getState().change('en');
+  useLanguage.getState().setLanguage('en');
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -98,7 +98,7 @@ describe('Inventory workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'العربية' }));
     const heading = await screen.findByRole('heading', { name: 'عهدتي' });
     expect(heading.closest('.faculty-inventory')).toHaveAttribute('dir', 'rtl');
-    expect(localStorage.getItem('faculty-inventory-language')).toBe('ar');
+    expect(localStorage.getItem('faculty-language')).toBe('ar');
     expect(fetchMock.mock.calls.some(([url]) => url.includes('/api/inventory/assets'))).toBe(false);
   });
 
@@ -113,7 +113,7 @@ describe('Inventory workspace', () => {
 
   it('lets the assigned employee report a discrepancy in Arabic', async () => {
     const submit = vi.fn(() => response({ id: 'report' }, 201));
-    useLanguage.getState().change('ar');
+    useLanguage.getState().setLanguage('ar');
     mount('/inventory/my-items', {
       '/api/inventory/my-items': {
         linkedEmployee: true,
@@ -363,7 +363,7 @@ describe('Inventory workspace', () => {
   });
 
   it('preserves the return action after a stale committee decision in Arabic', async () => {
-    useLanguage.getState().change('ar');
+    useLanguage.getState().setLanguage('ar');
     const submit = vi
       .fn()
       .mockResolvedValue(response({ message: 'An asset changed during review' }, 409));
@@ -386,14 +386,14 @@ describe('Inventory workspace', () => {
   });
 
   it('resolves the old shell task link to the localized Inventory task', async () => {
-    useLanguage.getState().change('ar');
+    useLanguage.getState().setLanguage('ar');
     mount('/workflow/tasks/task', task('review', ['forward', 'return', 'reject']));
     const heading = await screen.findByRole('heading', { name: 'مراجعة الطلب' });
     expect(heading.closest('.faculty-inventory')).toHaveAttribute('dir', 'rtl');
   });
 
   it('opens and closes an RTL asset detail dialog with the keyboard', async () => {
-    useLanguage.getState().change('ar');
+    useLanguage.getState().setLanguage('ar');
     mount('/inventory/assets', {
       '/api/inventory/capabilities': { ...capabilities, read: true },
       '/api/inventory/assets': [

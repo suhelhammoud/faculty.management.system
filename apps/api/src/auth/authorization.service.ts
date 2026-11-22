@@ -10,7 +10,7 @@ import {
   userRoles,
   user,
 } from '@project/db/schema';
-import { gt, isNull, or, sql } from 'drizzle-orm';
+import { gt, inArray, isNull, or, sql } from 'drizzle-orm';
 import { DATABASE } from '../database/database.constants.js';
 
 export type ResourceScope = { type: string; id: string };
@@ -43,6 +43,55 @@ export class AuthorizationService {
     db: Reader = this.db,
   ): Promise<boolean> {
     return (await this.access(userId, permission, resource, db)) === 'allowed';
+  }
+
+  async canMany(
+    userId: string,
+    permissions: readonly string[],
+    resourceType: string,
+    resourceIds: readonly string[],
+    db: Reader = this.db,
+  ): Promise<(permission: string, resourceId: string) => boolean> {
+    if (!permissions.length || !resourceIds.length || !(await this.isActive(userId, db))) {
+      return () => false;
+    }
+    const [roleGrants, rules] = await Promise.all([
+      db
+        .select({ permission: rolePermissions.permission })
+        .from(userRoles)
+        .innerJoin(rolePermissions, eq(userRoles.roleId, rolePermissions.roleId))
+        .where(and(eq(userRoles.userId, userId), inArray(rolePermissions.permission, permissions))),
+      db
+        .select({
+          permission: resourceAcl.permission,
+          id: resourceAcl.resourceId,
+          effect: resourceAcl.effect,
+        })
+        .from(resourceAcl)
+        .where(
+          and(
+            eq(resourceAcl.userId, userId),
+            eq(resourceAcl.resourceType, resourceType),
+            inArray(resourceAcl.resourceId, resourceIds),
+            inArray(resourceAcl.permission, permissions),
+          ),
+        ),
+    ]);
+    const granted = new Set(roleGrants.map(({ permission }) => permission));
+    const resourceSet = new Set(resourceIds);
+    const permissionSet = new Set(permissions);
+    const effects = new Map<string, string[]>();
+    const effectKey = (permission: string, id: string) => JSON.stringify([permission, id]);
+    for (const { permission, id, effect } of rules) {
+      const key = effectKey(permission, id);
+      const matching = effects.get(key) ?? [];
+      matching.push(effect);
+      effects.set(key, matching);
+    }
+    return (permission, id) =>
+      resourceSet.has(id) &&
+      permissionSet.has(permission) &&
+      evaluatePermission(effects.get(effectKey(permission, id)) ?? [], granted.has(permission));
   }
 
   async canAttempt(userId: string, permission: string, resource?: ResourceScope): Promise<boolean> {

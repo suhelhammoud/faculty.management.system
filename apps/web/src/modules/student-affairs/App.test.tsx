@@ -1,3 +1,5 @@
+import { focusManager } from '@tanstack/react-query';
+import { useFacultyLanguage } from '@/components/language-preference';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8,6 +10,7 @@ const api = '/api/student-affairs';
 const id = 'student-one';
 const profile = {
   studentId: id,
+  revision: 1,
   academicId: 'DEMO-STA-002',
   firstName: 'ليلى',
   fatherName: null,
@@ -52,7 +55,10 @@ function mount(path: string, routes: Record<string, unknown | Handler>) {
   return { fetch, ...app };
 }
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  useFacultyLanguage.getState().setLanguage('en');
+  localStorage.clear();
+});
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Student Affairs workspace', () => {
@@ -118,7 +124,10 @@ describe('Student Affairs workspace', () => {
 
   it('submits only changed profile fields for a legacy student and switches to Arabic RTL', async () => {
     const patch = vi.fn((request?: RequestInit) => {
-      expect(JSON.parse(String(request?.body))).toEqual({ fatherName: 'خالد' });
+      expect(JSON.parse(String(request?.body))).toEqual({
+        fatherName: 'خالد',
+        expectedRevision: 1,
+      });
       return json({ ...profile, fatherName: 'خالد' });
     });
     mount(`${base}/students/${id}/edit`, {
@@ -135,6 +144,38 @@ describe('Student Affairs workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'العربية' }));
     expect(await screen.findByRole('heading', { name: 'شؤون الطلاب' })).toBeInTheDocument();
     expect(document.querySelector('.faculty-student-affairs')).toHaveAttribute('dir', 'rtl');
+  });
+
+  it('keeps the edit baseline through a refresh and retains the draft on a stale revision', async () => {
+    let latest = profile;
+    const patch = vi.fn((request?: RequestInit) => {
+      expect(JSON.parse(String(request?.body))).toEqual({ notes: 'My draft', expectedRevision: 1 });
+      return json(
+        {
+          code: 'STUDENT_REVISION_CONFLICT',
+          message: 'This student record changed while you were editing.',
+        },
+        409,
+      );
+    });
+    const read = vi.fn(() => json(latest));
+    mount(`${base}/students/${id}/edit`, {
+      '/api/auth/get-session': account('admin'),
+      [`${api}/capabilities`]: admin,
+      [`${api}/students/${id}`]: (_url: URL, request?: RequestInit) =>
+        request?.method === 'PATCH' ? patch(request) : read(),
+    });
+    expect(await screen.findByDisplayValue('14/01/2002')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'My draft' } });
+    latest = { ...profile, birthDate: '2002-02-15', revision: 2 };
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await waitFor(() => expect(read).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByRole('button', { name: 'Reload latest record' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Notes')).toHaveValue('My draft');
+    expect(patch).toHaveBeenCalledOnce();
+    focusManager.setFocused(undefined);
   });
 
   it('lets an admin change individual staff assignments', async () => {

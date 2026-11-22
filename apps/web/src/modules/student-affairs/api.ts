@@ -15,9 +15,12 @@ const origin = (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace
 export class ApiError extends Error {
   readonly status: number;
 
-  constructor(status: number, message: string) {
+  readonly code?: string;
+
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -37,7 +40,11 @@ export async function request<T>(
   });
   const data = response.status === 204 ? undefined : await response.json().catch(() => null);
   if (!response.ok)
-    throw new ApiError(response.status, typeof data?.message === 'string' ? data.message : '');
+    throw new ApiError(
+      response.status,
+      typeof data?.message === 'string' ? data.message : '',
+      typeof data?.code === 'string' ? data.code : undefined,
+    );
   return data as T;
 }
 
