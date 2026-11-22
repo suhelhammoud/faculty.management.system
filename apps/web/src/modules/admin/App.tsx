@@ -8,6 +8,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { api } from './api';
+import { FacultyPositionsTab } from './faculty-positions/FacultyPositionsTab';
 import { useUi } from './store';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
@@ -511,31 +512,37 @@ function Dashboard() {
   return (
     <>
       <nav aria-label="Administration" className="module-navigation">
-        {(['users', 'roles', 'acl', 'audit'] as const).map((t) => (
+        {(['users', 'roles', 'acl', 'audit', 'faculty-positions'] as const).map((t) => (
           <Button
             key={t}
             variant={tab === t ? 'default' : 'outline'}
             aria-pressed={tab === t}
             onClick={() => setTab(t)}
           >
-            {t === 'audit'
-              ? 'Audit log'
-              : t === 'acl'
-                ? 'Resource access'
-                : t === 'users'
-                  ? 'Accounts'
-                  : 'Roles & permissions'}
+            {t === 'faculty-positions'
+              ? 'Faculty Positions'
+              : t === 'audit'
+                ? 'Audit log'
+                : t === 'acl'
+                  ? 'Resource access'
+                  : t === 'users'
+                    ? 'Accounts'
+                    : 'Roles & permissions'}
           </Button>
         ))}
       </nav>
-      {mutation.error && <p role="alert">{mutation.error.message}</p>}
-      {[users, roles, permissions].map((q, i) =>
-        q.error ? (
-          <p role="alert" key={i}>
-            {['Accounts', 'Roles', 'Permissions'][i]}: {q.error.message}
-          </p>
-        ) : null,
+      {tab === 'faculty-positions' && <FacultyPositionsTab />}
+      {tab !== 'faculty-positions' && mutation.error && (
+        <p role="alert">{mutation.error.message}</p>
       )}
+      {tab !== 'faculty-positions' &&
+        [users, roles, permissions].map((q, i) =>
+          q.error ? (
+            <p role="alert" key={i}>
+              {['Accounts', 'Roles', 'Permissions'][i]}: {q.error.message}
+            </p>
+          ) : null,
+        )}
       {tab === 'users' && (
         <>
           <section className="panel overflow-x-auto">

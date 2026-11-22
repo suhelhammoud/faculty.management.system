@@ -9,6 +9,7 @@ import { DatabaseModule } from './database/database.module.js';
 import { AttendanceModule } from './modules/attendance/attendance.module.js';
 import { CorrespondenceModule } from './modules/correspondence/correspondence.module.js';
 import { ExamsModule } from './modules/exams/exams.module.js';
+import { FacultyPositionsModule } from './modules/faculty-positions/faculty-positions.module.js';
 import { FacilitiesModule } from './modules/facilities/facilities.module.js';
 import { HrModule } from './modules/hr/hr.module.js';
 import { InventoryModule } from './modules/inventory/inventory.module.js';
@@ -78,6 +79,7 @@ const workspaceRoot = findWorkspaceRoot(process.cwd());
     InventoryModule,
     StudentAffairsModule,
     FacilitiesModule,
+    FacultyPositionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

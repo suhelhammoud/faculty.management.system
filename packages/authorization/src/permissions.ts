@@ -27,6 +27,10 @@ export const PERMISSION = {
     read: 'facilities:read',
     write: 'facilities:write',
   },
+  facultyPositions: {
+    read: 'faculty-positions:read',
+    manage: 'faculty-positions:manage',
+  },
   workflow: {
     monitor: 'workflow:monitor',
   },
@@ -63,6 +67,11 @@ export const PERMISSION_CATALOG = [
   { key: PERMISSION.hrEmployees.update, description: 'Update HR employee records' },
   { key: PERMISSION.hrReferenceData.read, description: 'View HR reference data' },
   { key: PERMISSION.hrReferenceData.write, description: 'Manage HR reference data' },
+  { key: PERMISSION.facultyPositions.read, description: 'View faculty positions and appointments' },
+  {
+    key: PERMISSION.facultyPositions.manage,
+    description: 'Manage faculty positions and appointments',
+  },
   { key: PERMISSION.facilities.read, description: 'View facilities records' },
   { key: PERMISSION.facilities.write, description: 'Manage facilities records' },
   { key: PERMISSION.studentAffairs.read, description: 'Read Student Affairs records' },

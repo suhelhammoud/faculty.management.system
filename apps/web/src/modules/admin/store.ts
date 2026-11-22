@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-type Tab = 'users' | 'roles' | 'acl' | 'audit';
+type Tab = 'users' | 'roles' | 'acl' | 'audit' | 'faculty-positions';
 export const useUi = create<{
   tab: Tab;
   selectedUser: string;

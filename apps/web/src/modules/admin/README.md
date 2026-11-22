@@ -24,6 +24,12 @@ Validate the build with `pnpm build:web`. A live database/API is required for en
 
 An authorized submission that uses the grant spends one attempt, even if the action fails. Read access to navigate a module continues to follow its standard permission checks. For a local example, sign in as `admin` and select `elevation_demo` under **Resource access**. [Demo fixtures](../../../../../packages/db/src/seed/README.md#elevated-access-demo) · [How permissions are checked](../../../../../docs/modules/authorization/README.md#how-the-api-checks-a-request)
 
+## Faculty positions
+
+Open **Faculty Positions** and choose **Assign holder** or **Manage holder** on the position row. The appointment form and history open below the row. Choose an approved, enabled user, confirm the **Appointment date**, and click **Save holder**. The date defaults to today and the holder changes as soon as you save. To end an appointment, choose **Vacant** and save. Users with read-only access can open the history with **View details**.
+
+After the database migration and permission catalog sync, grant `faculty-positions:read` to existing roles that need to view the tab. Also grant `faculty-positions:manage` to roles that manage positions and appointments. New Administrator accounts provisioned with the default role template receive both permissions.
+
 ## Production URL configuration
 
 Follow the [web deployment guide](../../../README.md#build-and-host). On the API, set `BETTER_AUTH_URL` to its public HTTPS origin and include the exact web origin in `TRUSTED_ORIGINS`. The API uses the same allowlist for credentialed CORS and administrative requests.

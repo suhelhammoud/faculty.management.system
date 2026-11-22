@@ -14,10 +14,10 @@ const migrationsFolder = fileURLToPath(new URL('../drizzle', import.meta.url));
 const upgradeBaseline = '0004_student_affairs_access';
 const existingAsset = { tag: 'MIGRATION-TEST-ASSET', name: 'Existing demo asset' };
 
-async function copyBaseline(destination) {
+async function copyBaseline(destination, baselineTag = upgradeBaseline) {
   const journalPath = join('meta', '_journal.json');
   const journal = JSON.parse(await readFile(join(migrationsFolder, journalPath), 'utf8'));
-  const baseline = journal.entries.findIndex(({ tag }) => tag === upgradeBaseline);
+  const baseline = journal.entries.findIndex(({ tag }) => tag === baselineTag);
   assert(baseline >= 0 && baseline < journal.entries.length - 1, 'Expected an upgrade migration');
 
   journal.entries = journal.entries.slice(0, baseline + 1);
@@ -60,6 +60,7 @@ test('installs a fresh schema and upgrades an existing schema with data', async 
   const control = new Pool({ connectionString });
   const databases = [];
   const baselineFolder = await mkdtemp(join(tmpdir(), 'faculty-migration-baseline-'));
+  const positionsFolder = await mkdtemp(join(tmpdir(), 'faculty-migration-positions-'));
   t.after(async () => {
     try {
       for (const { pool, name } of databases) {
@@ -69,6 +70,7 @@ test('installs a fresh schema and upgrades an existing schema with data', async 
     } finally {
       await control.end();
       await rm(baselineFolder, { recursive: true, force: true });
+      await rm(positionsFolder, { recursive: true, force: true });
     }
   });
 
@@ -92,6 +94,14 @@ test('installs a fresh schema and upgrades an existing schema with data', async 
     existingAsset.name,
   ]);
 
+  await copyBaseline(positionsFolder, '0008_faculty_positions');
+  await migrate(drizzle(upgrade), { migrationsFolder: positionsFolder });
+  await upgrade.query(
+    "insert into auth_user (id, name, email) values ('test-holder', 'Test holder', 'holder@example.invalid')",
+  );
+  await upgrade.query(`insert into faculty_position_appointments (position_id, user_id, started_at)
+    select id, 'test-holder', '2026-11-03 00:30:00+02' from faculty_positions where code = 'dean'`);
+
   for (const pool of [fresh, upgrade]) {
     const db = drizzle(pool);
     await migrate(db, { migrationsFolder });
@@ -104,4 +114,8 @@ test('installs a fresh schema and upgrades an existing schema with data', async 
     existingAsset.tag,
   ]);
   assert.deepEqual(rows, [existingAsset]);
+  const { rows: appointmentDates } = await upgrade.query(
+    'select appointment_date::text as date from faculty_position_appointments',
+  );
+  assert.deepEqual(appointmentDates, [{ date: '2026-11-02' }]);
 });

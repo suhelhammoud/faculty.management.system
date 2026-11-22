@@ -377,3 +377,119 @@ test('opens a Student Affairs profile directly on a phone and switches to Arabic
   await page.reload();
   await expect(page.locator('.faculty-student-affairs')).toHaveAttribute('dir', 'rtl');
 });
+
+test('assigns a holder to the existing Dean position from its row', async ({ page }) => {
+  await mockSession(page);
+  await page.route('**/api/admin/{users,roles,permissions}', (route) =>
+    route.fulfill({ json: [] }),
+  );
+
+  const base = '**/api/admin/faculty-positions';
+  const holder = { userId: 'colleague', name: 'Faculty Colleague', username: 'colleague' };
+  const appointment = {
+    ...holder,
+    id: 'appointment',
+    appointmentDate: '2026-10-19',
+    startedAt: '2026-11-22T12:00:00.000Z',
+    endedAt: null,
+  };
+  let currentAppointment: typeof appointment | null = null;
+  const dean = { id: 'dean', code: 'dean', titleEn: 'Dean', titleAr: null, departmentCode: null };
+
+  await page.route(base, (route) =>
+    route.fulfill({
+      json: {
+        canManage: true,
+        positions: [
+          { ...dean, currentAppointment },
+          {
+            ...dean,
+            id: 'head-registry',
+            code: 'head-registry',
+            titleEn: 'Head of the Registry',
+            currentAppointment: null,
+          },
+        ],
+      },
+    }),
+  );
+  await page.route(`${base}/eligible-holders`, (route) => route.fulfill({ json: [holder] }));
+  await page.route(`${base}/dean/appointments`, (route) =>
+    route.fulfill({ json: currentAppointment ? [currentAppointment] : [] }),
+  );
+  await page.route(`${base}/dean/holder`, (route) => {
+    expect(route.request().method()).toBe('PUT');
+    expect(route.request().postDataJSON()).toEqual({
+      userId: holder.userId,
+      expectedAppointmentId: null,
+      appointmentDate: appointment.appointmentDate,
+    });
+    currentAppointment = appointment;
+    return route.fulfill({ json: { appointmentId: appointment.id } });
+  });
+
+  await page.goto('/admin');
+  await page.getByRole('button', { name: 'Faculty Positions', exact: true }).click();
+  const row = page.getByRole('row').filter({
+    has: page.getByRole('button', { name: /^(Assign|Manage) holder for Dean$/ }),
+  });
+  await expect(row).toContainText('Vacant');
+  const assign = row.getByRole('button', { name: 'Assign holder for Dean' });
+  await expect(assign).toHaveAttribute('aria-expanded', 'false');
+  await assign.click();
+  await expect(assign).toHaveAttribute('aria-expanded', 'true');
+
+  const details = row
+    .locator('xpath=following-sibling::tr[1]')
+    .getByRole('region', { name: 'Dean' });
+  await expect(details.getByText('No appointments yet.')).toBeVisible();
+  await details.getByLabel('Appoint user').selectOption(holder.userId);
+  const date = details.getByRole('textbox', { name: 'Appointment date' });
+  await expect(date).toHaveValue(/^\d{2}\/\d{2}\/\d{4}$/);
+  await date.fill('19/10/2026');
+  await details.getByRole('button', { name: 'Save holder' }).click();
+  await expect(row).toContainText(holder.name);
+  await expect(row).toContainText('Appointed 19/10/2026');
+  await expect(details.getByRole('row').filter({ hasText: 'Current' })).toContainText('19/10/2026');
+  const manage = row.getByRole('button', { name: 'Manage holder for Dean' });
+  await expect(manage).toHaveAttribute('aria-expanded', 'true');
+  await manage.click();
+  await expect(details).toHaveCount(0);
+});
+
+test('shows only appointment history to read-only faculty position viewers', async ({ page }) => {
+  await mockSession(page);
+  await page.route('**/api/admin/{users,roles,permissions}', (route) =>
+    route.fulfill({ json: [] }),
+  );
+  const base = '**/api/admin/faculty-positions';
+  await page.route(base, (route) =>
+    route.fulfill({
+      json: {
+        canManage: false,
+        positions: [
+          {
+            id: 'dean',
+            code: 'dean',
+            titleEn: 'Dean',
+            titleAr: null,
+            departmentCode: null,
+            currentAppointment: null,
+          },
+        ],
+      },
+    }),
+  );
+  await page.route(`${base}/dean/appointments`, (route) => route.fulfill({ json: [] }));
+
+  await page.goto('/admin');
+  await page.getByRole('button', { name: 'Faculty Positions', exact: true }).click();
+  await page.getByRole('button', { name: 'View details for Dean' }).click();
+  const details = page.getByRole('region', { name: 'Dean' });
+  await expect(details.getByRole('heading', { name: 'Appointment history' })).toBeVisible();
+  await expect(details.getByText('No appointments yet.')).toBeVisible();
+  await expect(details.getByLabel('Appoint user')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: /^(Assign holder|Manage holder|Add position)/ }),
+  ).toHaveCount(0);
+});
