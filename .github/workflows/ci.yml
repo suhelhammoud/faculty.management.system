@@ -78,9 +78,9 @@ jobs:
           SEED_TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
         run: pnpm --filter @project/db test:seed
       - name: Install Chromium for browser checks
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm setup:playwright --with-deps
       - name: Build web app and run browser smoke tests
         run: pnpm test:frontend:smoke
 
       - name: Run live Student Affairs browser journey
-        run: node packages/db/test/pilot.mjs
+        run: node --import ./scripts/playwright-cache.mjs packages/db/test/pilot.mjs

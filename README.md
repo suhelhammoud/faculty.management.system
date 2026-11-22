@@ -121,13 +121,19 @@ Set `VITE_API_URL` before building when the app uses an API origin other than
 `http://localhost:4000`. For production setup and deep-link routing, see
 [the web app guide](apps/web/README.md).
 
-Run the frontend tests with mocked API responses:
+Run the frontend tests with mocked API responses. Set up the browser once while online:
 
 ```sh
 pnpm --filter web test
-pnpm exec playwright install chromium
+pnpm setup:playwright
 pnpm test:frontend:smoke
 ```
+
+The browser smoke and pilot commands reuse Chromium Headless Shell and FFmpeg in
+`.cache/ms-playwright/`. After setup, run the test commands directly to test offline.
+Run setup again when a Playwright upgrade requires a different browser build. To
+use another cache, set `PLAYWRIGHT_BROWSERS_PATH` to the same absolute path for
+setup and testing. Git ignores the local browser cache and generated reports.
 
 Use the `frontend` pnpm catalog when adding an existing shared dependency to another frontend. For new API-backed screens, use TanStack Query for fetching, caching, and mutations. Use Zustand for shared client state such as language preferences.
 
@@ -143,6 +149,19 @@ loopback PostgreSQL connection whose user can create databases, then run
 `pnpm --filter @project/db test:migrations`. The tests compare a fresh install
 with an upgrade from migration `0004`, verify that an existing asset survives
 the upgrade, and drop the two databases they create.
+
+### Pause and resume CI
+
+Run these from the repository with an authenticated GitHub CLI account that can
+manage workflows.
+
+```sh
+# Pause automatic CI runs
+gh workflow disable ci.yml
+
+# Resume automatic CI runs
+gh workflow enable ci.yml
+```
 
 ## More documentation
 

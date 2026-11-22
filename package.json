@@ -12,8 +12,9 @@
     "dev:api": "pnpm --filter ./apps/api start:dev",
     "build:web": "pnpm --filter web build",
     "build:frontends": "pnpm run build:web",
-    "test:pilot": "pnpm --filter api build && node packages/db/test/pilot.mjs",
-    "test:frontend:smoke": "playwright test --config playwright.frontend.config.ts"
+    "setup:playwright": "node --import ./scripts/playwright-cache.mjs ./node_modules/@playwright/test/cli.js install chromium --only-shell",
+    "test:pilot": "pnpm --filter api build && node --import ./scripts/playwright-cache.mjs packages/db/test/pilot.mjs",
+    "test:frontend:smoke": "node --import ./scripts/playwright-cache.mjs ./node_modules/@playwright/test/cli.js test --config playwright.frontend.config.ts"
   },
   "keywords": [],
   "author": "",

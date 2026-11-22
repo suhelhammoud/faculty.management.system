@@ -23,5 +23,10 @@ build/
 # Vite cache
 **/.vite/
 
+# Local Playwright browsers and reports
+/.cache/ms-playwright/
+/playwright-report/
+/test-results/
+
 # TypeScript
 *.tsbuildinfo

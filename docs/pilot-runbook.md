@@ -11,12 +11,13 @@
 
 ## Rehearse an upgrade and restore
 
-Start the configured loopback PostgreSQL container, then run these from the repository root.
+Start the configured loopback PostgreSQL container. If this checkout needs its initial browser setup, run `pnpm setup:playwright` while online. Then run the rehearsal from the repository root.
 
 ```sh
-pnpm exec playwright install chromium
 pnpm test:pilot --restore
 ```
+
+The rehearsal uses the same local browser cache as the smoke tests. [Browser setup](../README.md#build-and-test-the-frontend)
 
 The command uses `DATABASE_URL` or `packages/db/.env.db` to connect to the local server. It creates two new databases with generated names. The PostgreSQL account needs permission to create databases. The backup and restore use the container’s PostgreSQL tools. The runtime defaults to `podman` and the container to `faculty-postgres`. Override them with `PILOT_CONTAINER_RUNTIME` and `PILOT_PG_CONTAINER` when using a different local container. The rehearsal uses ports 4753 and 4754.
 
