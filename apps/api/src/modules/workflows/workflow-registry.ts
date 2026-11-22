@@ -94,6 +94,10 @@ export class WorkflowRegistry implements OnApplicationBootstrap {
     this.ready = true;
   }
 
+  templates() {
+    return [...this.active.values()].map(({ definition }) => definition);
+  }
+
   current(key: string) {
     return this.active.get(key);
   }

@@ -1,3 +1,4 @@
+import { apiOrigin, readApiResponse } from '@/lib/api-response';
 import {
   MutationCache,
   QueryCache,
@@ -125,7 +126,6 @@ export class ApiError extends Error {
     this.status = status;
   }
 }
-const base = (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace(/\/$/, '');
 export async function api<T>(
   path: string,
   options: { signal?: AbortSignal; body?: unknown; key?: string; method?: string } = {},
@@ -133,7 +133,7 @@ export async function api<T>(
   const { signal, body, key, method = body === undefined ? 'GET' : 'POST' } = options;
   let response: Response;
   try {
-    response = await fetch(`${base}/api/${path}`, {
+    response = await fetch(`${apiOrigin}/api/${path}`, {
       credentials: 'include',
       signal,
       method,
@@ -147,7 +147,7 @@ export async function api<T>(
     if (signal?.aborted) throw error;
     throw new ApiError(0, 'Unable to reach the server.');
   }
-  const result = await response.json().catch(() => null);
+  const result = await readApiResponse(response);
   if (!response.ok)
     throw new ApiError(response.status, typeof result?.message === 'string' ? result.message : '');
   return result as T;

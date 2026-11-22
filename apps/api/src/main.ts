@@ -43,6 +43,6 @@ async function bootstrap() {
   );
   app.useBodyParser('json');
   app.enableShutdownHooks();
-  await app.listen(configService.get<number>('PORT', 3000));
+  await app.listen(configService.getOrThrow<number>('PORT'));
 }
 await bootstrap();

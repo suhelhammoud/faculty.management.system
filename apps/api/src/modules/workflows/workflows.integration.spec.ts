@@ -48,6 +48,7 @@ import { InventoryDiscrepanciesController } from '../inventory/inventory-discrep
 import { InventoryDiscrepanciesService } from '../inventory/inventory-discrepancies.service.js';
 import type { WorkflowRegistration, WorkflowStepEligibility } from './workflow-definition.js';
 import { WorkflowRegistry } from './workflow-registry.js';
+import { DesignerController } from './designer.controller.js';
 import { WorkflowsController } from './workflows.controller.js';
 import { WorkflowsService } from './workflows.service.js';
 
@@ -119,7 +120,7 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
     await db
       .insert(permissions)
       .values(
-        [...Object.values(permissionGrants), PERMISSION.workflow.monitor].map((key) => ({
+        [...Object.values(permissionGrants), ...Object.values(PERMISSION.workflow)].map((key) => ({
           key,
           description: key,
         })),
@@ -142,6 +143,8 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
       { userId: actors.manager, roleId: actorRoles.manager },
     ]);
     await db.insert(rolePermissions).values([
+      { roleId: actorRoles.manager, permission: PERMISSION.workflow.designEdit },
+      { roleId: actorRoles.reviewer, permission: PERMISSION.workflow.designRead },
       { roleId: actorRoles.requester, permission: permissionGrants.requestRemoval },
       { roleId: actorRoles.reviewer, permission: permissionGrants.reviewRemoval },
       { roleId: actorRoles.reviewer, permission: permissionGrants.decideRemoval },
@@ -174,6 +177,7 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
     const module = await Test.createTestingModule({
       controllers: [
         WorkflowsController,
+        DesignerController,
         InventoryRemovalController,
         InventoryController,
         InventoryDiscrepanciesController,
@@ -241,6 +245,58 @@ describe.skipIf(!testDatabase)('Workflows HTTP integration', () => {
   afterAll(async () => {
     await app?.close();
     await connection?.pool.end();
+  });
+
+  it('shares versioned drafts with readers and isolates edits from the registry', async () => {
+    const base = '/api/workflow/designer';
+    const editor = headers(actors.manager),
+      viewer = headers(actors.reviewer);
+    await client()
+      .get(base + '/drafts')
+      .expect(401);
+    await client()
+      .get(base + '/drafts')
+      .set(headers(actors.outsider))
+      .expect(403);
+    const catalog = await client()
+      .get(base + '/catalog')
+      .set(viewer)
+      .expect(200);
+    const template = catalog.body.templates.find(
+      (t: { key: string }) => t.key === 'inventory.removal',
+    );
+    await client()
+      .post(base + '/drafts')
+      .set(viewer)
+      .send(template)
+      .expect(403);
+    const draft = await client()
+      .post(base + '/drafts')
+      .set(editor)
+      .send(template)
+      .expect(201);
+    const path = base + '/drafts/' + draft.body.id;
+    const exported = await client()
+      .get(path + '/export')
+      .set(viewer)
+      .expect(200);
+    expect(exported.body.steps.review.actions.return).toEqual({ next: 'revise' });
+    expect(exported.body.steps.review).not.toHaveProperty('x');
+    const update = { revision: 1, document: { ...template, initialStep: '' } };
+    await client().put(path).set(viewer).send(update).expect(403);
+    const saves = await Promise.all([1, 2].map(() => client().put(path).set(editor).send(update)));
+    expect(saves.map((r) => r.status).sort()).toEqual([200, 409]);
+    await client()
+      .get(path + '/export')
+      .set(viewer)
+      .expect(400);
+    expect(
+      (
+        await client()
+          .get(base + '/catalog')
+          .set(viewer)
+      ).body,
+    ).toEqual(catalog.body);
   });
 
   async function asset() {

@@ -33,6 +33,8 @@ export const PERMISSION = {
   },
   workflow: {
     monitor: 'workflow:monitor',
+    designRead: 'workflow:design-read',
+    designEdit: 'workflow:design-edit',
   },
   studentAffairs: {
     read: 'student-affairs:read',
@@ -83,6 +85,8 @@ export const PERMISSION_CATALOG = [
     key: PERMISSION.studentAffairs.grantPromotions,
     description: 'Issue and revoke Student Affairs promotion grants',
   },
+  { key: PERMISSION.workflow.designRead, description: 'View and export shared workflow designs' },
+  { key: PERMISSION.workflow.designEdit, description: 'Create and edit shared workflow designs' },
   {
     key: PERMISSION.workflow.monitor,
     description: 'View the workflow monitor within record scope',

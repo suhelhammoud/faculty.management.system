@@ -14,20 +14,21 @@ For an empty user database, put `BOOTSTRAP_USERNAME` and `BOOTSTRAP_PASSWORD` in
 
 All mutation requests must include an allowed `Origin` header. Browser requests must include cookies (`credentials: 'include'`). Public health routes are `/` and `/health/database`.
 
-| Method | Path                                  | Body / purpose                                                         |
-| ------ | ------------------------------------- | ---------------------------------------------------------------------- |
-| POST   | `/api/auth/sign-in/username`          | `username`, `password`                                                 |
-| GET    | `/api/auth/get-session`               | Current session                                                        |
-| POST   | `/api/auth/sign-out`                  | Sign out                                                               |
-| POST   | `/api/admin/change-password`          | `currentPassword`, `newPassword`; authenticated, enabled accounts only |
-| GET    | `/api/admin/users`                    | List users; `users:read`                                               |
-| POST   | `/api/admin/users`                    | `username`, `name`, `password`; `users:create`                         |
-| POST   | `/api/admin/users/:id/approve`        | `users:approve`                                                        |
-| POST   | `/api/admin/users/:id/reset-password` | Temporary `password`; `users:reset-password`                           |
-| GET    | `/api/admin/roles`                    | `roles:read`                                                           |
-| POST   | `/api/admin/roles`                    | `name`; `roles:create`                                                 |
-| POST   | `/api/admin/roles/:id/permissions`    | `permission`; `roles:update`                                           |
-| POST   | `/api/admin/users/:id/roles`          | `roleId`; `users:assign-roles`                                         |
+| Method | Path                                  | Body / purpose                                                          |
+| ------ | ------------------------------------- | ----------------------------------------------------------------------- |
+| POST   | `/api/auth/sign-in/username`          | `username`, `password`                                                  |
+| GET    | `/api/auth/get-session`               | Current session                                                         |
+| POST   | `/api/auth/sign-out`                  | Sign out                                                                |
+| POST   | `/api/admin/change-password`          | `currentPassword`, `newPassword`; authenticated, enabled accounts only  |
+| GET    | `/api/admin/users`                    | List users; `users:read`                                                |
+| POST   | `/api/admin/users`                    | `username`, `name`, `password`; `users:create`                          |
+| POST   | `/api/admin/users/:id/approve`        | `users:approve`                                                         |
+| POST   | `/api/admin/users/:id/reset-password` | Temporary `password`; `users:reset-password`                            |
+| GET    | `/api/admin/roles`                    | `roles:read`                                                            |
+| POST   | `/api/admin/roles`                    | `name`; `roles:create`                                                  |
+| POST   | `/api/admin/roles/:id/permissions`    | `permission`; `roles:update`                                            |
+| GET    | `/api/admin/users/:id/roles`          | Assigned role IDs and names. Requires `users:assign-roles` on the user. |
+| POST   | `/api/admin/users/:id/roles`          | `roleId`; `users:assign-roles`                                          |
 
 New accounts are pending approval and require a password change. Passwords must be 12–128 characters. Username creation accepts 3–30 ASCII letters, digits, or underscores and normalizes to lowercase. Synthetic internal email identifiers satisfy Better Auth's schema; email login and recovery are not exposed.
 
@@ -59,7 +60,7 @@ Destructive operations preserve at least one approved, enabled user without a pe
 
 ACL creation accepts `resourceType`, `resourceId`, `permission`, and `effect` (`allow` or `deny`). Example: `{"resourceType":"users","resourceId":"TARGET_USER_ID","permission":"users:approve","effect":"deny"}`. The response contains the new ACL entry ID. Grants and denies may coexist; any matching deny wins. Delete a deny explicitly to restore access. Removing a deny requires the same delegation checks as adding a grant.
 
-Currently registered resource types are `users` and `roles`, matching the backend's existing entities. Unknown types, missing resources, unknown permission keys, and mismatched permission namespaces are rejected. Register a resolver when introducing another resource such as tasks. Permissions are listed from the database catalog; this API does not create arbitrary permission keys. The supported keys and descriptions live in `@project/authorization` and are synchronized with `pnpm --filter @project/db seed:permissions`.
+Registered ACL resource types are `users`, `roles`, and `inventory.removal-request`. Removal requests accept the review, committee decision, and committee withdrawal permissions. The permission catalog returns an `aclResourceType` for each key. A null value means the key has no registered ACL resource type. The API validates the permission and looks up the resource before saving a rule. The supported keys and descriptions live in `@project/authorization` and are synchronized with `pnpm --filter @project/db seed:permissions`.
 
 Permission removal revokes affected sessions and applies the existing last-administrator invariant in a serializable transaction. ACL changes take effect on subsequent authorization checks without a new login, and all mutations write audit records. ACL listing is scoped to the user named in the URL; deleting another user's ACL ID returns 404. No schema migration is needed for these endpoints.
 

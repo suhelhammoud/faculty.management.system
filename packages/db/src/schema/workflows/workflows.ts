@@ -105,3 +105,17 @@ export const workflowEvents = pgTable(
     ),
   ],
 );
+
+export const workflowDrafts = pgTable('workflow_drafts', {
+  id: uuid().defaultRandom().primaryKey(),
+  document: jsonb().notNull(),
+  revision: integer().default(1).notNull(),
+  createdBy: text('created_by')
+    .notNull()
+    .references(() => user.id),
+  updatedBy: text('updated_by')
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestampWithZone('created_at').defaultNow().notNull(),
+  updatedAt: timestampWithZone('updated_at').defaultNow().notNull(),
+});

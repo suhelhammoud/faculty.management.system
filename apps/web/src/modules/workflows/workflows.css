@@ -25,3 +25,88 @@
 .workflow-page button {
   justify-self: start;
 }
+
+.designer {
+  max-inline-size: 90rem;
+  min-width: 0;
+}
+.designer .design-tools,
+.designer .design-inspector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: end;
+}
+.designer fieldset {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid #94a3b8;
+  border-radius: 0.5rem;
+}
+.designer input,
+.designer select,
+.designer button {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #94a3b8;
+  border-radius: 0.3rem;
+}
+.designer button:disabled {
+  opacity: 0.55;
+}
+.design-scroll {
+  max-width: 100%;
+  overflow: auto;
+  max-height: 65vh;
+  border: 1px solid #94a3b8;
+}
+.design-canvas {
+  position: relative;
+  min-width: 100%;
+  background: radial-gradient(#94a3b8 1px, transparent 1px) 0 0 / 20px 20px;
+}
+.design-canvas button,
+.design-end {
+  position: absolute;
+  width: 150px;
+  min-height: 50px;
+  background: Canvas;
+  color: CanvasText;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+.design-canvas button[aria-pressed='true'] {
+  outline: 3px solid #2563eb;
+}
+.design-end {
+  border: 1px solid;
+  border-radius: 2rem;
+}
+.design-canvas text {
+  font-size: 12px;
+  fill: currentColor;
+  paint-order: stroke;
+  stroke: Canvas;
+  stroke-width: 3px;
+}
+
+.design-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 24rem);
+  gap: 1rem;
+  align-items: start;
+}
+.designer .design-inspector {
+  display: grid;
+  align-items: start;
+}
+.designer .design-inspector input,
+.designer .design-inspector select {
+  max-width: 100%;
+  min-width: 0;
+}
+@media (max-width: 800px) {
+  .design-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

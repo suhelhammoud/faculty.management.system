@@ -78,6 +78,13 @@
       "when": 1795377895544,
       "tag": "0010_workflow_position_approvals",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795379054758,
+      "tag": "0011_workflow_drafts",
+      "breakpoints": true
     }
   ]
 }

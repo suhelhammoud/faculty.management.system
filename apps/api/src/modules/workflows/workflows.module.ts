@@ -1,3 +1,4 @@
+import { DesignerController } from './designer.controller.js';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../../auth/auth.module.js';
 import { WorkflowRegistry } from './workflow-registry.js';
@@ -6,7 +7,7 @@ import { WorkflowsService } from './workflows.service.js';
 
 @Module({
   imports: [AuthModule],
-  controllers: [WorkflowsController],
+  controllers: [WorkflowsController, DesignerController],
   providers: [WorkflowRegistry, WorkflowsService],
   exports: [WorkflowRegistry, WorkflowsService],
 })

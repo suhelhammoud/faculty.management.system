@@ -73,7 +73,7 @@ Stop it when finished with `pnpm --filter @project/db db:stop`. The named volume
    pnpm --filter @project/db seed:local
    ```
 
-   Sign in with username `admin` and the `SEED_USER_PASSWORD` configured in `packages/db/.env`. The local administrator has all catalog permissions. Rerunning the seed preserves this administrator's password and account settings; other demo users use the current seed password.
+   Sign in with username `admin` and the `SEED_USER_PASSWORD` configured in `packages/db/.env`. The local administrator receives the default Administrator role. Student Affairs permissions require explicit grants. Rerunning the seed preserves this administrator's password and account settings; other demo users use the current seed password.
 
    Local seeding synchronizes the permission catalog, creates the Administrator, HR Administrator, and Facilities Administrator roles, and adds their default permission grants without removing existing grants. It also seeds local Inventory roles and users, HR data, Facilities rooms, and Inventory opening transactions. The runner only accepts a non-production PostgreSQL database on a loopback host. See [local seed details](packages/db/src/seed/README.md).
 
@@ -99,20 +99,21 @@ Open [http://localhost:3000](http://localhost:3000) to choose a module. Each
 module opens on its own page and has an **All modules** link back to the
 directory. Feature code lives in `apps/web/src/modules`.
 
-| Feature         | Route               |
-| --------------- | ------------------- |
-| Administration  | `/admin`            |
-| Attendance      | `/attendance`       |
-| Maintenance     | `/maintenance`      |
-| Supervision     | `/supervision`      |
-| Meetings        | `/meetings`         |
-| HR              | `/hr/employees`     |
-| Exams           | `/exams`            |
-| Correspondence  | `/correspondence`   |
-| Inventory       | `/inventory`        |
-| Student Affairs | `/student-affairs`  |
-| Facilities      | `/facilities/rooms` |
-| Workflows       | `/workflow/tasks`   |
+| Feature           | Route                                                          |
+| ----------------- | -------------------------------------------------------------- |
+| Administration    | `/admin`                                                       |
+| Attendance        | `/attendance`                                                  |
+| Maintenance       | `/maintenance`                                                 |
+| Supervision       | `/supervision`                                                 |
+| Meetings          | `/meetings`                                                    |
+| HR                | `/hr/employees`                                                |
+| Exams             | `/exams`                                                       |
+| Correspondence    | `/correspondence`                                              |
+| Inventory         | `/inventory`                                                   |
+| Student Affairs   | `/student-affairs`                                             |
+| Facilities        | `/facilities/rooms`                                            |
+| Workflows         | `/workflow/tasks`                                              |
+| Workflow designer | [Open local designer](http://localhost:3000/workflow/designer) |
 
 ## Build and test the frontend
 

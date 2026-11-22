@@ -1,3 +1,4 @@
+import { apiOrigin, readApiResponse } from '@/lib/api-response';
 import {
   MutationCache,
   QueryCache,
@@ -10,7 +11,6 @@ import {
 export const root = '/student-affairs';
 export const dataKey = ['student-affairs', 'data'];
 export const sessionKey = ['student-affairs', 'session'];
-const origin = (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace(/\/$/, '');
 
 export class ApiError extends Error {
   readonly status: number;
@@ -30,7 +30,7 @@ export async function request<T>(
   body?: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
-  const response = await fetch(`${origin}/api/${path}`, {
+  const response = await fetch(`${apiOrigin}/api/${path}`, {
     method,
     credentials: 'include',
     cache: 'no-store',
@@ -38,7 +38,7 @@ export async function request<T>(
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const data = response.status === 204 ? undefined : await response.json().catch(() => null);
+  const data = response.status === 204 ? undefined : await readApiResponse(response);
   if (!response.ok)
     throw new ApiError(
       response.status,

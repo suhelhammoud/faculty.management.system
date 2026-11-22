@@ -26,6 +26,7 @@ import {
   rolePermissions,
   auditLog,
   resourceAcl,
+  inventoryRemovalRequests,
   permissions,
 } from '@project/db/schema';
 import type { Request } from 'express';
@@ -37,6 +38,19 @@ import {
   RequireActionPermission,
   RequirePermission,
 } from './auth.guard.js';
+const removalPermissions = new Set<string>([
+  PERMISSION.inventory.reviewRemoval,
+  PERMISSION.inventory.decideRemoval,
+  PERMISSION.inventory.withdrawRemoval,
+]);
+
+function aclResourceType(permission: string) {
+  if (removalPermissions.has(permission)) return 'inventory.removal-request';
+  if (permission.startsWith('users:')) return 'users';
+  if (permission.startsWith('roles:')) return 'roles';
+  return null;
+}
+
 function value(body: Record<string, unknown>, key: string) {
   const v = body?.[key];
   if (typeof v !== 'string' || !v.trim()) throw new BadRequestException(key);
@@ -212,6 +226,19 @@ export class AdminController {
     });
     return { success: true };
   }
+  @Get('users/:id/roles')
+  @RequirePermission(PERMISSION.users.assignRoles, 'users')
+  async assignedRoles(@Param('id') id: string) {
+    const [person] = await this.db.select({ id: user.id }).from(user).where(eq(user.id, id));
+    if (!person) throw new NotFoundException('User not found');
+    return this.db
+      .select({ id: roles.id, name: roles.name })
+      .from(userRoles)
+      .innerJoin(roles, eq(userRoles.roleId, roles.id))
+      .where(eq(userRoles.userId, id))
+      .orderBy(roles.name);
+  }
+
   @Post('users/:id/roles')
   @RequirePermission(PERMISSION.users.assignRoles, 'users')
   async assign(
@@ -367,8 +394,9 @@ export class AdminController {
 
   @Get('permissions')
   @RequirePermission(PERMISSION.roles.read)
-  listPermissions() {
-    return this.db.select().from(permissions).orderBy(permissions.key);
+  async listPermissions() {
+    const catalog = await this.db.select().from(permissions).orderBy(permissions.key);
+    return catalog.map((entry) => ({ ...entry, aclResourceType: aclResourceType(entry.key) }));
   }
 
   @Get('audit-log')
@@ -473,13 +501,19 @@ export class AdminController {
     @Req() req: Request,
   ) {
     const resourceType = value(body, 'resourceType');
-    const resourceId = value(body, 'resourceId');
+    const rawId = value(body, 'resourceId');
+    const resourceId = resourceType === 'inventory.removal-request' ? rawId.toLowerCase() : rawId;
     const permission = value(body, 'permission');
     const effect = value(body, 'effect');
     if (effect !== 'allow' && effect !== 'deny')
       throw new BadRequestException('effect must be allow or deny');
-    if (!['users', 'roles'].includes(resourceType) || !permission.startsWith(resourceType + ':'))
+    if (aclResourceType(permission) !== resourceType)
       throw new BadRequestException('Unsupported resource type or mismatched permission');
+    if (
+      resourceType === 'inventory.removal-request' &&
+      !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(resourceId)
+    )
+      throw new BadRequestException('Removal request ID must be a UUID');
     const actorId = await this.actor(req);
     const { AuthorizationService } = await import('./authorization.service.js');
     if (
@@ -495,7 +529,12 @@ export class AdminController {
       if (!person) throw new NotFoundException('User not found');
       const [known] = await tx.select().from(permissions).where(eq(permissions.key, permission));
       if (!known) throw new BadRequestException('Unknown permission');
-      const table = resourceType === 'users' ? user : roles;
+      const table =
+        resourceType === 'users'
+          ? user
+          : resourceType === 'roles'
+            ? roles
+            : inventoryRemovalRequests;
       const [resource] = await tx
         .select({ id: table.id })
         .from(table)

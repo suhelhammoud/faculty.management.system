@@ -60,3 +60,38 @@ export interface WorkflowPage<T> {
   records: T[];
   nextCursor: string | null;
 }
+
+export interface DesignRule {
+  permission?: string;
+  requester?: true;
+  position?: string | { byDepartment: Record<string, string> };
+  match?: 'any' | 'all';
+}
+export type DesignTransition =
+  { next: string } | { finish: 'completed' | 'rejected' | 'cancelled' };
+export interface DesignStep {
+  id: string;
+  key: string;
+  title: string;
+  instructions: string;
+  eligible: DesignRule;
+  withdraw?: DesignRule;
+  actions: { key: string; target: DesignTransition }[];
+  x: number;
+  y: number;
+}
+export interface DesignDocument {
+  title: string;
+  description: string;
+  key: string;
+  version: number;
+  initialStep: string;
+  steps: DesignStep[];
+}
+export interface WorkflowDraft {
+  id: string;
+  revision: number;
+  document: DesignDocument;
+  updatedAt: string;
+  updatedBy: string;
+}

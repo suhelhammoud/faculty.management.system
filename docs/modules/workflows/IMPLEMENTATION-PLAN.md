@@ -241,3 +241,9 @@ web origin in the API's `TRUSTED_ORIGINS`. Start from **Propose asset removal**
 in Inventory or open the shared inbox with **Workflows**. The [local Inventory guide](../../../apps/web/src/modules/inventory/README.md) lists
 the seeded accounts and walkthrough. Exams and Student Affairs can register
 their own processes when their policies are confirmed.
+
+## Shared workflow designer
+
+Open **Workflow designer** from the task inbox. Choose a blank workflow or a registered template. Select a step to edit its eligibility, withdrawal rule, and action destinations. Use **Save draft** to share work in progress. **Export definition** validates the saved graph and downloads the declarative JSON used for developer integration. Register the resulting definition with its module handlers when deploying a runnable version.
+
+For rollout, run `pnpm --filter @project/db migrate` and `pnpm --filter @project/db seed:permissions`. Give reviewers `workflow:design-read` and authors `workflow:design-edit`. Editors can also read and export. Existing installations require an operator to grant both new keys to the designated delegating role before administrators can distribute them through Administration. Fresh administrator bootstraps include both keys.

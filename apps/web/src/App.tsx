@@ -8,6 +8,7 @@ import {
   WorkflowTask,
 } from './modules/workflows/WorkflowPages';
 
+const Designer = lazy(() => import('./modules/workflows/Designer'));
 const AdminApp = lazy(() => import('./modules/admin/App'));
 const AttendanceApp = lazy(() => import('./modules/attendance/App'));
 const MaintenanceApp = lazy(() => import('./modules/maintenance/App'));
@@ -143,6 +144,7 @@ export default function App() {
           />
         ))}
         <Route element={<DefaultHeaderLayout />}>
+          <Route path="/workflow/designer/:id?" element={<Designer />} />
           <Route path="/workflow/tasks" element={<WorkflowInbox />} />
           <Route path="/workflow/tasks/:id" element={<WorkflowTask />} />
           <Route path="/workflow/monitor" element={<WorkflowMonitor />} />

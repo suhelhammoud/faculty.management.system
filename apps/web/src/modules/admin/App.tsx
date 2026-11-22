@@ -430,6 +430,7 @@ function Dashboard() {
   const { tab, setTab, selectedUser, selectUser } = useUi();
   const client = useQueryClient();
   const [roleId, setRoleId] = useState('');
+  const [aclType, setAclType] = useState('users');
   const [auditPage, setAuditPage] = useState(1);
   const [auditAction, setAuditAction] = useState('');
   const [auditActor, setAuditActor] = useState('');
@@ -447,7 +448,13 @@ function Dashboard() {
   });
   const permissions = useQuery({
     queryKey: ['permissions'],
-    queryFn: () => api<{ key: string }[]>('admin/permissions'),
+    queryFn: () => api<{ key: string; aclResourceType: string | null }[]>('admin/permissions'),
+    retry: false,
+  });
+  const assignedRoles = useQuery({
+    queryKey: ['assigned-roles', selectedUser],
+    queryFn: () => api<Role[]>(`admin/users/${enc(selectedUser)}/roles`),
+    enabled: tab === 'users' && !!selectedUser,
     retry: false,
   });
   const rolePermissions = useQuery({
@@ -630,35 +637,56 @@ function Dashboard() {
                 <Field name="password" label="New temporary password" password />
                 <p>All sessions will be revoked. Share the password securely.</p>
               </ActionForm>
-              <ActionForm title="Assign role" path={`admin/users/${enc(selectedUser)}/roles`}>
-                <label>
-                  Role
-                  <select name="roleId" required>
-                    {roleOptions}
-                  </select>
-                </label>
-              </ActionForm>
-              <section className="panel form-grid">
-                <label>
-                  Role to remove
-                  <select value={roleId} onChange={(e) => setRoleId(e.target.value)}>
-                    {roleOptions}
-                  </select>
-                </label>
-                <Button
-                  variant="destructive"
-                  disabled={!roleId || mutation.isPending}
-                  onClick={() =>
-                    act(
-                      `admin/users/${enc(selectedUser)}/roles/${enc(roleId)}`,
-                      'Remove this role assignment and revoke sessions?',
-                      'DELETE',
-                    )
-                  }
-                >
-                  Remove assignment
-                </Button>
-              </section>
+              {assignedRoles.isPending ? (
+                <p role="status">Loading role assignments…</p>
+              ) : assignedRoles.error ? (
+                <p role="alert">{assignedRoles.error.message}</p>
+              ) : (
+                <>
+                  <ActionForm
+                    key={selectedUser}
+                    title="Assign role"
+                    path={`admin/users/${enc(selectedUser)}/roles`}
+                  >
+                    <label>
+                      Role
+                      <select name="roleId" required>
+                        <option value="">Choose a role</option>
+                        {roles.data
+                          ?.filter((r) => !assignedRoles.data.some((a) => a.id === r.id))
+                          .map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.name}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                  </ActionForm>
+                  <section className="panel form-grid">
+                    <h2>Assigned roles</h2>
+                    {assignedRoles.data.length === 0 && <p>This user has no assigned roles.</p>}
+                    {assignedRoles.data.map((r) => (
+                      <div key={r.id}>
+                        {r.name}{' '}
+                        <Button
+                          variant="destructive"
+                          disabled={mutation.isPending}
+                          aria-label={`Remove ${r.name} assignment`}
+                          onClick={() =>
+                            act(
+                              `admin/users/${enc(selectedUser)}/roles/${enc(r.id)}`,
+                              `Remove ${r.name} and revoke sessions?`,
+                              'DELETE',
+                            )
+                          }
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </section>
+                </>
+              )}
             </>
           )}
         </>
@@ -780,7 +808,12 @@ function Dashboard() {
               <ActionForm title="Add access rule" path={`admin/users/${enc(selectedUser)}/acl`}>
                 <label>
                   Resource type
-                  <select name="resourceType">
+                  <select
+                    name="resourceType"
+                    value={aclType}
+                    onChange={(event) => setAclType(event.target.value)}
+                  >
+                    <option value="inventory.removal-request">Inventory removal request</option>
                     <option value="users">User</option>
                     <option value="roles">Role</option>
                   </select>
@@ -790,9 +823,11 @@ function Dashboard() {
                   Permission
                   <select name="permission" required>
                     <option value="">Choose permission</option>
-                    {permissions.data?.map((p) => (
-                      <option key={p.key}>{p.key}</option>
-                    ))}
+                    {permissions.data
+                      ?.filter((p) => p.aclResourceType === aclType)
+                      .map((p) => (
+                        <option key={p.key}>{p.key}</option>
+                      ))}
                   </select>
                 </label>
                 <label>

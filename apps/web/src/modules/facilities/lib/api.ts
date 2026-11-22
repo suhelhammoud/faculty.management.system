@@ -1,3 +1,4 @@
+import { apiOrigin, readApiResponse } from '@/lib/api-response';
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 import type { FacilityKind } from './types';
 
@@ -11,8 +12,6 @@ export class ApiError extends Error {
   }
 }
 
-const base = (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace(/\/$/, '');
-
 export async function api<T>(
   path: string,
   method = 'GET',
@@ -21,7 +20,7 @@ export async function api<T>(
 ): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${base}/api/${path}`, {
+    response = await fetch(`${apiOrigin}/api/${path}`, {
       method,
       credentials: 'include',
       signal,
@@ -32,7 +31,7 @@ export async function api<T>(
     if (signal?.aborted) throw error;
     throw new Error('Unable to reach the server.');
   }
-  const data = await response.json().catch(() => null);
+  const data = await readApiResponse(response);
   if (!response.ok) {
     const message = Array.isArray(data?.message)
       ? data.message.join(' ')

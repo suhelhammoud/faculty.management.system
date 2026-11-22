@@ -3,17 +3,8 @@ import { AdminController } from './admin.controller.js';
 import type { Database } from '@project/db';
 import type { Auth } from './auth.provider.js';
 describe('last usable administrator protection', () => {
-  const keys = [
-    'users:create',
-    'users:approve',
-    'users:assign-roles',
-    'roles:update',
-  ];
-  async function check(
-    people: unknown[],
-    assignments: unknown[],
-    grants: unknown[],
-  ) {
+  const keys = ['users:create', 'users:approve', 'users:assign-roles', 'roles:update'];
+  async function check(people: unknown[], assignments: unknown[], grants: unknown[]) {
     const from = vi
       .fn()
       .mockResolvedValueOnce(people)
@@ -52,11 +43,7 @@ describe('last usable administrator protection', () => {
   });
   it('rejects removal of the final administrative role', async () => {
     await expect(
-      check(
-        [{ id: 'a', enabled: true, approved: true, mustChangePassword: false }],
-        [],
-        [],
-      ),
+      check([{ id: 'a', enabled: true, approved: true, mustChangePassword: false }], [], []),
     ).rejects.toThrow();
   });
   it('accepts administrative permissions combined across multiple roles', async () => {
@@ -78,6 +65,43 @@ describe('last usable administrator protection', () => {
 
 describe('ACL request validation', () => {
   const controller = new AdminController({} as Database, {} as Auth);
+  it('advertises only request-specific workflow permissions for removal ACLs', async () => {
+    const keys = [
+      'inventory:removal-review',
+      'inventory:removal-decide',
+      'inventory:removal-withdraw',
+      'inventory:request-removal',
+      'workflow:monitor',
+    ];
+    const db = {
+      select: () => ({ from: () => ({ orderBy: () => keys.map((key) => ({ key })) }) }),
+    };
+    const catalog = await new AdminController(
+      db as unknown as Database,
+      {} as Auth,
+    ).listPermissions();
+    expect(catalog.map((entry) => entry.aclResourceType)).toEqual([
+      'inventory.removal-request',
+      'inventory.removal-request',
+      'inventory.removal-request',
+      null,
+      null,
+    ]);
+  });
+  it('rejects an invalid workflow request identifier before storage', async () => {
+    await expect(
+      controller.addAcl(
+        'u',
+        {
+          resourceType: 'inventory.removal-request',
+          resourceId: 'invalid',
+          permission: 'inventory:removal-review',
+          effect: 'allow',
+        },
+        {} as never,
+      ),
+    ).rejects.toThrow('must be a UUID');
+  });
   it('rejects invalid effects before accessing storage', async () => {
     await expect(
       controller.addAcl(

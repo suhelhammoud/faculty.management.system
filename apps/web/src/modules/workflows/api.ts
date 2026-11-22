@@ -1,11 +1,11 @@
-const base = (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace(/\/$/, '');
+import { apiOrigin } from '@/lib/api-response';
 
 export async function workflowApi<T>(
   path: string,
   options?: { body: unknown; key: string },
   signal?: AbortSignal,
 ): Promise<T> {
-  const response = await fetch(`${base}/api/${path}`, {
+  const response = await fetch(`${apiOrigin}/api/${path}`, {
     credentials: 'include',
     signal,
     ...(options && {

@@ -116,3 +116,9 @@ The catalog seeder preserves existing rows. When retiring a permission, remove i
 - [HR API access and setup](../hr/API.md)
 - [Facilities API access and setup](../facilities/API.md)
 - [Inventory API access and setup](../inventory/API.md)
+
+## Manage access to an Inventory removal request
+
+In Administration, open the individual resource exceptions tab, choose the staff member, and select **Inventory removal request**. Enter the removal request UUID and choose review, committee decision, or committee withdrawal. The workflow uses the request UUID for access checks. The task and workflow instance each have a separate ID.
+
+A request-specific grant applies to that record and the selected action. The current workflow step still determines which actions are available. A matching deny overrides a role grant for that action. Administrators need role-assignment access for the staff member and the permission they are delegating on the request.

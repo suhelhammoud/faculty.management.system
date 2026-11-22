@@ -36,7 +36,7 @@ function validateEnvironment(config: Record<string, string | undefined>) {
     throw new Error('DATABASE_URL must use the postgres:// or postgresql:// scheme');
   }
 
-  const port = config.PORT === undefined ? 3000 : Number(config.PORT);
+  const port = config.PORT === undefined ? 4000 : Number(config.PORT);
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error('PORT must be an integer between 1 and 65535');
   }

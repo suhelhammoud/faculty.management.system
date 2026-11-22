@@ -1,3 +1,4 @@
+import { DesignerLink } from './DesignerLink';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, NavLink, Navigate, useNavigate, useParams, useSearchParams } from 'react-router';
 import type {
@@ -60,6 +61,7 @@ function Frame({ title, children }: { title: string; children: ReactNode }) {
       <nav className="module-navigation" aria-label="Workflow pages">
         <NavLink to="/workflow/tasks">Task inbox</NavLink>
         <NavLink to="/workflow/monitor">Monitor</NavLink>
+        <DesignerLink />
         <NavLink to={`/${removalPath}/new`}>Propose asset removal</NavLink>
       </nav>
       {children}
