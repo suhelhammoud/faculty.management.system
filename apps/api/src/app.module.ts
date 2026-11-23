@@ -1,3 +1,4 @@
+import { DepartmentModule } from './modules/department/department.module.js';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { existsSync } from 'node:fs';
@@ -78,6 +79,7 @@ const workspaceRoot = findWorkspaceRoot(process.cwd());
     CorrespondenceModule,
     InventoryModule,
     StudentAffairsModule,
+    DepartmentModule,
     FacilitiesModule,
     FacultyPositionsModule,
   ],

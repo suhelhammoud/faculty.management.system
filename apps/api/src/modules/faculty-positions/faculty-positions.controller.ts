@@ -57,6 +57,12 @@ export class FacultyPositionsController {
     return { positions, canManage };
   }
 
+  @Get('departments')
+  @RequirePermission(PERMISSION.facultyPositions.manage)
+  departments() {
+    return this.positions.departmentOptions();
+  }
+
   @Get('eligible-holders')
   @RequirePermission(PERMISSION.facultyPositions.manage)
   eligibleHolders() {

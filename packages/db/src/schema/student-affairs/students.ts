@@ -13,6 +13,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { user } from '../auth/users.js';
 import { timestamps } from './common.js';
+import { departments } from '../department/index.js';
 
 export const students = pgTable(
   'students',
@@ -24,6 +25,7 @@ export const students = pgTable(
     fatherName: text('father_name'),
     lastName: text('last_name'),
     currentStudyYear: smallint('current_study_year'),
+    departmentId: uuid('department_id').references(() => departments.id, { onDelete: 'restrict' }),
     userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
     birthPlace: text('birth_place'),
     birthDate: date('birth_date', { mode: 'string' }),
@@ -56,6 +58,7 @@ export const students = pgTable(
     unique('students_user_id_unique').on(table.userId),
     check('students_revision_check', sql`${table.revision} > 0`),
     check('students_current_study_year_check', sql`${table.currentStudyYear} between 1 and 5`),
+    index('students_department_idx').on(table.departmentId),
     index('students_current_study_year_idx').on(table.currentStudyYear),
   ],
 );

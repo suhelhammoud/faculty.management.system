@@ -39,6 +39,7 @@ default view based on the signed-in user's capabilities.
 | `exams`           | `/exams`           |                                             |
 | `correspondence`  | `/correspondence`  |                                             |
 | `inventory`       | `/inventory`       | `/inventory/my-items`, `/inventory/assets`  |
+| `department`      | `/department`      | `/department/curricula/:versionId`          |
 | `student-affairs` | `/student-affairs` | `/student-affairs/students`                 |
 | `facilities`      | `/facilities`      | `/facilities/rooms`, `/facilities/settings` |
 | `workflows`       | `/workflow/tasks`  | `/workflow/tasks/:id`, `/workflow/monitor`  |

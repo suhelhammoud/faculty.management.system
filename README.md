@@ -110,10 +110,13 @@ directory. Feature code lives in `apps/web/src/modules`.
 | Exams             | `/exams`                                                       |
 | Correspondence    | `/correspondence`                                              |
 | Inventory         | `/inventory`                                                   |
+| Department        | `/department`                                                  |
 | Student Affairs   | `/student-affairs`                                             |
 | Facilities        | `/facilities/rooms`                                            |
 | Workflows         | `/workflow/tasks`                                              |
 | Workflow designer | [Open local designer](http://localhost:3000/workflow/designer) |
+
+See the [Department guide](docs/modules/department/README.md) for curriculum setup and student assignments.
 
 ## Build and test the frontend
 

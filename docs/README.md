@@ -26,6 +26,7 @@ Each module has a specification in `docs/modules/`. Implemented modules also lin
 - [Correspondence](modules/correspondence/README.md)
 - [Inventory](modules/inventory/README.md)
 - [Facilities](modules/facilities/README.md)
+- [Department and curriculum plans](modules/department/README.md)
 - [Student Affairs](modules/student-affairs/README.md)
 - [Workflow engine and queues](modules/workflows/IMPLEMENTATION-PLAN.md)
 - [Workflow designer, draft sharing, and access setup](modules/workflows/designer.md)

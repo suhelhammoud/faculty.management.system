@@ -111,6 +111,24 @@ describe.skipIf(!connectionString)('Faculty Positions API integration', () => {
     }
   });
 
+  it('offers backfilled departments to position managers with their existing permission', async () => {
+    const response = await request(app!.getHttpServer())
+      .get(`${path}/departments`)
+      .set('x-test-caller', 'admin')
+      .expect(200);
+    expect(response.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'software-engineering' }),
+        expect.objectContaining({ code: 'network-systems' }),
+        expect.objectContaining({ code: 'artificial-intelligence' }),
+      ]),
+    );
+    await request(app!.getHttpServer())
+      .get(`${path}/departments`)
+      .set('x-test-caller', 'reader')
+      .expect(403);
+  });
+
   it('manages positions and preserves history and permissions across concurrent handovers', async () => {
     const api = request(app!.getHttpServer());
     const catalog = (caller: string) => api.get(path).set('x-test-caller', caller);

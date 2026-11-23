@@ -8,6 +8,8 @@ import type {
   StudentList,
   StudentProfile,
 } from '@project/contracts/student-affairs';
+import type { Department } from '@project/contracts/department';
+import { useDepartmentRead } from '../department/api';
 import { ApiError, root, useRead, useWrite } from './api';
 import {
   ActionLink,
@@ -30,7 +32,14 @@ const profilePath = (id: string) => `students/${encodeURIComponent(id)}`;
 const studentUrl = (id: string) => `${root}/${profilePath(id)}`;
 type ProfileKey = Exclude<
   keyof StudentProfile,
-  'studentId' | 'currentStudyYear' | 'createdAt' | 'updatedAt' | 'revision'
+  | 'studentId'
+  | 'currentStudyYear'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'revision'
+  | 'departmentId'
+  | 'departmentName'
+  | 'curriculum'
 >;
 type CoreKey = 'academicId' | 'firstName' | 'fatherName' | 'lastName';
 type ProfileField = [
@@ -226,6 +235,7 @@ function ProfileForm({
   const { t } = useLanguage();
   const navigate = useNavigate();
   const write = useWrite<StudentProfile>();
+  const departments = useDepartmentRead<Department[]>();
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const input = new FormData(event.currentTarget);
@@ -237,6 +247,10 @@ function ProfileForm({
         const value = kind === 'date' ? parseDate(text) : text || null;
         if (value !== (baseline?.[key] ?? null)) body[key] = value;
       }
+    if (input.has('departmentId')) {
+      const departmentId = String(input.get('departmentId')) || null;
+      if (departmentId !== (baseline?.departmentId ?? null)) body.departmentId = departmentId;
+    }
     if (!student) body.currentStudyYear = Number(input.get('currentStudyYear'));
     if (student && Object.keys(body).length === 0) {
       void navigate(studentUrl(student.studentId));
@@ -267,6 +281,34 @@ function ProfileForm({
             </Field>
           </div>
         )}
+        <div className="sta-panel">
+          <Resource query={departments}>
+            {(records) => (
+              <Field label={t('Department')}>
+                <select
+                  name="departmentId"
+                  data-slot="native-select"
+                  defaultValue={baseline?.departmentId ?? ''}
+                >
+                  <option value="">{t('Unassigned')}</option>
+                  {baseline?.departmentId &&
+                    !records.some(({ id, active }) => active && id === baseline.departmentId) && (
+                      <option value={baseline.departmentId}>
+                        {baseline.departmentName ?? baseline.departmentId}
+                      </option>
+                    )}
+                  {records
+                    .filter(({ active }) => active)
+                    .map(({ id, name }) => (
+                      <option key={id} value={id}>
+                        {name}
+                      </option>
+                    ))}
+                </select>
+              </Field>
+            )}
+          </Resource>
+        </div>
         {groups.map(({ title, fields }) => (
           <section className="sta-panel" key={title}>
             <h3>{t(title)}</h3>
@@ -424,6 +466,31 @@ export function StudentRoute({
                   refreshStudent={query.refetch}
                 />
               )}
+              <section className="sta-panel">
+                <dl className="sta-fields">
+                  <div>
+                    <dt>{t('Department')}</dt>
+                    <dd>
+                      <bdi>{student.departmentName ?? '—'}</bdi>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{t('Assigned curriculum')}</dt>
+                    <dd>
+                      {student.curriculum ? (
+                        <NavLink to={`/department/curricula/${student.curriculum.id}`}>
+                          <bdi>
+                            {student.curriculum.name} · v{student.curriculum.version} ·{' '}
+                            {student.curriculum.departmentName}
+                          </bdi>
+                        </NavLink>
+                      ) : (
+                        '—'
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
               {groups.map(({ title, fields }) => (
                 <section className="sta-panel" key={title}>
                   <h3>{t(title)}</h3>

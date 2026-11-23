@@ -24,6 +24,8 @@ import { AuthGuard } from '../../auth/auth.guard.js';
 import type { Auth } from '../../auth/auth.provider.js';
 import { AuthorizationService } from '../../auth/authorization.service.js';
 import { DATABASE } from '../../database/database.constants.js';
+import { DepartmentController } from '../department/department.controller.js';
+import { DepartmentService } from '../department/department.service.js';
 import { StudentAffairsController } from './student-affairs.controller.js';
 import { StudentAffairsService } from './student-affairs.service.js';
 
@@ -139,15 +141,16 @@ describe.skipIf(!databaseName)('Student Affairs HTTP API', () => {
       },
     } as unknown as Auth;
     const module = await Test.createTestingModule({
-      controllers: [StudentAffairsController],
+      controllers: [StudentAffairsController, DepartmentController],
       providers: [
         StudentAffairsService,
+        DepartmentService,
         { provide: DATABASE, useValue: db },
         { provide: AuthorizationService, useValue: new AuthorizationService(db) },
       ],
     }).compile();
     app = module.createNestApplication();
-    app.use(adminOriginProtection([origin], [base]));
+    app.use(adminOriginProtection([origin], [base, '/api/department']));
     app.useGlobalGuards(new AuthGuard(new Reflector(), auth, new AuthorizationService(db)));
     await app.init();
     await assign('first', 1);
@@ -158,6 +161,110 @@ describe.skipIf(!databaseName)('Student Affairs HTTP API', () => {
   afterAll(async () => {
     await app?.close();
     await connection?.pool.end();
+  });
+
+  it('publishes immutable curricula and assigns batches only within the selected department', async () => {
+    const path = '/api/department';
+    const admin = headers('admin');
+    const createDepartment = async (code: string) =>
+      (await client().post(path).set(admin).send({ code, name: code }).expect(201)).body
+        .id as string;
+    await client().get(path).expect(401);
+    await client()
+      .post(path)
+      .set(headers('first'))
+      .send({ code: 'blocked', name: 'Blocked' })
+      .expect(403);
+    const departmentId = await createDepartment('curriculum-example');
+    const otherDepartmentId = await createDepartment('curriculum-other');
+    const registerInDepartment = async (id: string) =>
+      (
+        await client()
+          .post(registry)
+          .set(admin)
+          .send({ ...profile(), departmentId: id })
+          .expect(201)
+      ).body;
+    const first = await registerInDepartment(departmentId);
+    const second = await registerInDepartment(departmentId);
+    const outside = await registerInDepartment(otherDepartmentId);
+    const unassigned = await registerInDepartment(departmentId);
+    const module = {
+      studyYear: 1,
+      semester: 1,
+      code: 'INTRO',
+      name: 'Introduction',
+      theoryHours: 2,
+      labHours: 1,
+      credits: 3,
+      requirement: 'required',
+    };
+    const { body: draft } = await client()
+      .post(`${path}/curricula`)
+      .set(admin)
+      .send({ departmentId, name: 'Example plan', modules: [module] })
+      .expect(201);
+    const assignBatch = (studentIds: string[]) =>
+      client().post(`${path}/assignments`).set(admin).send({ planId: draft.id, studentIds });
+    await assignBatch([first.studentId]).expect(409);
+    const publish = (id: string, allowEmptySemesters: boolean, expectedRevision = 1) =>
+      client()
+        .post(`${path}/curricula/${id}/publish`)
+        .set(admin)
+        .send({ expectedRevision, allowEmptySemesters });
+    await publish(draft.id, false).expect(400);
+    await publish(draft.id, true).expect(201);
+    await assignBatch([first.studentId, outside.studentId]).expect(409);
+    const responses = await Promise.all([
+      assignBatch([first.studentId, second.studentId]),
+      assignBatch([first.studentId, second.studentId]),
+    ]);
+    expect(responses.map(({ status }) => status).sort()).toEqual([201, 409]);
+    const { body: candidates } = await client()
+      .get(`${path}/${departmentId}/students?page=1&search=${first.academicId}`)
+      .set(admin)
+      .expect(200);
+    expect(candidates.records).toHaveLength(1);
+    expect(candidates.records[0].assignment.id).toBe(draft.id);
+    const { body: next } = await client()
+      .post(`${path}/curricula/families/${draft.familyId}/drafts`)
+      .set(admin)
+      .expect(201);
+    expect(next.version).toBe(2);
+    const edit = (id: string) =>
+      client()
+        .patch(`${path}/curricula/${id}`)
+        .set(admin)
+        .send({
+          name: 'Renamed plan',
+          expectedRevision: 1,
+          modules: [{ ...module, theoryHours: 3 }],
+        });
+    await edit(draft.id).expect(409);
+    await edit(next.id).expect(200);
+    await publish(next.id, true, 2).expect(201);
+    await client()
+      .patch(`${registry}/${first.studentId}`)
+      .set(admin)
+      .send({ departmentId: otherDepartmentId, expectedRevision: 1 })
+      .expect(200);
+    const { body: moved } = await client()
+      .get(`${registry}/${first.studentId}`)
+      .set(headers('first'))
+      .expect(200);
+    expect(moved.departmentId).toBe(otherDepartmentId);
+    expect(moved.curriculum).toMatchObject({ id: draft.id, name: 'Example plan', version: 1 });
+    const { body: original } = await client()
+      .get(`${path}/curricula/${draft.id}`)
+      .set(admin)
+      .expect(200);
+    expect(original.modules[0].theoryHours).toBe(2);
+    await client()
+      .patch(`${path}/${departmentId}`)
+      .set(admin)
+      .send({ name: 'Example', active: false })
+      .expect(200);
+    await assignBatch([unassigned.studentId]).expect(409);
   });
 
   it('returns only the caller’s capabilities and limits recipient lookup to the dean', async () => {

@@ -19,6 +19,7 @@ const ExamsApp = lazy(() => import('./modules/exams/App'));
 const CorrespondenceApp = lazy(() => import('./modules/correspondence/App'));
 const InventoryApp = lazy(() => import('./modules/inventory/App'));
 const StudentAffairsApp = lazy(() => import('./modules/student-affairs/App'));
+const DepartmentApp = lazy(() => import('./modules/department/App'));
 const FacilitiesApp = lazy(() => import('./modules/facilities/App'));
 
 const modules: Record<
@@ -42,6 +43,7 @@ const modules: Record<
     Component: StudentAffairsApp,
     directoryLinkInHeader: true,
   },
+  department: { title: 'Department', Component: DepartmentApp, directoryLinkInHeader: true },
   facilities: { title: 'Facilities', Component: FacilitiesApp, directoryLinkInHeader: true },
 };
 

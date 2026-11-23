@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./department": {
+      "types": "./department.d.ts"
+    },
     "./student-affairs": {
       "types": "./student-affairs.d.ts"
     },

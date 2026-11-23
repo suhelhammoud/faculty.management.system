@@ -1,3 +1,5 @@
+import type { AssignedCurriculum } from './department.js';
+
 export interface StudentAffairsCapabilities {
   read: boolean;
   administer: boolean;
@@ -60,6 +62,9 @@ export interface StudentProfileFields {
 }
 
 export interface StudentProfile extends StudentSummary, StudentProfileFields {
+  departmentId?: string | null;
+  departmentName?: string | null;
+  curriculum?: AssignedCurriculum | null;
   revision: number;
   adjustedScore: string | null;
   createdAt: string;

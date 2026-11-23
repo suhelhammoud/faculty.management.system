@@ -40,7 +40,7 @@ type Handler = (url: URL, request?: RequestInit) => Response;
 function mount(path: string, routes: Record<string, unknown | Handler>) {
   const fetch = vi.fn((input: string, request?: RequestInit) => {
     const url = new URL(input);
-    const response = routes[url.pathname];
+    const response = routes[url.pathname] ?? (url.pathname === '/api/department' ? [] : undefined);
     if (typeof response === 'function') return Promise.resolve((response as Handler)(url, request));
     return Promise.resolve(response === undefined ? json({}, 404) : json(response));
   });

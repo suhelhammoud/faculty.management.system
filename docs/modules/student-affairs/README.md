@@ -18,6 +18,10 @@ The Student Affairs workspace is available at `/student-affairs` in English and 
 
 Staff can cover several years, and several staff can cover the same year. Profile writes follow the student’s current year. Annual record creation follows the student’s current year and the staff member’s assignment. Historical remarks follow the year on the annual record. The admin can backfill annual records and correct their recorded study year.
 
+## Department and curriculum
+
+Choose an active department on the student creation or edit form. Normal profile write permissions apply. Profiles show the student's current department and link to the exact assigned curriculum version, including when that plan belongs to a former department. Assign curricula in the [Department workspace](../department/README.md).
+
 ## Staff API
 
 All paths are relative to `/api/student-affairs`. Requests require an active session. Writes require a trusted browser origin through the shared origin protection.
@@ -44,6 +48,8 @@ All paths are relative to `/api/student-affairs`. Requests require an active ses
 A promotion grant takes effect on issuance, covers the whole registry, and allows repeated moves until expiry or revocation. The dean can issue one live grant per admin at a time. The audit log records profile and annual writes, staff assignment changes, and grant issuance and revocation. Year changes record the prior and new year and the grant ID when applicable. The audit entries store identifiers and action metadata.
 
 Invalid requests return `400`, insufficient access returns `403`, missing records return `404`, and duplicate academic IDs, annual periods, or live grants return `409`. Dates use `YYYY-MM-DD`; scores use decimal strings. The recorded `adjustedScore` is read-only until its calculation is agreed. The annual API exposes only period, study year, remarks, and timestamps.
+
+Student create and patch requests accept an optional `departmentId`. Use an active department's UUID, or `null` to clear the student's department. Profile reads include `departmentId`, `departmentName`, and `curriculum`. The latter contains the assigned version's `id`, `name`, `version`, and `departmentName`, or is null. Changing `departmentId` preserves any existing curriculum assignment.
 
 Profile responses include an integer `revision`. Profile and current-year writes supply it as `expectedRevision`. Each successful change advances the revision. A stale write returns `409` with code `STUDENT_REVISION_CONFLICT`. Reload the record and review the draft before retrying. Existing student records start at revision 1 after the migration.
 

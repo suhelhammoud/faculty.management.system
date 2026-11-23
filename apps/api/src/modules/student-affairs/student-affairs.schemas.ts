@@ -30,6 +30,7 @@ export const studentQuery = z.strictObject({
 
 const profile = z.strictObject({
   academicId: text,
+  departmentId: uuid.nullable().optional(),
   firstName: text,
   fatherName: text,
   lastName: text,

@@ -5,6 +5,8 @@ export const arabic = {
   'Reload latest record': 'تحميل أحدث نسخة من السجل',
   'Discard your unsaved edits and reload the latest record?':
     'هل تريد تجاهل تعديلاتك غير المحفوظة وتحميل أحدث نسخة من السجل؟',
+  Department: 'القسم',
+  'Assigned curriculum': 'الخطة الدراسية المعيّنة',
   'Student Affairs': 'شؤون الطلاب',
   Students: 'الطلاب',
   'Staff assignments': 'تكليفات الموظفين',

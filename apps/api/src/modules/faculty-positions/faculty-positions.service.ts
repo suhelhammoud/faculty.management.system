@@ -10,6 +10,7 @@ import type { Database } from '@project/db';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import {
   auditLog,
+  departments,
   facultyPositionAppointments as appointments,
   facultyPositions as positions,
   user,
@@ -79,6 +80,14 @@ export class FacultyPositionsService {
     }));
   }
 
+  departmentOptions() {
+    return this.db
+      .select({ code: departments.code, name: departments.name })
+      .from(departments)
+      .where(eq(departments.active, true))
+      .orderBy(departments.name, departments.code);
+  }
+
   eligibleHolders() {
     return this.db
       .select(holder)
@@ -104,6 +113,14 @@ export class FacultyPositionsService {
 
   create(body: CreateFacultyPosition, actorId: string) {
     return this.db.transaction(async (tx) => {
+      if (body.departmentCode) {
+        const [department] = await tx
+          .select({ active: departments.active })
+          .from(departments)
+          .where(eq(departments.code, body.departmentCode))
+          .for('share');
+        if (!department?.active) throw new BadRequestException('Select an active department.');
+      }
       const [position] = await tx
         .insert(positions)
         .values(body)

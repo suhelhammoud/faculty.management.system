@@ -1,5 +1,5 @@
 import { useFacultyLanguage } from '@/components/language-preference';
-import { useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate, NavLink, Route, Routes } from 'react-router';
 import { ModuleHeaderActions, ModuleSessionControls } from '@/components/ModuleDirectoryLink';
@@ -90,7 +90,15 @@ function Workspace() {
   );
 }
 
-function Shell({ switchLanguage }: { switchLanguage: () => void }) {
+function Shell({
+  switchLanguage,
+  title,
+  children,
+}: {
+  switchLanguage: () => void;
+  title: 'Student Affairs' | 'Department';
+  children: ReactNode;
+}) {
   const { language, t } = useLanguage();
   const client = useQueryClient();
   const previous = useRef<string | undefined>(undefined);
@@ -158,7 +166,7 @@ function Shell({ switchLanguage }: { switchLanguage: () => void }) {
       dir={language === 'ar' ? 'rtl' : 'ltr'}
     >
       <header className="module-header">
-        <h1>{t('Student Affairs')}</h1>
+        <h1>{t(title)}</h1>
         <ModuleHeaderActions
           sessionControls={
             user && (
@@ -237,7 +245,7 @@ function Shell({ switchLanguage }: { switchLanguage: () => void }) {
               ) : !record.user.approved ? (
                 <p role="status">{t('Awaiting approval')}</p>
               ) : (
-                <Workspace />
+                children
               )}
             </div>
           )
@@ -247,15 +255,31 @@ function Shell({ switchLanguage }: { switchLanguage: () => void }) {
   );
 }
 
-export default function App() {
+export function StudentAffairsSession({
+  title,
+  children,
+}: {
+  title: 'Student Affairs' | 'Department';
+  children: ReactNode;
+}) {
   const [client] = useState(createClient);
   const { language, setLanguage } = useFacultyLanguage();
   const switchLanguage = () => setLanguage(language === 'ar' ? 'en' : 'ar');
   return (
     <QueryClientProvider client={client}>
       <LanguageContext.Provider value={language}>
-        <Shell switchLanguage={switchLanguage} />
+        <Shell switchLanguage={switchLanguage} title={title}>
+          {children}
+        </Shell>
       </LanguageContext.Provider>
     </QueryClientProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <StudentAffairsSession title="Student Affairs">
+      <Workspace />
+    </StudentAffairsSession>
   );
 }

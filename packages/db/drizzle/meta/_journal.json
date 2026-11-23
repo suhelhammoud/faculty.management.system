@@ -85,6 +85,20 @@
       "when": 1795379054758,
       "tag": "0011_workflow_drafts",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795380000000,
+      "tag": "0012_curricula",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795380000001,
+      "tag": "0013_department",
+      "breakpoints": true
     }
   ]
 }

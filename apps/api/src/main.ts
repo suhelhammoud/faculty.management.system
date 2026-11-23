@@ -39,6 +39,7 @@ async function bootstrap() {
       '/api/workflow',
       '/api/inventory',
       '/api/student-affairs',
+      '/api/department',
     ]),
   );
   app.useBodyParser('json');

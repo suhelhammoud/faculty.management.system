@@ -38,6 +38,11 @@ function PositionForm({
   onSaved?: (id: string) => void;
 }) {
   const client = useQueryClient();
+  const departmentOptions = useQuery({
+    queryKey: [...queryKey, 'departments'],
+    queryFn: () => api<{ code: string; name: string }[]>(`${path}/departments`),
+    enabled: !position,
+  });
   const save = useMutation({
     mutationFn: (body: CreateFacultyPosition | FacultyPositionTitles) =>
       api<{ id: string }>(
@@ -85,8 +90,15 @@ function PositionForm({
             />
           </label>
           <label>
-            Department code (optional)
-            <Input name="departmentCode" maxLength={80} pattern="[a-z0-9]+(-[a-z0-9]+)*" />
+            Department
+            <select name="departmentCode" disabled={!departmentOptions.isSuccess}>
+              <option value="">Faculty-wide</option>
+              {departmentOptions.data?.map(({ code, name }) => (
+                <option key={code} value={code}>
+                  {name} ({code})
+                </option>
+              ))}
+            </select>
           </label>
         </>
       )}
@@ -98,9 +110,13 @@ function PositionForm({
         Arabic title (optional)
         <Input name="titleAr" dir="rtl" maxLength={200} defaultValue={position?.titleAr ?? ''} />
       </label>
-      <Button type="submit" disabled={save.isPending}>
+      <Button
+        type="submit"
+        disabled={save.isPending || (!position && !departmentOptions.isSuccess)}
+      >
         {position ? 'Save titles' : 'Add position'}
       </Button>
+      {departmentOptions.error && <p role="alert">{departmentOptions.error.message}</p>}
       {save.error && <p role="alert">{save.error.message}</p>}
       {save.isSuccess && <p role="status">Position saved.</p>}
     </form>

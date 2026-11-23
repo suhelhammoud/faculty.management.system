@@ -9,6 +9,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
+import { departments } from '../department/index.js';
 import { user } from '../auth/users.js';
 
 export const facultyPositions = pgTable('faculty_positions', {
@@ -16,7 +17,9 @@ export const facultyPositions = pgTable('faculty_positions', {
   code: text('code').notNull().unique(),
   titleEn: text('title_en').notNull(),
   titleAr: text('title_ar'),
-  departmentCode: text('department_code'),
+  departmentCode: text('department_code').references(() => departments.code, {
+    onDelete: 'restrict',
+  }),
 });
 
 export const facultyPositionAppointments = pgTable(

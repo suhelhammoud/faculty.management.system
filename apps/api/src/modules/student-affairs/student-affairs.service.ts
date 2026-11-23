@@ -18,6 +18,10 @@ import type {
 import type { Database } from '@project/db';
 import {
   auditLog,
+  curriculumFamilies,
+  curriculumPlans,
+  departments,
+  studentCurriculumAssignments,
   rolePermissions,
   studentAcademicYears as annualYears,
   studentAffairsPromotionGrants as grants,
@@ -187,12 +191,46 @@ export class StudentAffairsService {
       .from(students)
       .where(eq(students.studentId, id));
     if (!student) throw new NotFoundException('Student not found');
-    return student;
+    const [record] = await this.db
+      .select({
+        departmentName: departments.name,
+      })
+      .from(students)
+      .leftJoin(departments, eq(students.departmentId, departments.id))
+      .where(eq(students.studentId, id));
+    const [curriculum] = await this.db
+      .select({
+        id: curriculumPlans.id,
+        name: curriculumPlans.name,
+        version: curriculumPlans.version,
+        departmentName: departments.name,
+      })
+      .from(studentCurriculumAssignments)
+      .innerJoin(curriculumPlans, eq(studentCurriculumAssignments.planId, curriculumPlans.id))
+      .innerJoin(curriculumFamilies, eq(curriculumPlans.familyId, curriculumFamilies.id))
+      .innerJoin(departments, eq(curriculumFamilies.departmentId, departments.id))
+      .where(eq(studentCurriculumAssignments.studentId, id));
+    return {
+      ...student,
+      departmentName: record?.departmentName ?? null,
+      curriculum: curriculum ?? null,
+    };
+  }
+
+  private async requireActiveDepartment(tx: Tx, id?: string | null) {
+    if (!id) return;
+    const [department] = await tx
+      .select({ active: departments.active })
+      .from(departments)
+      .where(eq(departments.id, id))
+      .for('share');
+    if (!department?.active) throw new BadRequestException('Select an active department.');
   }
 
   create(actor: string, values: StudentCreate) {
     return this.db.transaction(async (tx) => {
       await this.requireYear(tx, actor, values.currentStudyYear);
+      await this.requireActiveDepartment(tx, values.departmentId);
       const [student] = await tx
         .insert(students)
         .values(values)
@@ -207,6 +245,7 @@ export class StudentAffairsService {
   async patch(actor: string, id: string, { expectedRevision, ...values }: StudentPatch) {
     try {
       return await this.db.transaction(async (tx) => {
+        await this.requireActiveDepartment(tx, values.departmentId);
         const student = await this.lockStudent(tx, id);
         await this.requireYear(tx, actor, student.currentStudyYear);
         requireRevision(student.revision, expectedRevision);

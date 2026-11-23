@@ -23,6 +23,8 @@ A **permission** names an action, such as `hr-employees:read` or `facilities:wri
 
 ## Faculty positions in workflow approvals
 
+Faculty position managers select an active department from the shared directory when adding a departmental office. Existing approval rules keyed by department code continue to use the same codes. [Department and curriculum plans](../department/README.md)
+
 A Faculty Position identifies a standing office and its current appointment. Appointing someone makes them eligible for steps configured to accept that position, subject to record access and any additional step rules. Role membership and permission grants are managed separately.
 
 When a step combines a permission and a position, an explicit deny for that permission on the record blocks the action. Under an either-route rule, the position holder can still qualify if the permission is simply absent. [Configure position-based approval steps](../workflows/IMPLEMENTATION-PLAN.md#position-based-approval-steps)
@@ -73,6 +75,8 @@ The catalog groups permissions by area.
 | Inventory         | `inventory:read`, `inventory:configure`, `inventory:post-transactions`, `inventory:dispose`, `inventory:manage-assets`, `inventory:request-removal`, `inventory:removal-review`, `inventory:removal-decide`, `inventory:removal-withdraw` |
 | Workflows         | `workflow:monitor`                                                                                                                                                                                                                        |
 | Student Affairs   | `student-affairs:read`, `student-affairs:administer`, `student-affairs:grant-promotions`                                                                                                                                                  |
+
+Department curriculum access uses the same Student Affairs permissions. Grant `student-affairs:read` for viewing and both read and administer for managing plans and bulk assignment in the web app. [Department access](../department/README.md#setup-and-access)
 
 Student Affairs applies year assignments to staff writes. The dean issues deadline-based promotion grants through the Student Affairs API. [Student Affairs permissions and grants](../student-affairs/README.md#permissions-and-dependencies)
 
