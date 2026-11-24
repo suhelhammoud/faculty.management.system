@@ -18,9 +18,11 @@ Read routes require `student-affairs:read`. Management routes require `student-a
 | `GET /:id/students`                   | Manage | List students in a department and their curriculum assignment summaries. Accepts `search` and `page` and returns `{ records, total }` with up to 50 students per page. |
 | `POST /assignments`                   | Manage | Assign a published version with `{ planId, studentIds }` and return `{ assigned }`. Send 1–500 distinct student IDs.                                                   |
 
+The plan title is stored as `name`. Plan creation and draft updates accept optional `description`, `adoptionDate` (`YYYY-MM-DD`), `ministryDecision`, and `remarks`. Send `null` to clear a field. Version details return these fields. New drafts copy the description and remarks, with the adoption date and ministry decision blank for the new version.
+
 A plan family ID stays stable across revisions. A version's `id` is different from its `familyId`. Use the version ID for `planId` in an assignment. Versions report their `version`, `revision`, and `publishedAt`. A null `publishedAt` indicates a draft. Successful edits advance the draft revision, and stale edits or updates to published versions return `409`.
 
-A module takes `studyYear` (1–5), `semester` (1–2), `code`, `name`, `theoryHours`, `labHours`, `credits`, and `requirement` (`required` or `elective`). The hours are weekly integers from 0 to 80 and credits are integers from 0 to 100. A draft can have up to 500 modules. Publication requires at least one module, and publishing with empty semesters requires `allowEmptySemesters: true`.
+A module takes `studyYear` (1–5), `semester` (1–2), `code`, `name`, `theoryHours`, `labHours`, `credits`, and `requirement` (`required` or `elective`). The hours are weekly integers from 0 to 80 and credits are integers from 0 to 100 or null when unspecified. `name` is the English module name. Optional `nameAr` stores the Arabic name. Optional `theoryMarks`, `practicalMarks`, `totalMarks`, and `progressMarks` each accept an integer from 0 to 100 or null. A draft can have up to 500 modules. Publication requires at least one module, and publishing with empty semesters requires `allowEmptySemesters: true`.
 
 Assignment is transactional. Missing, already assigned, or out-of-department students cause a `409` and leave the batch unapplied. New assignments require an active department and a published version. The audit log records `department:assign-curriculum` with the actor, plan version ID, and selected student IDs.
 

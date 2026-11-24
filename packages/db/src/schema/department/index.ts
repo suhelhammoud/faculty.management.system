@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   pgTable,
@@ -43,6 +44,10 @@ export const curriculumPlans = pgTable(
       .references(() => curriculumFamilies.id, { onDelete: 'restrict' }),
     name: text().notNull(),
     version: integer().notNull(),
+    description: text(),
+    adoptionDate: date('adoption_date', { mode: 'string' }),
+    ministryDecision: text('ministry_decision'),
+    remarks: text(),
     revision: integer().notNull().default(1),
     publishedAt: timestamp('published_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -64,9 +69,14 @@ export const curriculumModules = pgTable(
     semester: smallint().notNull(),
     code: text().notNull(),
     name: text().notNull(),
+    nameAr: text('name_ar'),
     theoryHours: smallint('theory_hours').notNull().default(0),
     labHours: smallint('lab_hours').notNull().default(0),
-    credits: smallint().notNull().default(0),
+    credits: smallint(),
+    theoryMarks: smallint('theory_marks'),
+    practicalMarks: smallint('practical_marks'),
+    totalMarks: smallint('total_marks'),
+    progressMarks: smallint('progress_marks'),
     requirement: text().$type<'required' | 'elective'>().notNull().default('required'),
   },
   (table) => [
@@ -76,6 +86,11 @@ export const curriculumModules = pgTable(
     check(
       'curriculum_module_hours_check',
       sql`${table.theoryHours} >= 0 and ${table.labHours} >= 0 and ${table.credits} >= 0`,
+    ),
+    check(
+      'curriculum_module_marks_check',
+      sql`${table.theoryMarks} between 0 and 100 and ${table.practicalMarks} between 0 and 100
+        and ${table.totalMarks} between 0 and 100 and ${table.progressMarks} between 0 and 100`,
     ),
     check(
       'curriculum_module_requirement_check',

@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { CurriculumModule } from '@project/contracts/department';
+import type { CurriculumModule, CurriculumPlanMetadata } from '@project/contracts/department';
 import type { Database } from '@project/db';
 import {
   auditLog,
@@ -19,6 +19,8 @@ import {
 import { randomUUID } from 'node:crypto';
 import { and, asc, count, desc, eq, ilike, inArray, or } from 'drizzle-orm';
 import { DATABASE } from '../../database/database.constants.js';
+
+type DraftInput = Partial<CurriculumPlanMetadata> & { name: string; modules: CurriculumModule[] };
 
 type Tx = Parameters<Parameters<Database['transaction']>[0]>[0];
 const versionFields = {
@@ -72,7 +74,13 @@ export class DepartmentService {
     return this.db.transaction(
       async (tx) => {
         const [plan] = await tx
-          .select(versionFields)
+          .select({
+            ...versionFields,
+            description: plans.description,
+            adoptionDate: plans.adoptionDate,
+            ministryDecision: plans.ministryDecision,
+            remarks: plans.remarks,
+          })
           .from(plans)
           .innerJoin(families, eq(plans.familyId, families.id))
           .where(eq(plans.id, id));
@@ -93,14 +101,14 @@ export class DepartmentService {
     );
   }
 
-  createPlan(input: { departmentId: string; name: string; modules: CurriculumModule[] }) {
+  createPlan({ departmentId, modules: rows, ...details }: DraftInput & { departmentId: string }) {
     return this.db.transaction(async (tx) => {
-      await this.requireActive(tx, input.departmentId);
+      await this.requireActive(tx, departmentId);
       const [family] = await tx
         .insert(families)
         .values({
-          departmentId: input.departmentId,
-          name: input.name,
+          departmentId: departmentId,
+          name: details.name,
         })
         .onConflictDoNothing()
         .returning();
@@ -108,9 +116,9 @@ export class DepartmentService {
         throw new ConflictException('This department already has a plan with that name.');
       const [plan] = await tx
         .insert(plans)
-        .values({ familyId: family.id, name: input.name, version: 1 })
+        .values({ ...details, familyId: family.id, version: 1 })
         .returning();
-      await this.saveModules(tx, plan.id, input.modules);
+      await this.saveModules(tx, plan.id, rows);
       return plan;
     });
   }
@@ -133,6 +141,8 @@ export class DepartmentService {
         .values({
           familyId,
           name: latest.name,
+          description: latest.description,
+          remarks: latest.remarks,
           version: latest.version + 1,
         })
         .returning();
@@ -142,16 +152,19 @@ export class DepartmentService {
     });
   }
 
-  edit(id: string, input: { name: string; expectedRevision: number; modules: CurriculumModule[] }) {
+  edit(
+    id: string,
+    { expectedRevision, modules: rows, ...details }: DraftInput & { expectedRevision: number },
+  ) {
     return this.db.transaction(async (tx) => {
-      const plan = await this.lockDraft(tx, id, input.expectedRevision);
+      const plan = await this.lockDraft(tx, id, expectedRevision);
       const [updated] = await tx
         .update(plans)
-        .set({ name: input.name, revision: plan.revision + 1 })
+        .set({ ...details, revision: plan.revision + 1 })
         .where(eq(plans.id, id))
         .returning();
       await tx.delete(modules).where(eq(modules.planId, id));
-      await this.saveModules(tx, id, input.modules);
+      await this.saveModules(tx, id, rows);
       return updated;
     });
   }
@@ -298,21 +311,41 @@ export class DepartmentService {
   }
 
   private async saveModules(tx: Tx, planId: string, rows: CurriculumModule[]) {
-    if (rows.length)
+    if (rows.length) {
       await tx.insert(modules).values(
         rows.map(
-          ({ studyYear, semester, code, name, theoryHours, labHours, credits, requirement }) => ({
+          ({
+            studyYear,
+            semester,
+            code,
+            name,
+            nameAr,
+            theoryHours,
+            labHours,
+            credits,
+            theoryMarks,
+            practicalMarks,
+            totalMarks,
+            progressMarks,
+            requirement,
+          }) => ({
             planId,
             studyYear,
             semester,
             code,
             name,
+            nameAr,
             theoryHours,
             labHours,
             credits,
+            theoryMarks,
+            practicalMarks,
+            totalMarks,
+            progressMarks,
             requirement,
           }),
         ),
       );
+    }
   }
 }

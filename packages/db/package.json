@@ -19,6 +19,7 @@
     "build": "pnpm --filter @project/authorization build && tsc -p tsconfig.json",
     "typecheck": "pnpm --filter @project/authorization build && tsc --noEmit -p tsconfig.json",
     "seed:permissions": "pnpm build && node dist/seed/permission-catalog.js",
+    "seed:curricula": "pnpm build && node dist/seed/curricula.js",
     "seed:local": "pnpm build && node dist/seed/local.js",
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",

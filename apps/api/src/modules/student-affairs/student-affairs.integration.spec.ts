@@ -194,15 +194,28 @@ describe.skipIf(!databaseName)('Student Affairs HTTP API', () => {
       semester: 1,
       code: 'INTRO',
       name: 'Introduction',
+      nameAr: 'مقدمة',
       theoryHours: 2,
       labHours: 1,
-      credits: 3,
+      credits: null,
+      theoryMarks: 70,
+      practicalMarks: 30,
+      totalMarks: 100,
+      progressMarks: null,
       requirement: 'required',
     };
     const { body: draft } = await client()
       .post(`${path}/curricula`)
       .set(admin)
-      .send({ departmentId, name: 'Example plan', modules: [module] })
+      .send({
+        departmentId,
+        name: 'Example plan',
+        modules: [module],
+        description: 'Example description',
+        adoptionDate: '2025-09-01',
+        ministryDecision: 'Decision 12',
+        remarks: 'First revision',
+      })
       .expect(201);
     const assignBatch = (studentIds: string[]) =>
       client().post(`${path}/assignments`).set(admin).send({ planId: draft.id, studentIds });
@@ -231,12 +244,25 @@ describe.skipIf(!databaseName)('Student Affairs HTTP API', () => {
       .set(admin)
       .expect(201);
     expect(next.version).toBe(2);
+    const { body: copied } = await client()
+      .get(`${path}/curricula/${next.id}`)
+      .set(admin)
+      .expect(200);
+    expect(copied.modules[0]).toMatchObject(module);
+    expect(copied).toMatchObject({
+      description: 'Example description',
+      remarks: 'First revision',
+      adoptionDate: null,
+      ministryDecision: null,
+    });
     const edit = (id: string) =>
       client()
         .patch(`${path}/curricula/${id}`)
         .set(admin)
         .send({
           name: 'Renamed plan',
+          adoptionDate: '2026-09-01',
+          ministryDecision: 'Decision 34',
           expectedRevision: 1,
           modules: [{ ...module, theoryHours: 3 }],
         });
@@ -258,7 +284,16 @@ describe.skipIf(!databaseName)('Student Affairs HTTP API', () => {
       .get(`${path}/curricula/${draft.id}`)
       .set(admin)
       .expect(200);
-    expect(original.modules[0].theoryHours).toBe(2);
+    expect(original.modules[0]).toMatchObject(module);
+    expect(original).toMatchObject({ adoptionDate: '2025-09-01', ministryDecision: 'Decision 12' });
+    const { body: published } = await client()
+      .get(`${path}/curricula/${next.id}`)
+      .set(admin)
+      .expect(200);
+    expect(published).toMatchObject({
+      adoptionDate: '2026-09-01',
+      ministryDecision: 'Decision 34',
+    });
     await client()
       .patch(`${path}/${departmentId}`)
       .set(admin)

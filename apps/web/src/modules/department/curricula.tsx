@@ -1,12 +1,29 @@
 import { useRef, useState, type FormEvent } from 'react';
+import { DateInput, formatDate } from '@/components/ui/date-input';
 import { Link, useNavigate, useParams } from 'react-router';
 import type {
   CurriculumDetail,
   CurriculumModule,
+  CurriculumPlanMetadata,
   CurriculumVersion,
 } from '@project/contracts/department';
 import { Button, Field, Input, Resource, years } from '../student-affairs/common';
 import { useDepartmentRead, useDepartmentWrite } from './api';
+
+const assessmentFields = [
+  ['theoryMarks', 'Theory marks'],
+  ['practicalMarks', 'Practical marks'],
+  ['totalMarks', 'Total marks'],
+  ['progressMarks', 'Project progress marks'],
+] as const;
+const optionalNumericFields = [['credits', 'Credits'], ...assessmentFields] as const;
+
+const planDetails = [
+  ['description', 'Description'],
+  ['adoptionDate', 'Adoption date'],
+  ['ministryDecision', 'Ministry decision'],
+  ['remarks', 'Remarks'],
+] as const;
 
 type Row = CurriculumModule & { key: number };
 
@@ -58,6 +75,21 @@ function CurriculumDetailView({ plan, canManage }: { plan: CurriculumDetail; can
       <h2>
         {versionLabel(plan)} · {plan.publishedAt ? 'Published' : 'Draft'}
       </h2>
+      {!editable && (
+        <dl className="sta-panel sta-fields">
+          {planDetails.map(([key, label]) => {
+            const value = plan[key];
+            return (
+              <div key={key}>
+                <dt>{label}</dt>
+                <dd className="whitespace-pre-wrap" dir="auto">
+                  {key === 'adoptionDate' && value ? formatDate(value) : (value ?? '—')}
+                </dd>
+              </div>
+            );
+          })}
+        </dl>
+      )}
       {canManage && active && plan.publishedAt && (
         <div>
           <Button
@@ -76,6 +108,9 @@ function CurriculumDetailView({ plan, canManage }: { plan: CurriculumDetail; can
           </Button>
           <DepartmentError error={draft.error} />
         </div>
+      )}
+      {plan.modules.some(({ progressMarks }) => progressMarks != null) && (
+        <p>For projects spanning two semesters, progress marks apply to the whole project.</p>
       )}
       {editable ? (
         <DraftEditor plan={plan} />
@@ -101,6 +136,7 @@ function CurriculumDetailView({ plan, canManage }: { plan: CurriculumDetail; can
                               'Theory hours/week',
                               'Lab hours/week',
                               'Credits',
+                              ...assessmentFields.map(([, label]) => label),
                               'Requirement',
                             ].map((label) => (
                               <th key={label}>{label}</th>
@@ -115,10 +151,20 @@ function CurriculumDetailView({ plan, canManage }: { plan: CurriculumDetail; can
                               </td>
                               <td>
                                 <bdi>{row.name}</bdi>
+                                {row.nameAr && (
+                                  <div>
+                                    <bdi lang="ar" dir="rtl">
+                                      {row.nameAr}
+                                    </bdi>
+                                  </div>
+                                )}
                               </td>
                               <td>{row.theoryHours}</td>
                               <td>{row.labHours}</td>
-                              <td>{row.credits}</td>
+                              <td>{row.credits ?? '—'}</td>
+                              {assessmentFields.map(([key]) => (
+                                <td key={key}>{row[key] ?? '—'}</td>
+                              ))}
                               <td>{row.requirement}</td>
                             </tr>
                           ))}
@@ -140,6 +186,12 @@ function CurriculumDetailView({ plan, canManage }: { plan: CurriculumDetail; can
 
 function DraftEditor({ plan }: { plan: CurriculumDetail }) {
   const [name, setName] = useState(plan.name);
+  const [details, setDetails] = useState({
+    description: plan.description ?? '',
+    adoptionDate: plan.adoptionDate ?? '',
+    ministryDecision: plan.ministryDecision ?? '',
+    remarks: plan.remarks ?? '',
+  });
   const nextKey = useRef(plan.modules.length);
   const [rows, setRows] = useState<Row[]>(() => plan.modules.map((row, key) => ({ ...row, key })));
   const [dirty, setDirty] = useState(false);
@@ -148,6 +200,11 @@ function DraftEditor({ plan }: { plan: CurriculumDetail }) {
   const publish = useDepartmentWrite();
   const busy = save.isPending || publish.isPending;
   const emptyCount = 10 - new Set(rows.map((row) => `${row.studyYear}/${row.semester}`)).size;
+
+  function updateDetail(key: keyof CurriculumPlanMetadata, value: string) {
+    setDetails((previous) => ({ ...previous, [key]: value }));
+    setDirty(true);
+  }
 
   function update(key: number, changes: Partial<CurriculumModule>) {
     setDirty(true);
@@ -166,16 +223,39 @@ function DraftEditor({ plan }: { plan: CurriculumDetail }) {
       method: 'PATCH',
       body: {
         name,
+        description: details.description.trim() || null,
+        adoptionDate: details.adoptionDate || null,
+        ministryDecision: details.ministryDecision.trim() || null,
+        remarks: details.remarks.trim() || null,
         expectedRevision: plan.revision,
         modules: rows.map(
-          ({ studyYear, semester, code, name, theoryHours, labHours, credits, requirement }) => ({
+          ({
             studyYear,
             semester,
             code,
             name,
+            nameAr,
             theoryHours,
             labHours,
             credits,
+            theoryMarks,
+            practicalMarks,
+            totalMarks,
+            progressMarks,
+            requirement,
+          }) => ({
+            studyYear,
+            semester,
+            code,
+            name,
+            nameAr: nameAr?.trim() || null,
+            theoryHours,
+            labHours,
+            credits,
+            theoryMarks,
+            practicalMarks,
+            totalMarks,
+            progressMarks,
             requirement,
           }),
         ),
@@ -186,7 +266,7 @@ function DraftEditor({ plan }: { plan: CurriculumDetail }) {
   return (
     <form onSubmit={submit} className="sta-stack">
       <fieldset disabled={busy} className="sta-stack">
-        <Field label="Plan name">
+        <Field label="Plan title">
           <Input
             value={name}
             required
@@ -197,6 +277,43 @@ function DraftEditor({ plan }: { plan: CurriculumDetail }) {
             }}
           />
         </Field>
+        <div className="sta-panel sta-fields">
+          <Field label="Description">
+            <textarea
+              data-slot="textarea"
+              dir="auto"
+              maxLength={5000}
+              rows={3}
+              value={details.description}
+              onChange={(event) => updateDetail('description', event.target.value)}
+            />
+          </Field>
+          <Field label="Adoption date">
+            <DateInput
+              data-slot="input"
+              value={details.adoptionDate}
+              onValueChange={(value) => updateDetail('adoptionDate', value)}
+            />
+          </Field>
+          <Field label="Ministry decision">
+            <Input
+              dir="auto"
+              maxLength={500}
+              value={details.ministryDecision}
+              onChange={(event) => updateDetail('ministryDecision', event.target.value)}
+            />
+          </Field>
+          <Field label="Remarks">
+            <textarea
+              data-slot="textarea"
+              dir="auto"
+              maxLength={5000}
+              rows={3}
+              value={details.remarks}
+              onChange={(event) => updateDetail('remarks', event.target.value)}
+            />
+          </Field>
+        </div>
         {years.map((studyYear) => (
           <section className="sta-panel sta-stack" key={studyYear}>
             <h3>Year {studyYear}</h3>
@@ -216,7 +333,7 @@ function DraftEditor({ plan }: { plan: CurriculumDetail }) {
                           onChange={(event) => update(row.key, { code: event.target.value })}
                         />
                       </Field>
-                      <Field label="Name">
+                      <Field label="English name">
                         <Input
                           value={row.name}
                           maxLength={200}
@@ -224,11 +341,19 @@ function DraftEditor({ plan }: { plan: CurriculumDetail }) {
                           onChange={(event) => update(row.key, { name: event.target.value })}
                         />
                       </Field>
+                      <Field label="Arabic name">
+                        <Input
+                          value={row.nameAr ?? ''}
+                          lang="ar"
+                          dir="rtl"
+                          maxLength={200}
+                          onChange={(event) => update(row.key, { nameAr: event.target.value })}
+                        />
+                      </Field>
                       {(
                         [
                           ['theoryHours', 'Theory hours/week', 80],
                           ['labHours', 'Lab hours/week', 80],
-                          ['credits', 'Credits', 100],
                         ] as const
                       ).map(([key, label, max]) => (
                         <Field label={label} key={key}>
@@ -240,6 +365,22 @@ function DraftEditor({ plan }: { plan: CurriculumDetail }) {
                             value={row[key]}
                             onChange={(event) =>
                               update(row.key, { [key]: Number(event.target.value) })
+                            }
+                          />
+                        </Field>
+                      ))}
+                      {optionalNumericFields.map(([key, label]) => (
+                        <Field label={label} key={key}>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={row[key] ?? ''}
+                            onChange={(event) =>
+                              update(row.key, {
+                                [key]:
+                                  event.target.value === '' ? null : Number(event.target.value),
+                              })
                             }
                           />
                         </Field>
@@ -285,7 +426,12 @@ function DraftEditor({ plan }: { plan: CurriculumDetail }) {
                           name: '',
                           theoryHours: 0,
                           labHours: 0,
-                          credits: 0,
+                          nameAr: null,
+                          credits: null,
+                          theoryMarks: null,
+                          practicalMarks: null,
+                          totalMarks: null,
+                          progressMarks: null,
                           requirement: 'required',
                         },
                       ])

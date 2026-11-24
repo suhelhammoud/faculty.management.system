@@ -10,9 +10,14 @@ export interface CurriculumModule {
   semester: number;
   code: string;
   name: string;
+  nameAr: string | null;
   theoryHours: number;
   labHours: number;
-  credits: number;
+  credits: number | null;
+  theoryMarks: number | null;
+  practicalMarks: number | null;
+  totalMarks: number | null;
+  progressMarks: number | null;
   requirement: 'required' | 'elective';
 }
 
@@ -26,7 +31,14 @@ export interface CurriculumVersion {
   publishedAt: string | null;
 }
 
-export interface CurriculumDetail extends CurriculumVersion {
+export interface CurriculumPlanMetadata {
+  description: string | null;
+  adoptionDate: string | null;
+  ministryDecision: string | null;
+  remarks: string | null;
+}
+
+export interface CurriculumDetail extends CurriculumVersion, CurriculumPlanMetadata {
   modules: CurriculumModule[];
 }
 

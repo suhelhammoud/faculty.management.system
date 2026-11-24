@@ -101,7 +101,7 @@ function Plans({ department, canManage }: { department: Department; canManage: b
         </Resource>
         {canManage && department.active && (
           <form onSubmit={submit} className="sta-actions">
-            <Field label="New plan name">
+            <Field label="New plan title">
               <Input required name="name" maxLength={200} />
             </Field>
             <Button disabled={create.isPending}>Create draft</Button>
